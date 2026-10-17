@@ -1,0 +1,29 @@
+# Push a tag like v0.2.0 (matching package.json's version) to build all three platforms into a
+# draft GitHub release. Review the draft, then publish it - installed copies update from it.
+name: Release
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 24, cache: npm }
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - run: npx electron-builder --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Unsigned for now: skip looking for a macOS signing identity.
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
