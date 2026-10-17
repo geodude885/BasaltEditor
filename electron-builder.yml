@@ -21,6 +21,6 @@ linux:
   category: Development
 publish:
   provider: github
-  owner: ACutiePi
+  owner: geodude885
   repo: RumbleBossBattlesEditor
   releaseType: draft
