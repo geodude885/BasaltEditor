@@ -1,0 +1,26 @@
+appId: com.acutiepi.bossbattles.charteditor
+productName: Boss Battles Chart Editor
+directories:
+  buildResources: build
+  output: dist
+files:
+  - out/**
+  - package.json
+artifactName: ${name}-${version}-${os}-${arch}.${ext}
+win:
+  target: [nsis]
+nsis:
+  oneClick: true
+  perMachine: false
+mac:
+  # zip as well as dmg: auto-update on macOS reads the zip.
+  target: [dmg, zip]
+  category: public.app-category.developer-tools
+linux:
+  target: [AppImage]
+  category: Development
+publish:
+  provider: github
+  owner: ACutiePi
+  repo: RumbleBossBattlesEditor
+  releaseType: draft

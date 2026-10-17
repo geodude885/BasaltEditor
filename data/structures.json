@@ -1,0 +1,10 @@
+{
+  "Disc": { "across": 0.862, "up": 0.198, "along": 0.844, "pivotUp": 0.103 },
+  "Ball": { "across": 0.837, "up": 0.77, "along": 0.753, "pivotUp": 0.408 },
+  "Pillar": { "across": 0.5, "up": 1.95, "along": 0.5, "pivotUp": 0.975 },
+  "Wall": { "across": 1.3, "up": 2.15, "along": 0.6, "pivotUp": 1.075 },
+  "RockCube": { "across": 1, "up": 1, "along": 1, "pivotUp": 0.5 },
+  "BoulderBall": { "across": 0.943, "up": 0.868, "along": 0.849, "pivotUp": 0.46 },
+  "SmallRock": { "across": 1.018, "up": 0.976, "along": 0.638, "pivotUp": 0.495 },
+  "LargeRock": { "across": 2.346, "up": 1.611, "along": 2.372, "pivotUp": 0.737 }
+}
