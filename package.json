@@ -1,7 +1,7 @@
 {
   "name": "bossbattles-chart-editor",
   "productName": "Boss Battles Chart Editor",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Chart editor for RUMBLE Boss Battles",
   "author": "ACutiePi",
   "private": true,
