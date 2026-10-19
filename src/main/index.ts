@@ -45,7 +45,7 @@ function chartsFolder(): string | undefined {
     ? ["C:/Program Files (x86)/Steam", "C:/Program Files/Steam"]
     : [join(homedir(), ".steam/steam"), join(homedir(), ".local/share/Steam")];
   for (const root of steam) {
-    const folder = join(root, "steamapps/common/RUMBLE/UserData/BossBattles/Charts");
+    const folder = join(root, "steamapps/common/RUMBLE/UserData/Basalt/Charts");
     if (existsSync(folder)) return folder;
   }
   return undefined;

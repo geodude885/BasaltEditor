@@ -2,7 +2,7 @@
 // lands in the chart's text.
 import { actorSpotAt, actorsOf, endOf, evTime, laneOf, setEvTime } from "../model/chart";
 import { addPhaseAt, mirror, newTimed } from "../model/edits";
-import { convertChartLooksFromNightToStage, newStageCue } from "../model/looks";
+import { newStageCue } from "../model/looks";
 import { round } from "../model/tempo";
 import type { Point } from "../model/chart";
 import type { ChartEvent } from "../model/types";
@@ -221,12 +221,6 @@ export function removeLookCue(index: number): void {
     if (!doc.chart.visuals?.length) delete doc.chart.visuals;
   });
   editor.selectedLookCue = -1;
-}
-
-export function convertNightCuesToStage(): void {
-  let converted = 0;
-  doc.change(["visuals"], () => { converted = convertChartLooksFromNightToStage(doc.chart, doc.tempo); });
-  toast(converted ? `Converted ${converted} BossBattles Night cue${converted === 1 ? "" : "s"} to BossBattles Stage - the look is the same` : "No BossBattles Night cues to convert");
 }
 
 export function selectPhase(index: number): void {

@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
-  convertChartLooksFromNightToStage, cssToLinear, evaluateLooksAt, findPackParameter, linearToCss, lookCueProblems, NIGHT_LOOK_IN_STAGE_SETTINGS,
-  shadeCentrePixelLikeStage, STAGE_PACK, stageCueWarnings, stageDefaults, stageLookAt, stageLookBeforeCue, stageSettingsFrom, timedLookCues,
+  cssToLinear, evaluateLooksAt, findPackParameter, linearToCss, lookCueProblems,
+  shadeCentrePixelLikeStage, STAGE_PACK, stageCueWarnings, stageDefaults, stageLookAt, stageLookBeforeCue, stageSettingsFrom,
   type Rgb, type TimedLookCue,
 } from "./looks";
 import { Tempo } from "./tempo";
-import type { LoadedChart, LookCue } from "./types";
 
-// BossBattles Night's fragment shader, transcribed separately from Stage, for the centre of the screen
-// between beats with the glow's blur seeing the same colour all around.
+// The retired BossBattles Night pack's fragment shader, transcribed separately from Stage, for the centre
+// of the screen between beats with the glow's blur seeing the same colour all around. Stage reproduces
+// it exactly with the settings below, which makes it an independent check on the preview's maths.
 type NightSettings = { darkness: number; redGlow: number; glowRadius: number; blackFog: number };
 function nightCentrePixel(scene: Rgb, depthMetres: number | null, n: NightSettings): Rgb {
   const redness = (c: Rgb) => Math.min(1, Math.max(0, (c[0] - Math.max(c[1], c[2])) * 2.5));
@@ -38,6 +38,9 @@ function expectSamePixel(actual: Rgb, expected: Rgb): void {
 }
 
 const nightAtItsOwnDefaults = { darkness: 0.6, redGlow: 1.2, glowRadius: 3, blackFog: 0.07 };
+const nightLookInStageSettings: Record<string, number> = {
+  "Saturation": 0, "Darkness": 0.6, "Glow": 1.2, "Fog density": 0.07, "Beat pulse": 0.35, "Hit flash": 0.6, "Low health": 0.7, "Vignette": 0.4,
+};
 const stageWith = (settings: Record<string, number>) => stageSettingsFrom(new Map(Object.entries(settings)));
 
 describe("BossBattles Stage", () => {
@@ -47,53 +50,16 @@ describe("BossBattles Stage", () => {
 
   it("renders exactly as Night with Night's look", () => {
     for (const [, scene, depth] of scenes) {
-      expectSamePixel(shadeCentrePixelLikeStage(scene, depth, stageWith(NIGHT_LOOK_IN_STAGE_SETTINGS)), nightCentrePixel(scene, depth, nightAtItsOwnDefaults));
+      expectSamePixel(shadeCentrePixelLikeStage(scene, depth, stageWith(nightLookInStageSettings)), nightCentrePixel(scene, depth, nightAtItsOwnDefaults));
     }
   });
 
   it("keeps another hue instead of red when the key moves", () => {
-    const green = stageWith({ ...NIGHT_LOOK_IN_STAGE_SETTINGS, "Key hue": 120, "Fog density": 0 });
+    const green = stageWith({ ...nightLookInStageSettings, "Key hue": 120, "Fog density": 0 });
     const greenObject = shadeCentrePixelLikeStage([0.05, 0.6, 0.05], 5, green);
     const redObject = shadeCentrePixelLikeStage([0.6, 0.05, 0.05], 5, green);
     expect(greenObject[1]).toBeGreaterThan(0.6);
     expect(redObject[0]).toBeCloseTo(redObject[1], 6);
-  });
-});
-
-const tempoAt120 = new Tempo(120);
-const chartWithLooks = (visuals: LookCue[]) => ({ events: [], bpm: 120, visuals }) as LoadedChart;
-
-describe("converting a chart's Night cues", () => {
-  const nightCues = (): LookCue[] => [
-    { beat: 150, pack: "BossBattles Night", set: { "Darkness": 0.65, "Red glow": 1.7, "Black fog": 0.06, "Beat pulse": 0.55 }, fade: 0.3 },
-    { beat: 0, pack: "BossBattles Night", set: { "Darkness": 0.35, "Red glow": 0.7 }, fade: 2 },
-    { beat: 200, pack: "BossBattles Night", off: true, fade: 4 },
-    { beat: 300, pack: "BossBattles Night", on: true },
-  ];
-
-  it("renames Night's settings and keeps each cue's shape", () => {
-    const chart = chartWithLooks(nightCues());
-    expect(convertChartLooksFromNightToStage(chart, tempoAt120)).toBe(4);
-    expect(Object.keys(chart.visuals![0])).toEqual(["beat", "pack", "set", "fade"]);
-    expect(chart.visuals![0]).toEqual({ beat: 150, pack: "BossBattles Stage", set: { "Darkness": 0.65, "Glow": 1.7, "Fog density": 0.06, "Beat pulse": 0.55 }, fade: 0.3 });
-    expect(chart.visuals![2]).toEqual({ beat: 200, pack: "BossBattles Stage", off: true, fade: 4 });
-    for (const converted of chart.visuals!) expect(stageCueWarnings(converted)).toEqual([]);
-  });
-
-  it("gives Night's look to the first cue by time, and to the first after an off", () => {
-    const chart = chartWithLooks(nightCues());
-    convertChartLooksFromNightToStage(chart, tempoAt120);
-    expect(chart.visuals![1].set).toEqual({ ...NIGHT_LOOK_IN_STAGE_SETTINGS, "Darkness": 0.35, "Glow": 0.7 });
-    expect(chart.visuals![3]).toEqual({ beat: 300, pack: "BossBattles Stage", set: NIGHT_LOOK_IN_STAGE_SETTINGS, on: true });
-  });
-
-  it("looks as Night did once the first fade is over", () => {
-    const chart = chartWithLooks(nightCues());
-    convertChartLooksFromNightToStage(chart, tempoAt120);
-    const settled = stageLookAt(timedLookCues(chart, tempoAt120), tempoAt120.seconds(149));
-    expect(settled.on).toBe(true);
-    const night = { ...nightAtItsOwnDefaults, darkness: 0.35, redGlow: 0.7 };
-    for (const [, scene, depth] of scenes) expectSamePixel(shadeCentrePixelLikeStage(scene, depth, settled.settings), nightCentrePixel(scene, depth, night));
   });
 });
 

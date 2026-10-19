@@ -1,9 +1,10 @@
 # Working on Basalt Editor
 
-Basalt Editor (formerly the Boss Battles Chart Editor) is a desktop editor for RUMBLE Boss Battles
-charts (`chart.json` plus song, cover and clips, packaged as `.bbchart`). Basalt is the editor's name
-only: the format, the game and the shader packs keep theirs (`.bbchart`, `BossBattlesChart`,
-`UserData/BossBattles`, "BossBattles Stage"), because they belong to the mod. It replaced the single-file HTML editor that used to ship inside the mod; the mod no
+Basalt Editor (formerly the Boss Battles Chart Editor) is a desktop editor for charts of Basalt, the
+RUMBLE boss battle mod (formerly BossBattles): `chart.json` plus song, cover and clips, packaged as
+`.bbchart`. Charts live in `UserData/Basalt/Charts`, and the mod's schema generates `BasaltChart`. Two
+names kept from before the rename belong to the mod and its packs, not the editor: the `.bbchart`
+extension and the shader pack name ("BossBattles Stage"). It replaced the single-file HTML editor that used to ship inside the mod; the mod no
 longer bundles an editor. `README.md` covers the commands.
 
 ## Stack
@@ -93,8 +94,8 @@ src/renderer/src/
 ## The chart format and the game's numbers
 
 The format belongs to the mod. `npm run sync` copies `docs/chart.schema.json` from
-`../RumbleBossBattles` into `schema/` and regenerates `model/chart.gen.ts`, and copies the game's
-measured structure sizes (`UserData/BossBattles/SelfTest/structures.json`, from the mod's `=measure`
+`../Basalt` into `schema/` and regenerates `model/chart.gen.ts`, and copies the game's
+measured structure sizes (`UserData/Basalt/SelfTest/structures.json`, from the mod's `=measure`
 self-test) into `data/`. Both copies are committed so the editor builds without the mod or the game.
 Change the format in the mod first, then sync. Match the mod's behaviour, not the old editor's:
 `ChartRunner` and `ChartLoader` are the reference (e.g. a phase's spot is placed at the phase's start
@@ -104,7 +105,7 @@ Looks (`visuals` cues) work the same way. `npm run sync` also copies the BossBat
 manifest from `../RumbleBossBattlesShaders` into `data/packs/`; its `group` and `colour` fields lay
 out the Looks tab. `model/looks.ts` ports the mod's `LookTimeline` (how cues fade into one another)
 and the Stage shader's maths for the timeline's preview strip - change it when they change, and keep
-the tests that check Stage at its defaults against a transcription of BossBattles Night.
+the tests that check Stage against a transcription of the retired BossBattles Night shader.
 
 ## Releases
 

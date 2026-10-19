@@ -3,9 +3,9 @@
 export type Colour = string;
 
 /**
- * A BossBattles chart, format 2. See docs/chart-format.md.
+ * A Basalt chart, format 2. See docs/chart-format.md.
  */
-export interface BossBattlesChart {
+export interface BasaltChart {
   $schema?: string;
   format?: number;
   name?: string;

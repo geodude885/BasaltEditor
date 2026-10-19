@@ -4,7 +4,7 @@
 //   data/packs/*.json         <- the shader packs' manifests, from RumbleBossBattlesShaders
 // All are committed, so the editor builds without the mod or the game; run this when either changes.
 //
-// usage: npm run sync [-- --mod <RumbleBossBattles folder>] [-- --game <RUMBLE folder>] [-- --shaders <RumbleBossBattlesShaders folder>]
+// usage: npm run sync [-- --mod <Basalt folder>] [-- --game <RUMBLE folder>] [-- --shaders <RumbleBossBattlesShaders folder>]
 import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
@@ -13,7 +13,7 @@ import { compile } from "json-schema-to-typescript";
 
 const root = resolve(import.meta.dirname, "..");
 const { values } = parseArgs({ options: { mod: { type: "string" }, game: { type: "string" }, shaders: { type: "string" } } });
-const mod = resolve(values.mod ?? resolve(root, "../RumbleBossBattles"));
+const mod = resolve(values.mod ?? resolve(root, "../Basalt"));
 const game = resolve(values.game ?? "C:/Program Files (x86)/Steam/steamapps/common/RUMBLE");
 const shaders = resolve(values.shaders ?? resolve(root, "../RumbleBossBattlesShaders"));
 const packsTheEditorKnows = ["BossBattlesStage"];
@@ -24,7 +24,7 @@ async function refresh(from, to) {
 }
 
 await refresh(resolve(mod, "docs/chart.schema.json"), resolve(root, "schema/chart.schema.json"));
-await refresh(resolve(game, "UserData/BossBattles/SelfTest/structures.json"), resolve(root, "data/structures.json"));
+await refresh(resolve(game, "UserData/Basalt/SelfTest/structures.json"), resolve(root, "data/structures.json"));
 await mkdir(resolve(root, "data/packs"), { recursive: true });
 for (const pack of packsTheEditorKnows) {
   await refresh(resolve(shaders, `Assets/PackSource/${pack}/manifest.json`), resolve(root, `data/packs/${pack}.json`));

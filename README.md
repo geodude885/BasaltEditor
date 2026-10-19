@@ -1,12 +1,12 @@
 # Basalt Editor
 
-A desktop editor for [RUMBLE](https://store.steampowered.com/app/890550/RUMBLE/) Boss Battles charts:
+A desktop editor for [RUMBLE](https://store.steampowered.com/app/890550/RUMBLE/) Basalt charts:
 
 Features:
 * A scrollable beat grid, you can add, edit and select projectiles and moves to happen at different times.
 * Song's waveform and ability to play th
     See the 'lane' from above and it's predicted state at the playhead. the song's waveform under a beat grid, projectiles, moves and phases on a
-timeline. Open a chart folder from the game's `UserData/BossBattles/Charts`, edit, save the game
+timeline. Open a chart folder from the game's `UserData/Basalt/Charts`, edit, save the game
 reloads it within a second.
 
 Windows, macOS and Linux builds are on the Releases page; installed copies update themselves.

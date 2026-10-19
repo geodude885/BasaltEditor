@@ -2,7 +2,7 @@
 export const SAMPLE = `{
   "format": 1,
   "name": "Crossfire",
-  "author": "BossBattles",
+  "author": "Basalt",
   "difficulty": "Normal",
   "description": "Shots cutting across the lane. Hits on the Gunner count double while it is open.",
   // The lane centred on the Pit, running north.

@@ -2,7 +2,7 @@
   "name": "basalt-editor",
   "productName": "Basalt Editor",
   "version": "0.2.0",
-  "description": "Basalt Editor - a chart editor for RUMBLE Boss Battles",
+  "description": "Basalt Editor - a chart editor for Basalt, the RUMBLE boss battle mod",
   "author": "ACutiePi",
   "private": true,
   "type": "module",

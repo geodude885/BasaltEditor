@@ -9,7 +9,6 @@ export type PackParameter = { property: string; label: string; default: number; 
 export type PackManifest = { name: string; parameters: PackParameter[] };
 
 export const STAGE_PACK: PackManifest = stageManifest;
-export const NIGHT_PACK_NAME = "BossBattles Night";
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
@@ -204,50 +203,6 @@ export function linearToCss(colour: Rgb): string {
 export function cssToLinear(hex: string): Rgb {
   const channel = (at: number) => round(srgbToLinear(parseInt(hex.slice(at, at + 2), 16) / 255), 3);
   return [channel(1), channel(3), channel(5)];
-}
-
-// ---- BossBattles Night to Stage -------------------------------------------------------------------
-
-const NIGHT_SETTING_TO_STAGE: Record<string, string> = {
-  darkness: "Darkness", redglow: "Glow", glowradius: "Glow radius", blackfog: "Fog density", fogdensity: "Fog density",
-  beatpulse: "Beat pulse", hitflash: "Hit flash", vignette: "Vignette",
-};
-
-// Night's own look as Stage settings: Stage at its defaults changes nothing, and these make it Night.
-export const NIGHT_LOOK_IN_STAGE_SETTINGS: Record<string, number> = {
-  "Saturation": 0, "Darkness": 0.6, "Glow": 1.2, "Fog density": 0.07, "Beat pulse": 0.35, "Hit flash": 0.6, "Low health": 0.7, "Vignette": 0.4,
-};
-
-export const isNightCue = (cue: LookCue): boolean => (cue.pack ?? "").trim().toLowerCase() === NIGHT_PACK_NAME.toLowerCase();
-
-function convertNightCueToStage(cue: LookCue, startsFromPlayersOwnLook: boolean): LookCue {
-  const settings = Object.fromEntries(settingsWrittenIn(cue).map(([name, value]) => [NIGHT_SETTING_TO_STAGE[comparableParameterName(name)] ?? name, value]));
-  if (startsFromPlayersOwnLook && !cue.off) {
-    for (const [name, value] of Object.entries(NIGHT_LOOK_IN_STAGE_SETTINGS)) settings[name] ??= value;
-  }
-  const converted: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(cue)) {
-    if (key === "set") continue;
-    converted[key] = key === "pack" ? STAGE_PACK.name : value;
-    if (key === "pack" && Object.keys(settings).length) converted.set = settings;
-  }
-  return converted as LookCue;
-}
-
-// A Night cue that starts from the player's own look - the first, or the first after an "off" - also
-// gets the rest of Night's look, which Night had built in and Stage does not.
-export function convertChartLooksFromNightToStage(chart: LoadedChart, tempo: Tempo): number {
-  const visuals = chart.visuals ?? [];
-  const nightCuesInTimeOrder = visuals
-    .map((cue, index) => ({ cue, index, time: evTime(cue, tempo) }))
-    .filter(({ cue }) => isNightCue(cue))
-    .sort((a, b) => a.time - b.time || a.index - b.index);
-  let startsFromPlayersOwnLook = true;
-  for (const { cue, index } of nightCuesInTimeOrder) {
-    visuals[index] = convertNightCueToStage(cue, startsFromPlayersOwnLook);
-    startsFromPlayersOwnLook = cue.off === true;
-  }
-  return nightCuesInTimeOrder.length;
 }
 
 // ---- Editing Stage cues ---------------------------------------------------------------------------

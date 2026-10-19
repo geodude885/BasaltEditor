@@ -5,7 +5,7 @@
     "bundle": "bossbattlesstage.bundle",
     "material": "M_BossBattlesStage",
     "priority": 0,
-    "listen": [ "bossbattles.hit" ],
+    "listen": [ "basalt.hit" ],
     "parameters": [
         { "property": "_KeyHue",         "label": "Key hue",             "default": 0,     "min": 0,   "max": 360, "group": "Colour" },
         { "property": "_KeyStrictness",  "label": "Key strictness",      "default": 2.5,   "min": 0.5, "max": 8,   "group": "Colour" },

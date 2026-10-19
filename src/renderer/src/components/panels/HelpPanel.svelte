@@ -12,7 +12,7 @@
 
 <div class="about">
   <Logo size={40} />
-  <div><b>Basalt Editor</b> <span class="version">{__APP_VERSION__}</span><br />A chart editor for RUMBLE Boss Battles</div>
+  <div><b>Basalt Editor</b> <span class="version">{__APP_VERSION__}</span><br />A chart editor for Basalt, the RUMBLE boss battle mod</div>
 </div>
 
 {#if editor.showText}
@@ -27,7 +27,7 @@
   {#each keys as [key, what] (key)}<kbd>{key}</kbd><span>{what}</span>{/each}
 </div>
 <div class="note">
-  To edit a chart from the game: <b>Open folder</b> and pick its folder in the game's <code>UserData/BossBattles/Charts</code>, then
+  To edit a chart from the game: <b>Open folder</b> and pick its folder in the game's <code>UserData/Basalt/Charts</code>, then
   <b>Save</b> - the game reloads it within a second. A <b>.bbchart</b> package opens too, and <b>Package</b> makes one with the song, cover
   and clips to share. Only the parts you change are rewritten: comments and recorded clips stay as they were.
 </div>

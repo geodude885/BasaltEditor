@@ -1,13 +1,13 @@
 <script lang="ts">
   import {
-    colourChannels, cssToLinear, cueSetsParameter, isCueForPack, isNightCue, linearToCss,
+    colourChannels, cssToLinear, cueSetsParameter, isCueForPack, linearToCss,
     setStageCueColour, setStageCueSetting, settingsWrittenIn, STAGE_PACK, stageCueValue, stageCueWarnings, stageLookAfterCue,
     stageLookBeforeCue, stageParameterGroups, stagePreview, type PackParameter, type Rgb, type StageLook,
   } from "../../model/looks";
   import { evTime } from "../../model/chart";
   import { round } from "../../model/tempo";
   import type { LookCue } from "../../model/types";
-  import { addStageCueAtPlayhead, convertNightCuesToStage, removeLookCue, selectLookCue } from "../../store/actions";
+  import { addStageCueAtPlayhead, removeLookCue, selectLookCue } from "../../store/actions";
   import { doc } from "../../store/document.svelte";
   import { editor } from "../../store/editor.svelte";
   import { seek } from "../../store/playback";
@@ -15,7 +15,6 @@
 
   const groups = stageParameterGroups();
   const visuals = $derived(doc.chart.visuals ?? []);
-  const nightCueCount = $derived(visuals.filter(isNightCue).length);
   const index = $derived(editor.selectedLookCue);
   const cue = $derived<LookCue | undefined>(visuals[index]);
   const isStageCue = $derived(!!cue && isCueForPack(cue, STAGE_PACK));
@@ -59,10 +58,6 @@
 
 <div class="row">
   <button class="primary" title="A BossBattles Stage cue at the playhead (or double-click the timeline's looks row)" onclick={addStageCueAtPlayhead}>+ Look at the playhead</button>
-  {#if nightCueCount}
-    <button onclick={convertNightCuesToStage}>Convert {nightCueCount} BossBattles Night cue{nightCueCount === 1 ? "" : "s"} to Stage</button>
-    <span class="note">Converted cues carry Night's look with them, so the chart looks the same - then use Stage's colours, fog and beat flashes.</span>
-  {/if}
 </div>
 
 {#if visuals.length}
@@ -102,10 +97,6 @@
         </select>
       </label>
     </div>
-
-    {#if isNightCue(cue)}
-      <div class="note">A BossBattles Night cue. Convert the chart's Night cues (above) to edit them here.</div>
-    {/if}
 
     {#if !isStageCue}
       <div class="list">
