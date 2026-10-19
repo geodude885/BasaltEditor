@@ -1,5 +1,5 @@
-import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
-import { existsSync } from "node:fs";
+import { app, BrowserWindow, dialog, ipcMain, nativeTheme, shell } from "electron";
+import { cpSync, existsSync } from "node:fs";
 import { readdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { basename, join, resolve } from "node:path";
@@ -15,7 +15,8 @@ function createWindow(): void {
     height: 900,
     minWidth: 900,
     minHeight: 600,
-    backgroundColor: "#15181c",
+    // The page sets the theme once it loads; until then, the system's.
+    backgroundColor: nativeTheme.shouldUseDarkColors ? "#131415" : "#f4f2ee",
     autoHideMenuBar: true,
     // Windows and macOS take the icon from the installed app; Linux windows need telling.
     ...(process.platform === "linux" && { icon: join(import.meta.dirname, "../renderer/icon.png") }),
@@ -106,7 +107,20 @@ ipcMain.handle(Channels.saveFile, async (event, suggestedName: string, bytes: Ui
   return picked.filePath;
 });
 
+ipcMain.handle(Channels.setTheme, (_event, theme: "system" | "dark" | "light") => {
+  if (["system", "dark", "light"].includes(theme)) nativeTheme.themeSource = theme;
+});
+
+/** Basalt Editor was the Boss Battles Chart Editor: bring its saved storage (the draft, settings) across once. */
+function moveOldStorage(): void {
+  const old = join(app.getPath("appData"), "Boss Battles Chart Editor", "Local Storage");
+  const now = join(app.getPath("userData"), "Local Storage");
+  if (existsSync(now) || !existsSync(old)) return;
+  try { cpSync(old, now, { recursive: true }); } catch (e) { console.error("could not move the old storage:", e); }
+}
+
 void app.whenReady().then(() => {
+  moveOldStorage();
   createWindow();
   app.on("activate", () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
   // Installed copies update themselves from GitHub Releases.

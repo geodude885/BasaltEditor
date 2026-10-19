@@ -1,6 +1,7 @@
 /* A workbench: the lane seen from above on the left, the chart's timeline across the right, settings
-   in tabs under the timeline. One committed dark look: a slate arena floor at night with the lane's
-   own orange as the accent. Components keep their own layout in <style>; what is shared lives here. */
+   in tabs under the timeline. Two looks, Basalt (dark) and Ash (light), chosen by <html data-theme>
+   (store/appearance.svelte.ts); the canvases read the same variables through views/theme.ts.
+   Components keep their own layout in <style>; what is shared lives here. */
 @import "@fontsource/barlow-condensed/600.css";
 @import "@fontsource/barlow-condensed/700.css";
 @import "@fontsource/ibm-plex-sans/400.css";
@@ -10,14 +11,23 @@
 @import "@fontsource/ibm-plex-mono/500.css";
 
 :root {
-  --ground: #15181c;      /* page */
-  --slab: #1d2127;        /* panels */
-  --slab-2: #262b33;      /* raised controls */
-  --line: #343a44;        /* hairlines */
-  --sand: #e9dcc4;        /* text */
-  --dust: #9a9184;        /* secondary text */
-  --lane: #ff7a1a;        /* accent: the lane lines */
-  --lane-soft: #ff7a1a33;
+  --display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
+  --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+
+/* Basalt: dark volcanic greys, the lane's orange as the ember. */
+:root, :root[data-theme="dark"] {
+  --bg: #131415;          /* page */
+  --panel: #1b1c1e;
+  --raised: #25272a;      /* controls */
+  --line: #35373b;        /* hairlines */
+  --text: #e7e3dc;
+  --text-dim: #9a958d;
+  --accent: #ff7a1a;      /* the lane's orange */
+  --accent-soft: #ff7a1a33;
+  --on-accent: #1b1006;
+  --wash: #ffffff;        /* what hover and band tints are mixed from: light on dark */
   --telegraph: #ffd166;   /* a projectile waiting */
   --move: #6fb7ff;        /* actor moves */
   --clip: #b38cff;        /* recorded clips */
@@ -25,42 +35,80 @@
   --phase: #4fd1a5;       /* phases */
   --bad: #ff5a5a;
   --good: #4fd1a5;
-  --display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
-  --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
-  --mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  /* Canvases. */
+  --timeline: #161719;
+  --grid: #212225;        /* half beats */
+  --grid-beat: #292b2e;
+  --grid-bar: #3a3c40;
+  --wave: #a9b0b8aa;
+  --floor: #18191b;       /* around the lane */
+  --lane-floor: #2a2622;
+  --lane-ends: #ffd36a;
+  --zone: #f2f2d9;
   color-scheme: dark;
 }
+
+/* Ash: the same, in daylight. Colours that are text get darker so they still read. */
+:root[data-theme="light"] {
+  --bg: #f4f2ee;
+  --panel: #eceae5;
+  --raised: #fbfaf8;
+  --line: #d4cfc6;
+  --text: #1c1c1e;
+  --text-dim: #6a655d;
+  --accent: #b85200;
+  --accent-soft: #b8520026;
+  --on-accent: #ffffff;
+  --wash: #000000;
+  --telegraph: #a86b00;
+  --move: #1f6fc2;
+  --clip: #7a4fd6;
+  --look: #c2408f;
+  --phase: #0d8a63;
+  --bad: #d42c2c;
+  --good: #0d8a63;
+  --timeline: #faf9f6;
+  --grid: #ece9e3;
+  --grid-beat: #e0dcd4;
+  --grid-bar: #c4bdb1;
+  --wave: #6b7a8caa;
+  --floor: #e2ded6;
+  --lane-floor: #d8cfc0;
+  --lane-ends: #a86b00;
+  --zone: #3d3a35;
+  color-scheme: light;
+}
 html, body { height: 100%; margin: 0; }
-body { background: var(--ground); color: var(--sand); font: 14px/1.45 var(--body); }
+body { background: var(--bg); color: var(--text); font: 14px/1.45 var(--body); }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 button, input, select, textarea { font: inherit; color: inherit; }
 button {
-  background: var(--slab-2); border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px;
+  background: var(--raised); border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px;
   cursor: pointer; white-space: nowrap;
 }
-button:hover { border-color: var(--dust); }
-button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--lane); outline-offset: 1px; }
-button.primary { background: var(--lane); color: #1b1006; border-color: var(--lane); font-weight: 600; }
-button.on { border-color: var(--lane); color: var(--lane); }
+button:hover { border-color: var(--text-dim); }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+button.primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 600; }
+button.on { border-color: var(--accent); color: var(--accent); }
 button:disabled { opacity: .45; cursor: default; }
-input, select, textarea { background: var(--ground); border: 1px solid var(--line); border-radius: 5px; padding: 4px 6px; min-width: 0; }
+input, select, textarea { background: var(--bg); border: 1px solid var(--line); border-radius: 5px; padding: 4px 6px; min-width: 0; }
 input[type=number] { font-family: var(--mono); font-variant-numeric: tabular-nums; }
-label { display: grid; gap: 2px; font-size: 12px; color: var(--dust); min-width: 0; }
+label { display: grid; gap: 2px; font-size: 12px; color: var(--text-dim); min-width: 0; }
 label > span { letter-spacing: .04em; text-transform: uppercase; font-size: 11px; }
 label.check { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
-a { color: var(--lane); }
+a { color: var(--accent); }
 
-h3 { margin: 4px 0 0; font: 700 14px var(--display); text-transform: uppercase; letter-spacing: .08em; color: var(--dust); }
+h3 { margin: 4px 0 0; font: 700 14px var(--display); text-transform: uppercase; letter-spacing: .08em; color: var(--text-dim); }
 .grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-.note { color: var(--dust); font-size: 13px; max-width: 70ch; }
-.confirm { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px 10px; border: 1px solid var(--lane); border-radius: 8px; background: var(--lane-soft); }
+.note { color: var(--text-dim); font-size: 13px; max-width: 70ch; }
+.confirm { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px 10px; border: 1px solid var(--accent); border-radius: 8px; background: var(--accent-soft); }
 .list { display: grid; gap: 6px; }
-.list .item { display: flex; flex-wrap: wrap; gap: 6px; align-items: end; padding: 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--ground); }
+.list .item { display: flex; flex-wrap: wrap; gap: 6px; align-items: end; padding: 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
 .list .item label { flex: 1 1 90px; }
 .clock { font: 500 20px/1 var(--mono); font-variant-numeric: tabular-nums; min-width: 9ch; }
-.clock small { font-size: 12px; color: var(--dust); margin-left: 6px; }
+.clock small { font-size: 12px; color: var(--text-dim); margin-left: 6px; }
 
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto; } }

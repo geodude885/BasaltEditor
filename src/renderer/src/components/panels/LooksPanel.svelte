@@ -164,21 +164,21 @@
 <style>
   .cues { display: flex; flex-wrap: wrap; gap: 6px; }
   .cues button { display: grid; gap: 1px; text-align: left; font-size: 12px; padding: 4px 8px; }
-  .cues button span { color: var(--dust); }
+  .cues button span { color: var(--text-dim); }
   .cues button.stage { border-left: 3px solid var(--look); }
-  .cues button[aria-selected="true"] { border-color: var(--look); background: #ff8fd022; }
+  .cues button[aria-selected="true"] { border-color: var(--look); background: color-mix(in srgb, var(--look) 13%, transparent); }
   .cue { display: grid; gap: 10px; padding-top: 8px; border-top: 1px solid var(--line); }
   .cue h3 { margin: 0; }
   .swatches { display: grid; grid-template-columns: repeat(3, 28px); gap: 2px; align-items: center; }
   .swatches span { height: 20px; border-radius: 3px; border: 1px solid var(--line); }
-  .swatches small { grid-column: 1 / -1; color: var(--dust); font-size: 11px; }
-  .arrow { color: var(--dust); }
-  .warning { padding: 4px 8px; border-left: 3px solid var(--telegraph); background: #ffd16614; font: 12px var(--mono); }
+  .swatches small { grid-column: 1 / -1; color: var(--text-dim); font-size: 11px; }
+  .arrow { color: var(--text-dim); }
+  .warning { padding: 4px 8px; border-left: 3px solid var(--telegraph); background: color-mix(in srgb, var(--telegraph) 8%, transparent); font: 12px var(--mono); }
   .groups { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
-  section { display: grid; gap: 4px; padding: 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--ground); align-content: start; }
+  section { display: grid; gap: 4px; padding: 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); align-content: start; }
   .setting { display: grid; grid-template-columns: auto 9.5em minmax(60px, 1fr) 5.5em; gap: 6px; align-items: center; font-size: 12px; }
-  .setting.inherited .name, .setting.inherited .channels { color: var(--dust); }
+  .setting.inherited .name, .setting.inherited .channels { color: var(--text-dim); }
   .setting input[type=color] { width: 100%; height: 22px; padding: 0 2px; }
   .channels { font: 11px var(--mono); }
-  input.hue { accent-color: var(--sand); background: linear-gradient(90deg, red, yellow, lime, cyan, blue, magenta, red); height: 6px; border-radius: 3px; }
+  input.hue { accent-color: var(--text); background: linear-gradient(90deg, red, yellow, lime, cyan, blue, magenta, red); height: 6px; border-radius: 3px; }
 </style>

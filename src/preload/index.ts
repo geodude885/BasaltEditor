@@ -6,6 +6,7 @@ const api: EditorApi = {
   openFolder: () => ipcRenderer.invoke(Channels.openFolder),
   saveChart: (folder, text) => ipcRenderer.invoke(Channels.saveChart, folder, text),
   saveFile: (suggestedName, bytes) => ipcRenderer.invoke(Channels.saveFile, suggestedName, bytes),
+  setTheme: theme => ipcRenderer.invoke(Channels.setTheme, theme),
 };
 
 contextBridge.exposeInMainWorld("editor", api);

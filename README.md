@@ -1,4 +1,4 @@
-# Boss Battles Chart Editor
+# Basalt Editor
 
 A desktop editor for [RUMBLE](https://store.steampowered.com/app/890550/RUMBLE/) Boss Battles charts:
 

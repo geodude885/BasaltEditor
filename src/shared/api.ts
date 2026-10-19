@@ -13,6 +13,8 @@ export interface EditorApi {
   saveChart(folder: string, text: string): Promise<void>;
   /** Asks where to save a file and writes it. The path it went to, or null when cancelled. */
   saveFile(suggestedName: string, bytes: Uint8Array): Promise<string | null>;
+  /** Puts the window frame and dialogs in the page's theme. */
+  setTheme(theme: "system" | "dark" | "light"): Promise<void>;
 }
 
 export const Channels = {
@@ -20,4 +22,5 @@ export const Channels = {
   openFolder: "editor:open-folder",
   saveChart: "editor:save-chart",
   saveFile: "editor:save-file",
+  setTheme: "editor:set-theme",
 } as const;

@@ -1,7 +1,9 @@
-# Working on the Boss Battles chart editor
+# Working on Basalt Editor
 
-A desktop editor for RUMBLE Boss Battles charts (`chart.json` plus song, cover and clips, packaged
-as `.bbchart`). It replaced the single-file HTML editor that used to ship inside the mod; the mod no
+Basalt Editor (formerly the Boss Battles Chart Editor) is a desktop editor for RUMBLE Boss Battles
+charts (`chart.json` plus song, cover and clips, packaged as `.bbchart`). Basalt is the editor's name
+only: the format, the game and the shader packs keep theirs (`.bbchart`, `BossBattlesChart`,
+`UserData/BossBattles`, "BossBattles Stage"), because they belong to the mod. It replaced the single-file HTML editor that used to ship inside the mod; the mod no
 longer bundles an editor. `README.md` covers the commands.
 
 ## Stack
@@ -81,6 +83,11 @@ src/renderer/src/
   `draw*` function; whatever state the draw reads is tracked, so it redraws when that changes.
   Interaction state that must redraw (a selection box) is `$state`; drag bookkeeping is a plain
   variable.
+- **Two themes, Basalt (dark) and Ash (light)**, picked by `<html data-theme>` from
+  `store/appearance.svelte.ts`. Every colour is a variable in `app.css`, defined for both - no hex in
+  components or draw code. Tints are `color-mix(...)` in CSS and `alpha(t.x, n)` on a canvas; `--wash`
+  is what hover and band tints mix from (white on dark, black on light). Canvases read the variables
+  through `theme(appearance.scheme)`, which makes the draw redraw when the theme changes.
 - **Inputs are one-way** (`value={...}` plus `onchange`), so each committed field is one undo step.
 
 ## The chart format and the game's numbers

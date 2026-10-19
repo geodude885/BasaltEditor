@@ -1,17 +1,28 @@
 // The page's colours and fonts for canvas drawing, read once from the CSS variables in app.css.
 
-export type Theme = Record<"ground" | "sand" | "dust" | "lane" | "telegraph" | "move" | "clip" | "look" | "phase" | "bad" | "body" | "mono", string>;
+const NAMES = {
+  text: "text", textDim: "text-dim", accent: "accent", wash: "wash", telegraph: "telegraph", move: "move", clip: "clip", look: "look",
+  phase: "phase", bad: "bad", timeline: "timeline", grid: "grid", gridBeat: "grid-beat", gridBar: "grid-bar", wave: "wave",
+  floor: "floor", laneFloor: "lane-floor", laneEnds: "lane-ends", zone: "zone", body: "body", mono: "mono",
+} as const;
 
-let cached: Theme | null = null;
+export type Theme = Record<keyof typeof NAMES, string>;
 
-export function theme(): Theme {
-  if (cached) return cached;
-  const style = getComputedStyle(document.documentElement), v = (name: string) => style.getPropertyValue(`--${name}`).trim();
-  cached = {
-    ground: v("ground"), sand: v("sand"), dust: v("dust"), lane: v("lane"), telegraph: v("telegraph"),
-    move: v("move"), clip: v("clip"), look: v("look"), phase: v("phase"), bad: v("bad"), body: v("body"), mono: v("mono"),
-  };
-  return cached;
+const cached = new Map<string, Theme>();
+
+/** The colours for a scheme ("dark" or "light"), once <html> carries it. Passing it makes a draw depend on it. */
+export function theme(scheme: string): Theme {
+  let t = cached.get(scheme);
+  if (t) return t;
+  const style = getComputedStyle(document.documentElement);
+  t = Object.fromEntries(Object.entries(NAMES).map(([key, name]) => [key, style.getPropertyValue(`--${name}`).trim()])) as Theme;
+  cached.set(scheme, t);
+  return t;
+}
+
+/** A #rrggbb colour at some opacity, for the canvas. */
+export function alpha(colour: string, opacity: number): string {
+  return colour + Math.round(Math.max(0, Math.min(1, opacity)) * 255).toString(16).padStart(2, "0");
 }
 
 /** Sizes a canvas's backing store to its laid-out size at the screen's pixel ratio, and returns a context drawing in CSS pixels. */
@@ -34,7 +45,7 @@ export const boxIsAClick = (box: Box): boolean =>
   Math.abs(box.x1 - box.x0) < BOX_SMALLER_THAN_THIS_IS_A_CLICK_PIXELS && Math.abs(box.y1 - box.y0) < BOX_SMALLER_THAN_THIS_IS_A_CLICK_PIXELS;
 
 export function drawBox(ctx: CanvasRenderingContext2D, b: Box, t: Theme): void {
-  ctx.strokeStyle = t.sand; ctx.lineWidth = 1; ctx.setLineDash([4, 3]);
+  ctx.strokeStyle = t.text; ctx.lineWidth = 1; ctx.setLineDash([4, 3]);
   ctx.strokeRect(b.x0, b.y0, b.x1 - b.x0, b.y1 - b.y0); ctx.setLineDash([]);
-  ctx.fillStyle = "#ffffff10"; ctx.fillRect(b.x0, b.y0, b.x1 - b.x0, b.y1 - b.y0);
+  ctx.fillStyle = alpha(t.wash, 0.06); ctx.fillRect(b.x0, b.y0, b.x1 - b.x0, b.y1 - b.y0);
 }

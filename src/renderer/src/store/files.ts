@@ -9,6 +9,11 @@ import { loadSong, unloadSong } from "./playback";
 
 const api = () => window.editor;
 
+/** The desktop app's frame and dialogs in the page's theme. Nothing to do in a browser. */
+export function followTheme(choice: "system" | "dark" | "light"): void {
+  void window.editor?.setTheme(choice);
+}
+
 function clearFiles(): void {
   editor.files = new Map();
   editor.clips = new Map();

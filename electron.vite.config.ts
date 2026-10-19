@@ -1,6 +1,9 @@
+import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { defineConfig } from "electron-vite";
 import { svelte } from "@sveltejs/vite-plugin-svelte";
+
+const { version } = JSON.parse(readFileSync("package.json", "utf8"));
 
 export default defineConfig({
   main: {},
@@ -10,6 +13,7 @@ export default defineConfig({
   },
   renderer: {
     resolve: { alias: { $data: resolve("data") } },
+    define: { __APP_VERSION__: JSON.stringify(version) },
     plugins: [svelte()],
   },
 });

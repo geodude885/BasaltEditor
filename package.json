@@ -1,8 +1,8 @@
 {
-  "name": "bossbattles-chart-editor",
-  "productName": "Boss Battles Chart Editor",
-  "version": "0.1.2",
-  "description": "Chart editor for RUMBLE Boss Battles",
+  "name": "basalt-editor",
+  "productName": "Basalt Editor",
+  "version": "0.2.0",
+  "description": "Basalt Editor - a chart editor for RUMBLE Boss Battles",
   "author": "ACutiePi",
   "private": true,
   "type": "module",

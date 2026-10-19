@@ -4,6 +4,7 @@
   import { laneOf } from "../../model/chart";
   import { addProjectile, pickCycled, select } from "../../store/actions";
   import { doc } from "../../store/document.svelte";
+  import { appearance } from "../../store/appearance.svelte";
   import { editor } from "../../store/editor.svelte";
   import { boxIsAClick, prepare, theme, type Box } from "../theme";
   import { drawLane } from "./draw";
@@ -20,7 +21,7 @@
 
   $effect(() => {
     if (!w || !h) return;
-    drawLane(prepare(canvas, w, h), w, h, map, { chart: doc.chart, tempo: doc.tempo, time: editor.time, selection: editor.selection, box }, theme());
+    drawLane(prepare(canvas, w, h), w, h, map, { chart: doc.chart, tempo: doc.tempo, time: editor.time, selection: editor.selection, box }, theme(appearance.scheme));
   });
 
   const pointerAt = (ev: PointerEvent): [number, number] => { const r = canvas.getBoundingClientRect(); return [ev.clientX - r.left, ev.clientY - r.top]; };

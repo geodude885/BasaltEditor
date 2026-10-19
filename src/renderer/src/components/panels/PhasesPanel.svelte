@@ -34,6 +34,6 @@
 <style>
   .phases { display: flex; flex-wrap: wrap; gap: 6px; }
   .phases button { display: grid; gap: 1px; text-align: left; font-size: 12px; padding: 4px 8px; border-left: 3px solid var(--phase); }
-  .phases button span { color: var(--dust); }
-  .phases button[aria-selected="true"] { border-color: var(--phase); background: #4fd1a522; }
+  .phases button span { color: var(--text-dim); }
+  .phases button[aria-selected="true"] { border-color: var(--phase); background: color-mix(in srgb, var(--phase) 13%, transparent); }
 </style>

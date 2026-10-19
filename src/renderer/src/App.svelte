@@ -23,7 +23,7 @@
     if (!draft) toast("This is an example chart - open your own chart's files, or press New");
   });
 
-  $effect(() => { document.title = `${doc.dirty ? "• " : ""}${doc.chart.name || "Untitled"} - Boss Battles Chart Editor`; });
+  $effect(() => { document.title = `${doc.dirty ? "• " : ""}${doc.chart.name || "Untitled"} - Basalt Editor`; });
 
   // Drop files anywhere. The hint shows only while files are being dragged over the window: every
   // dragover keeps it up, and it goes a moment after they stop (a cancelled drag sends no reliable "leave").
@@ -71,16 +71,16 @@
 <style>
   .app { height: 100%; display: grid; grid-template-rows: auto 1fr; padding-inline: 16px; }
   .work { display: grid; grid-template-columns: minmax(260px, 340px) minmax(0, 1fr); gap: 16px; padding-block: 12px; min-height: 0; }
-  .pane { background: var(--slab); border: 1px solid var(--line); border-radius: 10px; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
-  .pane h2 { margin: 0; font: 700 15px/1 var(--display); text-transform: uppercase; letter-spacing: .08em; color: var(--dust); padding: 10px 12px 6px; }
+  .pane { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+  .pane h2 { margin: 0; font: 700 15px/1 var(--display); text-transform: uppercase; letter-spacing: .08em; color: var(--text-dim); padding: 10px 12px 6px; }
   .lanepane { overflow: auto; }
   .timepane { display: grid; grid-template-rows: auto auto minmax(0, 1fr); }
   .toast {
-    position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); background: var(--slab-2); border: 1px solid var(--lane);
+    position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); background: var(--raised); border: 1px solid var(--accent);
     padding: 8px 14px; border-radius: 8px; font-size: 13px; z-index: 5; max-width: calc(100% - 32px);
   }
   .drop {
-    position: fixed; inset: 0; background: #ff7a1a22; border: 3px dashed var(--lane); display: none; place-items: center;
+    position: fixed; inset: 0; background: color-mix(in srgb, var(--accent) 13%, transparent); border: 3px dashed var(--accent); display: none; place-items: center;
     font: 700 28px var(--display); text-transform: uppercase; z-index: 4; pointer-events: none;
   }
   .drop.show { display: grid; }

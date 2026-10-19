@@ -12,6 +12,6 @@
 
 <style>
   .problems { display: grid; gap: 4px; font: 13px var(--mono); }
-  .problems div { padding: 4px 8px; border-left: 3px solid var(--bad); background: #ff5a5a14; }
-  .problems .none { border-left-color: var(--good); background: #4fd1a514; }
+  .problems div { padding: 4px 8px; border-left: 3px solid var(--bad); background: color-mix(in srgb, var(--bad) 8%, transparent); }
+  .problems .none { border-left-color: var(--good); background: color-mix(in srgb, var(--good) 8%, transparent); }
 </style>

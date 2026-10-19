@@ -2,7 +2,7 @@ import { actorSpotAt, actorsOf, evTime, flightTime, isGrounded, laneOf, zoneOf }
 import { GROUNDED, PLAYER_HEAD } from "../../model/constants";
 import { round, type Tempo } from "../../model/tempo";
 import type { LoadedChart } from "../../model/types";
-import { drawBox, type Box, type Theme } from "../theme";
+import { alpha, drawBox, type Box, type Theme } from "../theme";
 import { footprint, isRound, originPx, type LaneMap } from "./geometry";
 
 export type LaneScene = {
@@ -19,15 +19,15 @@ export function drawLane(ctx: CanvasRenderingContext2D, w: number, h: number, ma
   ctx.clearRect(0, 0, w, h);
 
   // Floor, lane, ends, backstop.
-  ctx.fillStyle = "#1a1e23"; ctx.fillRect(0, 0, w, h);
-  ctx.fillStyle = "#2a2622";
+  ctx.fillStyle = t.floor; ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = t.laneFloor;
   const [lx0, lz0] = P(-L.width / 2, L.length), [lx1, lz1] = P(L.width / 2, 0);
   ctx.fillRect(lx0, lz0, lx1 - lx0, lz1 - lz0);
-  ctx.strokeStyle = t.lane; ctx.lineWidth = 2;
+  ctx.strokeStyle = t.accent; ctx.lineWidth = 2;
   ctx.beginPath(); ctx.moveTo(lx0, lz0); ctx.lineTo(lx0, lz1); ctx.moveTo(lx1, lz0); ctx.lineTo(lx1, lz1); ctx.stroke();
-  ctx.strokeStyle = "#ffd36a";
+  ctx.strokeStyle = t.laneEnds;
   ctx.beginPath(); ctx.moveTo(lx0, lz1); ctx.lineTo(lx1, lz1); ctx.moveTo(lx0, lz0); ctx.lineTo(lx1, lz0); ctx.stroke();
-  ctx.strokeStyle = "#ff7a1a66"; ctx.setLineDash([4, 4]);
+  ctx.strokeStyle = alpha(t.accent, 0.4); ctx.setLineDash([4, 4]);
   const [bx0, bz] = P(-L.width / 2 - 1, -0.9), [bx1] = P(L.width / 2 + 1, -0.9);
   ctx.beginPath(); ctx.moveTo(bx0, bz); ctx.lineTo(bx1, bz); ctx.stroke(); ctx.setLineDash([]);
 
@@ -35,25 +35,25 @@ export function drawLane(ctx: CanvasRenderingContext2D, w: number, h: number, ma
   const Z = zoneOf(c);
   if (Z.length < L.length) {
     const [zx0, zy] = P(-L.width / 2, Z.length), [zx1] = P(L.width / 2, Z.length);
-    ctx.fillStyle = "#ffffff0d"; ctx.fillRect(zx0, zy, zx1 - zx0, lz1 - zy);
-    ctx.strokeStyle = "#f2f2d9"; ctx.lineWidth = 1.5; ctx.setLineDash([6, 4]);
+    ctx.fillStyle = alpha(t.wash, 0.05); ctx.fillRect(zx0, zy, zx1 - zx0, lz1 - zy);
+    ctx.strokeStyle = t.zone; ctx.lineWidth = 1.5; ctx.setLineDash([6, 4]);
     ctx.beginPath(); ctx.moveTo(zx0, zy); ctx.lineTo(zx1, zy); ctx.stroke(); ctx.setLineDash([]);
-    ctx.fillStyle = "#f2f2d9"; ctx.font = `10px ${t.mono}`; ctx.textAlign = "left";
+    ctx.fillStyle = t.zone; ctx.font = `10px ${t.mono}`; ctx.textAlign = "left";
     ctx.fillText(`your zone · ${Z.height} m high`, zx1 + 4, zy + 3);
   }
 
   // Metre ticks along the left edge.
-  ctx.fillStyle = t.dust; ctx.font = `10px ${t.mono}`; ctx.textAlign = "right";
+  ctx.fillStyle = t.textDim; ctx.font = `10px ${t.mono}`; ctx.textAlign = "right";
   for (let z = 0; z <= L.length; z += 2) { const [x, y] = P(-L.width / 2, z); ctx.fillText(`${z}m`, x - 5, y + 3); }
 
   // You, and the actors where they stand at the playhead.
   const [yx, yy] = P(0, 0);
-  ctx.fillStyle = t.sand; ctx.beginPath(); ctx.arc(yx, yy, 7, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = t.dust; ctx.textAlign = "center"; ctx.fillText("you", yx, yy + 20);
+  ctx.fillStyle = t.text; ctx.beginPath(); ctx.arc(yx, yy, 7, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = t.textDim; ctx.textAlign = "center"; ctx.fillText("you", yx, yy + 20);
   for (const a of actorsOf(c)) {
     const at = actorSpotAt(c, a, time, tp), [ax, ay] = P(at.x, at.z);
     ctx.fillStyle = t.move; ctx.beginPath(); ctx.arc(ax, ay, 8, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = t.sand; ctx.font = `600 11px ${t.body}`; ctx.fillText(a.name || a.id || "", ax, ay - 13);
+    ctx.fillStyle = t.text; ctx.font = `600 11px ${t.body}`; ctx.fillText(a.name || a.id || "", ax, ay - 13);
   }
 
   // Projectiles: faint where they start; spawned ones at the playhead (yellow until thrown); the selection with its aim.
@@ -68,10 +68,10 @@ export function drawLane(ctx: CanvasRenderingContext2D, w: number, h: number, ma
     const flight = flightTime(s, aim);
 
     if (selected) {
-      ctx.strokeStyle = t.lane; ctx.lineWidth = 2; ctx.setLineDash([6, 4]);
+      ctx.strokeStyle = t.accent; ctx.lineWidth = 2; ctx.setLineDash([6, 4]);
       ctx.beginPath(); ctx.moveTo(fx, fy); ctx.lineTo(tx, ty); ctx.stroke(); ctx.setLineDash([]);
-      ctx.fillStyle = t.lane; ctx.beginPath(); ctx.arc(tx, ty, 5, 0, Math.PI * 2); ctx.fill();
-      ctx.font = `10px ${t.mono}`; ctx.fillStyle = t.sand; ctx.textAlign = "left";
+      ctx.fillStyle = t.accent; ctx.beginPath(); ctx.arc(tx, ty, 5, 0, Math.PI * 2); ctx.fill();
+      ctx.font = `10px ${t.mono}`; ctx.fillStyle = t.text; ctx.textAlign = "left";
       ctx.fillText(isGrounded(s) ? "grounded" : GROUNDED.includes(s.structure) ? "on the floor" : `y ${round(+s.from.y || 0, 2)}`, fx + 10, fy + 4);
     }
     // Not in play: faded by how far it is from the playhead - what is coming soon stands out, what has
@@ -87,10 +87,10 @@ export function drawLane(ctx: CanvasRenderingContext2D, w: number, h: number, ma
       x = fx + (tx - fx) * k; y = fy + (ty - fy) * k;
     }
     ctx.globalAlpha = alpha;
-    ctx.fillStyle = time < launch && live ? t.telegraph : (live ? t.lane : t.sand);
+    ctx.fillStyle = time < launch && live ? t.telegraph : (live ? t.accent : t.text);
     shape(ctx, s.structure, map.scale, x, y);
     ctx.globalAlpha = 1;
-    if (selected) { ctx.strokeStyle = t.sand; ctx.lineWidth = 1.5; shape(ctx, s.structure, map.scale, x, y, 5, true); }
+    if (selected) { ctx.strokeStyle = t.text; ctx.lineWidth = 1.5; shape(ctx, s.structure, map.scale, x, y, 5, true); }
   });
 
   if (scene.box) drawBox(ctx, scene.box, t);

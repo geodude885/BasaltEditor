@@ -11,9 +11,9 @@ import { doc } from "./document.svelte";
 export type Tab = "chart" | "phases" | "looks" | "tempo" | "actors" | "problems" | "help";
 export type Song = { name: string; url: string; buffer: AudioBuffer | null; peaks: Peaks | null };
 
-const VOLUME_KEY = "bb-editor-volume";
-const COLLAPSED_ROWS_KEY = "bb-editor-collapsed-timeline-rows";
-const EXTRA_TIMELINE_HEIGHT_KEY = "bb-editor-extra-timeline-height";
+const VOLUME_KEY = "basalt-volume";
+const COLLAPSED_ROWS_KEY = "basalt-collapsed-timeline-rows";
+const EXTRA_TIMELINE_HEIGHT_KEY = "basalt-extra-timeline-height";
 
 function savedVolume(): number {
   try { const v = parseFloat(localStorage.getItem(VOLUME_KEY) ?? ""); if (v >= 0 && v <= 1) return v; } catch { /* half */ }

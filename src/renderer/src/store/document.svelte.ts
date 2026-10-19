@@ -6,7 +6,7 @@ import * as Jsonc from "../model/jsonc";
 import { Tempo } from "../model/tempo";
 import type { LoadedChart } from "../model/types";
 
-const DRAFT_KEY = "bb-editor-draft";
+const DRAFT_KEY = "basalt-draft";
 const MAX_UNDO = 200;
 
 export function parseChart(text: string): LoadedChart {

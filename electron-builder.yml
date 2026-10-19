@@ -1,5 +1,5 @@
-appId: com.acutiepi.bossbattles.charteditor
-productName: Boss Battles Chart Editor
+appId: com.acutiepi.basalt
+productName: Basalt Editor
 directories:
   buildResources: build
   output: dist

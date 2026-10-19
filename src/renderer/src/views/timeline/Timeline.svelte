@@ -7,6 +7,7 @@
     addMove, addProjectile, addStageCueAtPlayhead, pickCycled, select, selectLookCue, selectPhase, setExtraTimelineHeight, toggleTimelineRow, zoom,
   } from "../../store/actions";
   import { doc } from "../../store/document.svelte";
+  import { appearance } from "../../store/appearance.svelte";
   import { editor } from "../../store/editor.svelte";
   import { seek, songStart } from "../../store/playback";
   import { boxIsAClick, prepare, theme, type Box } from "../theme";
@@ -34,7 +35,7 @@
       chart: doc.chart, tempo: doc.tempo, view: editor.view, time: editor.time, snap: editor.snap,
       selection: editor.selection, selectedPhase: editor.selectedPhase, lookCues: editor.lookCues, selectedLookCue: editor.selectedLookCue,
       markers: placed, song: editor.song, songStart: songStart(), clips: editor.clips, box, layout,
-    }, theme());
+    }, theme(appearance.scheme));
   });
 
   const secondsAt = (x: number) => tOf(editor.view, x);
@@ -168,17 +169,17 @@
 
 <style>
   .timeline { display: grid; grid-template-columns: 108px minmax(0, 1fr); border-bottom: 1px solid var(--line); }
-  .row-headers { position: relative; border-right: 1px solid var(--line); background: #15181c; }
+  .row-headers { position: relative; border-right: 1px solid var(--line); background: var(--bg); }
   .row-header {
     position: absolute; left: 0; right: 0; display: flex; align-items: center; gap: 4px; padding: 0 6px; border: 0;
-    border-radius: 0; background: none; color: var(--dust); font: 600 10px var(--body); text-transform: uppercase;
+    border-radius: 0; background: none; color: var(--text-dim); font: 600 10px var(--body); text-transform: uppercase;
     letter-spacing: .05em; text-align: left; overflow: hidden;
   }
-  .row-header:hover { color: var(--sand); background: #ffffff08; }
+  .row-header:hover { color: var(--text); background: color-mix(in srgb, var(--wash) 3%, transparent); }
   .row-header.collapsed { font-size: 9px; }
   .chevron { font-size: 9px; width: 9px; flex: none; }
   .canvas { min-width: 0; }
   canvas { width: 100%; display: block; touch-action: none; }
   .resize-handle { grid-column: 1 / -1; height: 6px; cursor: row-resize; background: var(--line); touch-action: none; }
-  .resize-handle:hover { background: var(--dust); }
+  .resize-handle:hover { background: var(--text-dim); }
 </style>

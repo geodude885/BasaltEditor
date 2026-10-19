@@ -37,7 +37,7 @@ export const SAMPLE = `{
 
 /** A new chart. */
 export const template = (name: string, author?: string): string => `{
-  // Made in the Boss Battles chart editor. The full format: docs/chart-format.md in the mod's repository.
+  // Made in Basalt Editor. The full format: docs/chart-format.md in the mod's repository.
   "format": 1,
   "name": ${JSON.stringify(name)},
   "author": ${JSON.stringify(author || "you")},

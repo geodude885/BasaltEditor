@@ -134,6 +134,6 @@
   .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
   .stat { display: grid; gap: 2px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; }
   .stat b { font: 600 20px var(--mono); font-variant-numeric: tabular-nums; }
-  .stat span { font-size: 11px; color: var(--dust); text-transform: uppercase; letter-spacing: .05em; }
+  .stat span { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .05em; }
   img { max-height: 96px; max-width: 100%; border-radius: 6px; }
 </style>
