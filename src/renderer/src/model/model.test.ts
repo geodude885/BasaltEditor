@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { actorSpotAt, actorsOf, endOf, evTime, setEvTime, zoneOf } from "./chart";
-import { addPhaseAt, addTempoChange, mirror, newTimed, resizeLane } from "./edits";
+import {
+  addPhaseAt, addTempoChange, mirror, newTimed, resizeLane, setArenaSpot, setLaneColour, setMusic, setRules, setTopLevelValueOrRemoveIfEmpty, setWallsShown, setZone,
+} from "./edits";
 import { parse } from "./jsonc";
 import { density, problems } from "./problems";
 import { SAMPLE, template } from "./samples";
@@ -119,5 +121,45 @@ describe("edits", () => {
     expect(c.phases!.map(p => p.start)).toEqual([0, 2, 4]);
     addTempoChange(c, 2, tp);
     expect(c.bpm).toEqual([{ beat: 0, bpm: 120 }, { beat: 4, bpm: 120 }]);
+  });
+});
+
+describe("settings that are more than one field", () => {
+  it("removes empty top-level values", () => {
+    const c = load(SAMPLE);
+    setTopLevelValueOrRemoveIfEmpty(c, "end", Number.NaN);
+    setTopLevelValueOrRemoveIfEmpty(c, "description", "");
+    expect(c.end).toBeUndefined();
+    expect(c.description).toBeUndefined();
+  });
+
+  it("writes lane colours as colours, dropping colors", () => {
+    const c = load(SAMPLE);
+    c.colors = { edges: "#ffffff" };
+    setLaneColour(c, "ends", "#00ff00");
+    expect(c.colors).toBeUndefined();
+    expect(c.colours).toEqual({ edges: "#ffffff", ends: "#00ff00" });
+    setWallsShown(c, true, "#66ccff", 0.5);
+    expect(c.colours?.walls).toBe("#66ccff80");
+    setLaneColour(c, "edges", undefined); setLaneColour(c, "ends", undefined); setWallsShown(c, false, "#000000", 0);
+    expect(c.colours).toBeUndefined();
+  });
+
+  it("keeps zone, rules, arena spot and music tidy", () => {
+    const c = load(SAMPLE);
+    setZone(c, 8, undefined);
+    expect(c.zone).toEqual({ length: 8 });
+    setZone(c, undefined, undefined);
+    expect(c.zone).toBeUndefined();
+    setRules(c, "discs", -2);
+    expect(c.rules).toEqual({ spawn: "discs", cleanup: 0 });
+    setRules(c, "all", undefined);
+    expect(c.rules).toBeUndefined();
+    setArenaSpot(c, 1, undefined, 90);
+    expect(c.arena).toEqual({ map: "pit", facing: 90 });
+    setMusic(c, "  song.ogg ", Number.NaN, 4);
+    expect(c.music).toEqual({ file: "song.ogg", start: 0, volume: 1 });
+    setMusic(c, "", 0, 1);
+    expect(c.music).toBeUndefined();
   });
 });

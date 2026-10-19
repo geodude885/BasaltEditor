@@ -1,0 +1,53 @@
+{
+    "name": "BossBattles Stage",
+    "author": "ACutiePi",
+    "version": "1.0.0",
+    "bundle": "bossbattlesstage.bundle",
+    "material": "M_BossBattlesStage",
+    "priority": 0,
+    "listen": [ "bossbattles.hit" ],
+    "parameters": [
+        { "property": "_KeyHue",         "label": "Key hue",             "default": 0,     "min": 0,   "max": 360, "group": "Colour" },
+        { "property": "_KeyStrictness",  "label": "Key strictness",      "default": 2.5,   "min": 0.5, "max": 8,   "group": "Colour" },
+        { "property": "_KeyKeep",        "label": "Key colour kept",     "default": 1,     "min": 0,   "max": 1,   "group": "Colour" },
+        { "property": "_Saturation",     "label": "Saturation",          "default": 1,     "min": 0,   "max": 1.5, "group": "Colour" },
+        { "property": "_Darkness",       "label": "Darkness",            "default": 0,   "min": 0,   "max": 1,   "group": "Colour" },
+        { "property": "_Contrast",       "label": "Contrast",            "default": 1,     "min": 0.5, "max": 2,   "group": "Colour" },
+        { "property": "_TintAmount",     "label": "Tint",                "default": 0,     "min": 0,   "max": 1,   "group": "Colour" },
+        { "property": "_TintR",          "label": "Tint R",              "default": 1,     "min": 0,   "max": 1,   "group": "Colour", "colour": "Tint colour" },
+        { "property": "_TintG",          "label": "Tint G",              "default": 1,     "min": 0,   "max": 1,   "group": "Colour", "colour": "Tint colour" },
+        { "property": "_TintB",          "label": "Tint B",              "default": 1,     "min": 0,   "max": 1,   "group": "Colour", "colour": "Tint colour" },
+
+        { "property": "_Glow",           "label": "Glow",                "default": 0,   "min": 0,   "max": 3,   "group": "Glow" },
+        { "property": "_GlowRadius",     "label": "Glow radius",         "default": 3,     "min": 0,   "max": 8,   "group": "Glow" },
+        { "property": "_GlowR",          "label": "Glow colour R",       "default": 1,     "min": 0,   "max": 1,   "group": "Glow", "colour": "Glow colour" },
+        { "property": "_GlowG",          "label": "Glow colour G",       "default": 0.08,  "min": 0,   "max": 1,   "group": "Glow", "colour": "Glow colour" },
+        { "property": "_GlowB",          "label": "Glow colour B",       "default": 0.04,  "min": 0,   "max": 1,   "group": "Glow", "colour": "Glow colour" },
+
+        { "property": "_FogDensity",     "label": "Fog density",         "default": 0,  "min": 0,   "max": 0.3, "group": "Fog" },
+        { "property": "_FogStart",       "label": "Fog start",           "default": 0,     "min": 0,   "max": 30,  "group": "Fog" },
+        { "property": "_SkyFog",         "label": "Sky fog",             "default": 1,     "min": 0,   "max": 1,   "group": "Fog" },
+        { "property": "_FogKeyResist",   "label": "Key through fog",     "default": 0.6,   "min": 0,   "max": 1,   "group": "Fog" },
+        { "property": "_FogR",           "label": "Fog colour R",        "default": 0.035, "min": 0,   "max": 1,   "group": "Fog", "colour": "Fog colour" },
+        { "property": "_FogG",           "label": "Fog colour G",        "default": 0,     "min": 0,   "max": 1,   "group": "Fog", "colour": "Fog colour" },
+        { "property": "_FogB",           "label": "Fog colour B",        "default": 0.004, "min": 0,   "max": 1,   "group": "Fog", "colour": "Fog colour" },
+
+        { "property": "_BeatPulse",      "label": "Beat pulse",          "default": 0,  "min": 0,   "max": 1,   "group": "Beat" },
+        { "property": "_PulseSharpness", "label": "Pulse sharpness",     "default": 6,     "min": 1,   "max": 20,  "group": "Beat" },
+        { "property": "_BeatFlash",      "label": "Beat flash",          "default": 0,     "min": 0,   "max": 0.5, "group": "Beat" },
+        { "property": "_BeatFlashR",     "label": "Beat flash colour R", "default": 1,     "min": 0,   "max": 1,   "group": "Beat", "colour": "Beat flash colour" },
+        { "property": "_BeatFlashG",     "label": "Beat flash colour G", "default": 1,     "min": 0,   "max": 1,   "group": "Beat", "colour": "Beat flash colour" },
+        { "property": "_BeatFlashB",     "label": "Beat flash colour B", "default": 1,     "min": 0,   "max": 1,   "group": "Beat", "colour": "Beat flash colour" },
+
+        { "property": "_Vignette",       "label": "Vignette",            "default": 0,   "min": 0,   "max": 1,   "group": "Edges" },
+        { "property": "_VignetteSize",   "label": "Vignette size",       "default": 2.8,   "min": 0.5, "max": 6,   "group": "Edges" },
+        { "property": "_VignetteR",      "label": "Vignette colour R",   "default": 0,     "min": 0,   "max": 1,   "group": "Edges", "colour": "Vignette colour" },
+        { "property": "_VignetteG",      "label": "Vignette colour G",   "default": 0,     "min": 0,   "max": 1,   "group": "Edges", "colour": "Vignette colour" },
+        { "property": "_VignetteB",      "label": "Vignette colour B",   "default": 0,     "min": 0,   "max": 1,   "group": "Edges", "colour": "Vignette colour" },
+        { "property": "_HitFlash",       "label": "Hit flash",           "default": 0,   "min": 0,   "max": 1,   "group": "Edges" },
+        { "property": "_LowHealth",      "label": "Low health",          "default": 0,   "min": 0,   "max": 1,   "group": "Edges" },
+        { "property": "_DangerR",        "label": "Danger colour R",     "default": 0.6,   "min": 0,   "max": 1,   "group": "Edges", "colour": "Danger colour" },
+        { "property": "_DangerG",        "label": "Danger colour G",     "default": 0,     "min": 0,   "max": 1,   "group": "Edges", "colour": "Danger colour" },
+        { "property": "_DangerB",        "label": "Danger colour B",     "default": 0,     "min": 0,   "max": 1,   "group": "Edges", "colour": "Danger colour" }
+    ]
+}

@@ -3,10 +3,12 @@
   import ActorsPanel from "./panels/ActorsPanel.svelte";
   import ChartPanel from "./panels/ChartPanel.svelte";
   import HelpPanel from "./panels/HelpPanel.svelte";
+  import LooksPanel from "./panels/LooksPanel.svelte";
+  import PhasesPanel from "./panels/PhasesPanel.svelte";
   import ProblemsPanel from "./panels/ProblemsPanel.svelte";
   import TempoPanel from "./panels/TempoPanel.svelte";
 
-  const tabs: [Tab, string][] = [["chart", "Chart"], ["tempo", "Tempo"], ["actors", "Actors"], ["problems", "Problems"], ["help", "Keys & help"]];
+  const tabs: [Tab, string][] = [["chart", "Chart"], ["phases", "Phases"], ["looks", "Looks"], ["tempo", "Tempo"], ["actors", "Actors"], ["problems", "Problems"], ["help", "Keys & help"]];
 </script>
 
 <div class="tabs">
@@ -17,6 +19,8 @@
   </div>
   <div class="panel" role="tabpanel">
     {#if editor.tab === "chart"}<ChartPanel />
+    {:else if editor.tab === "phases"}<PhasesPanel />
+    {:else if editor.tab === "looks"}<LooksPanel />
     {:else if editor.tab === "tempo"}<TempoPanel />
     {:else if editor.tab === "actors"}<ActorsPanel />
     {:else if editor.tab === "problems"}<ProblemsPanel />

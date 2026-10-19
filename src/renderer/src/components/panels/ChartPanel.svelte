@@ -1,17 +1,18 @@
 <script lang="ts">
-  import { alphaOf, coloursOf, endOf, laneOf, withAlpha, zoneOf } from "../../model/chart";
+  import { alphaOf, coloursOf, endOf, laneOf, zoneOf } from "../../model/chart";
   import { DIFFICULTIES, LANE_COLOURS, MAPS, WALL_COLOUR, WALL_DEFAULT } from "../../model/constants";
-  import { resizeLane } from "../../model/edits";
+  import {
+    resizeLane, setArenaSpot, setLaneColour, setMusic, setRules, setTopLevelValueOrRemoveIfEmpty, setWallsShown, setZone,
+  } from "../../model/edits";
   import { density } from "../../model/problems";
   import { round } from "../../model/tempo";
-  import type { LaneColours, LoadedChart } from "../../model/types";
+  import type { LoadedChart } from "../../model/types";
   import { endWithSong, toast } from "../../store/actions";
   import { doc } from "../../store/document.svelte";
   import { editor } from "../../store/editor.svelte";
   import { newChart } from "../../store/files";
   import { songLength } from "../../store/playback";
   import { checked, num, optionalNum, text } from "../fields";
-  import PhaseEditor from "./PhaseEditor.svelte";
 
   const c = $derived(doc.chart);
   const lane = $derived(laneOf(c));
@@ -19,71 +20,13 @@
   const stats = $derived(density(c, doc.tempo));
   const end = $derived(endOf(c, doc.tempo));
   const colours = $derived(coloursOf(c));
-  const phase = $derived(editor.selectedPhase >= 0 ? c.phases?.[editor.selectedPhase] : undefined);
   const song = $derived(editor.song?.buffer ? songLength() : null);
   const walls = $derived(colours.walls);
   const m = $derived(c.music);
 
-  /** Sets a top-level key; empty values remove it. */
-  function set<K extends keyof LoadedChart>(key: K, value: LoadedChart[K] | undefined | ""): void {
-    doc.change([key], () => {
-      if (value === undefined || value === "" || (typeof value === "number" && Number.isNaN(value))) delete c[key];
-      else c[key] = value;
-    });
-  }
-
-  function setColours(next: LaneColours): void {
-    doc.change(["colours", "colors"], () => {
-      delete c.colors;
-      if (Object.keys(next).length) c.colours = next; else delete c.colours;
-    });
-  }
-
-  function setLaneColour(key: string, value: string | undefined): void {
-    const next: Record<string, string | undefined> = { ...colours };
-    if (value) next[key] = value; else delete next[key];
-    setColours(next as LaneColours);
-  }
-
-  function setWalls(show: boolean, colour: string, alpha: number): void {
-    const next = { ...colours };
-    if (show) next.walls = withAlpha(colour, alpha || 0.2); else delete next.walls;
-    setColours(next);
-  }
-
-  function setZone(length: number | undefined, height: number | undefined): void {
-    doc.change(["zone"], () => {
-      const z: { length?: number; height?: number } = {};
-      if (length != null) z.length = length;
-      if (height != null) z.height = height;
-      if (Object.keys(z).length) c.zone = z; else delete c.zone;
-    });
-  }
-
-  function setRules(spawn: string, cleanup: number | undefined): void {
-    doc.change(["rules"], () => {
-      const rules = { ...(c.rules ?? {}) };
-      if (spawn === "all") delete rules.spawn; else rules.spawn = spawn as "discs" | "none";
-      if (cleanup == null) delete rules.cleanup; else rules.cleanup = Math.max(0, cleanup);
-      if (Object.keys(rules).length) c.rules = rules; else delete c.rules;
-    });
-  }
-
-  function setArenaSpot(x: number | undefined, z: number | undefined, facing: number | undefined): void {
-    doc.change(["arena"], () => {
-      const a = { ...(c.arena ?? { map: "here" as const }) };
-      if (x != null && z != null) a.at = { x, z }; else delete a.at;
-      if (facing != null) a.facing = facing; else delete a.facing;
-      c.arena = a;
-    });
-  }
-
-  function setMusic(file: string, start: number, volume: number): void {
-    doc.change(["music"], () => {
-      if (!file.trim()) { delete c.music; return; }
-      c.music = { file: file.trim(), start: start || 0, volume: Math.min(1, Math.max(0, Number.isNaN(volume) ? 1 : volume)) };
-    });
-  }
+  const set = <K extends keyof LoadedChart>(key: K, value: LoadedChart[K] | undefined | "") =>
+    doc.change([key], () => setTopLevelValueOrRemoveIfEmpty(c, key, value));
+  const changeColours = (mutate: () => void) => doc.change(["colours", "colors"], mutate);
 
   function setLength(length: number): void {
     if (!(length > 2) || Math.abs(length - lane.length) < 0.001) return;
@@ -99,8 +42,6 @@
     <button onclick={() => { editor.confirmNew = false; }}>Keep editing</button>
   </div>
 {/if}
-
-{#if phase}<PhaseEditor {phase} index={editor.selectedPhase} />{/if}
 
 <div class="cards">
   <div class="stat"><b>{stats.shots}</b><span>projectiles</span></div>
@@ -136,20 +77,20 @@
 </div>
 {#if (arena.map ?? "here") !== "here"}
   <div class="grid3">
-    <label><span>Start x</span><input type="number" step="0.1" value={arena.at?.x ?? ""} placeholder="laid across the middle" onchange={e => setArenaSpot(optionalNum(e), arena.at?.z, arena.facing)} /></label>
-    <label><span>Start z</span><input type="number" step="0.1" value={arena.at?.z ?? ""} onchange={e => setArenaSpot(arena.at?.x, optionalNum(e), arena.facing)} /></label>
-    <label><span>Facing °</span><input type="number" step="5" value={arena.facing ?? ""} placeholder="north" onchange={e => setArenaSpot(arena.at?.x, arena.at?.z, optionalNum(e))} /></label>
+    <label><span>Start x</span><input type="number" step="0.1" value={arena.at?.x ?? ""} placeholder="laid across the middle" onchange={e => doc.change(["arena"], () => setArenaSpot(c, optionalNum(e), arena.at?.z, arena.facing))} /></label>
+    <label><span>Start z</span><input type="number" step="0.1" value={arena.at?.z ?? ""} onchange={e => doc.change(["arena"], () => setArenaSpot(c, arena.at?.x, optionalNum(e), arena.facing))} /></label>
+    <label><span>Facing °</span><input type="number" step="5" value={arena.facing ?? ""} placeholder="north" onchange={e => doc.change(["arena"], () => setArenaSpot(c, arena.at?.x, arena.at?.z, optionalNum(e)))} /></label>
   </div>
   <div class="note">Easiest in game: Chart editing on, then SETUP on the picker - walk the lane and SAVE.</div>
 {/if}
 
 <h3>Your zone and rules</h3>
 <div class="grid3">
-  <label><span>Zone length m</span><input type="number" step="0.5" min="0.5" value={c.zone?.length ?? ""} placeholder={String(zoneOf(c).length)} onchange={e => setZone(optionalNum(e), c.zone?.height)} /></label>
-  <label><span>Zone height m</span><input type="number" step="0.5" min="1" value={c.zone?.height ?? ""} placeholder="3.5" onchange={e => setZone(c.zone?.length, optionalNum(e))} /></label>
-  <label><span>Clean up still structures after s</span><input type="number" step="0.5" min="0" value={c.rules?.cleanup ?? ""} placeholder="3 (0 = never)" onchange={e => setRules(c.rules?.spawn ?? "all", optionalNum(e))} /></label>
+  <label><span>Zone length m</span><input type="number" step="0.5" min="0.5" value={c.zone?.length ?? ""} placeholder={String(zoneOf(c).length)} onchange={e => doc.change(["zone"], () => setZone(c, optionalNum(e), c.zone?.height))} /></label>
+  <label><span>Zone height m</span><input type="number" step="0.5" min="1" value={c.zone?.height ?? ""} placeholder="3.5" onchange={e => doc.change(["zone"], () => setZone(c, c.zone?.length, optionalNum(e)))} /></label>
+  <label><span>Clean up still structures after s</span><input type="number" step="0.5" min="0" value={c.rules?.cleanup ?? ""} placeholder="3 (0 = never)" onchange={e => doc.change(["rules"], () => setRules(c, c.rules?.spawn ?? "all", optionalNum(e)))} /></label>
   <label><span>You may spawn</span>
-    <select value={(c.rules?.spawn ?? "all").toLowerCase()} onchange={e => setRules(text(e), c.rules?.cleanup)}>
+    <select value={(c.rules?.spawn ?? "all").toLowerCase()} onchange={e => doc.change(["rules"], () => setRules(c, text(e), c.rules?.cleanup))}>
       <option value="all">everything</option><option value="discs">discs only</option><option value="none">nothing - moves only</option>
     </select>
   </label>
@@ -160,25 +101,25 @@
 <div class="grid2">
   {#each LANE_COLOURS as [key, label, mine] (key)}
     <label>
-      <span>{label}{#if colours[key]} <a href="#default" onclick={e => { e.preventDefault(); setLaneColour(key, undefined); }}>default</a>{/if}</span>
-      <input type="color" value={(colours[key] ?? mine).slice(0, 7)} onchange={e => setLaneColour(key, text(e))} />
+      <span>{label}{#if colours[key]} <a href="#default" onclick={e => { e.preventDefault(); changeColours(() => setLaneColour(c, key, undefined)); }}>default</a>{/if}</span>
+      <input type="color" value={(colours[key] ?? mine).slice(0, 7)} onchange={e => changeColours(() => setLaneColour(c, key, text(e)))} />
     </label>
   {/each}
 </div>
 <div class="grid3">
-  <label><span>Show walls</span><input type="checkbox" checked={!!walls} onchange={e => setWalls(checked(e), (walls ?? WALL_COLOUR).slice(0, 7), alphaOf(walls ?? WALL_DEFAULT))} /></label>
-  <label><span>Wall colour</span><input type="color" disabled={!walls} value={(walls ?? WALL_COLOUR).slice(0, 7)} onchange={e => setWalls(true, text(e), alphaOf(walls))} /></label>
+  <label><span>Show walls</span><input type="checkbox" checked={!!walls} onchange={e => changeColours(() => setWallsShown(c, checked(e), (walls ?? WALL_COLOUR).slice(0, 7), alphaOf(walls ?? WALL_DEFAULT)))} /></label>
+  <label><span>Wall colour</span><input type="color" disabled={!walls} value={(walls ?? WALL_COLOUR).slice(0, 7)} onchange={e => changeColours(() => setWallsShown(c, true, text(e), alphaOf(walls)))} /></label>
   <label><span>Wall opacity {Math.round(alphaOf(walls ?? WALL_DEFAULT) * 100)}%</span>
-    <input type="range" min="0.05" max="0.8" step="0.05" disabled={!walls} value={alphaOf(walls ?? WALL_DEFAULT)} onchange={e => setWalls(true, (walls ?? WALL_COLOUR).slice(0, 7), num(e))} />
+    <input type="range" min="0.05" max="0.8" step="0.05" disabled={!walls} value={alphaOf(walls ?? WALL_DEFAULT)} onchange={e => changeColours(() => setWallsShown(c, true, (walls ?? WALL_COLOUR).slice(0, 7), num(e)))} />
   </label>
 </div>
 <div class="note">Walls are invisible unless shown: then a see-through pane marks each one, as high as your zone.</div>
 
 <h3>Song and cover</h3>
 <div class="grid3">
-  <label><span>Song file</span><input value={m?.file ?? ""} placeholder="song.mp3" onchange={e => setMusic(text(e), m?.start ?? 0, m?.volume ?? 1)} /></label>
-  <label><span>Chart starts at song s</span><input type="number" step="0.01" value={m?.start ?? 0} onchange={e => setMusic(m?.file ?? "", num(e), m?.volume ?? 1)} /></label>
-  <label><span>Volume</span><input type="number" step="0.05" min="0" max="1" value={m?.volume ?? 1} onchange={e => setMusic(m?.file ?? "", m?.start ?? 0, num(e))} /></label>
+  <label><span>Song file</span><input value={m?.file ?? ""} placeholder="song.mp3" onchange={e => doc.change(["music"], () => setMusic(c, text(e), m?.start ?? 0, m?.volume ?? 1))} /></label>
+  <label><span>Chart starts at song s</span><input type="number" step="0.01" value={m?.start ?? 0} onchange={e => doc.change(["music"], () => setMusic(c, m?.file ?? "", num(e), m?.volume ?? 1))} /></label>
+  <label><span>Volume</span><input type="number" step="0.05" min="0" max="1" value={m?.volume ?? 1} onchange={e => doc.change(["music"], () => setMusic(c, m?.file ?? "", m?.start ?? 0, num(e)))} /></label>
 </div>
 <div class="grid2">
   <label><span>Cover image</span><input value={c.cover ?? ""} placeholder="cover.png" onchange={e => set("cover", text(e).trim() || undefined)} /></label>

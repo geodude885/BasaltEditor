@@ -23,7 +23,8 @@ export function zoneOf(c: Chart): Zone {
 
 export const coloursOf = (c: Chart): LaneColours => c.colours ?? c.colors ?? {};
 
-export function evTime(ev: ChartEvent, tp: Tempo): number {
+// Anything placed in time by "t" (seconds) or "beat": events, look cues.
+export function evTime(ev: { t?: number; beat?: number }, tp: Tempo): number {
   if (ev.t != null) return +ev.t;
   return ev.beat != null && tp.ok ? tp.seconds(+ev.beat) : NaN;
 }

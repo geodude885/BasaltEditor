@@ -2,9 +2,11 @@
 // lands in the chart's text.
 import { actorSpotAt, actorsOf, endOf, evTime, laneOf, setEvTime } from "../model/chart";
 import { addPhaseAt, mirror, newTimed } from "../model/edits";
+import { convertChartLooksFromNightToStage, newStageCue } from "../model/looks";
 import { round } from "../model/tempo";
 import type { Point } from "../model/chart";
 import type { ChartEvent } from "../model/types";
+import { MOST_EXTRA_TIMELINE_HEIGHT_PIXELS, type TimelineRow } from "../views/timeline/geometry";
 import { doc } from "./document.svelte";
 import { editor } from "./editor.svelte";
 import { seek, songLength } from "./playback";
@@ -78,9 +80,7 @@ export function addMove(): void {
 export function addPhase(): void {
   let index = -1;
   doc.change(["phases"], () => { index = addPhaseAt(doc.chart, doc.tempo.snap(editor.time, editor.snap), doc.tempo); });
-  editor.selectedPhase = index;
-  editor.selection.clear();
-  editor.tab = "chart";
+  selectPhase(index);
 }
 
 // ---- Editing the selection ----------------------------------------------------------------------
@@ -193,4 +193,54 @@ export function tap(): void {
 export function tapBpm(): number {
   const t = editor.tapTimes;
   return t.length < 2 ? 0 : 60000 * (t.length - 1) / (t[t.length - 1] - t[0]);
+}
+
+// ---- Look cues --------------------------------------------------------------------------------
+
+export function selectLookCue(index: number): void {
+  editor.selectedLookCue = index;
+  editor.selection.clear();
+  editor.selectedPhase = -1;
+  editor.tab = "looks";
+}
+
+export function addStageCueAtPlayhead(): void {
+  const time = doc.tempo.snap(editor.time, editor.snap);
+  let index = -1;
+  doc.change(["visuals"], () => {
+    doc.chart.visuals ??= [];
+    doc.chart.visuals.push(newStageCue(doc.chart, time, doc.tempo));
+    index = doc.chart.visuals.length - 1;
+  });
+  selectLookCue(index);
+}
+
+export function removeLookCue(index: number): void {
+  doc.change(["visuals"], () => {
+    doc.chart.visuals?.splice(index, 1);
+    if (!doc.chart.visuals?.length) delete doc.chart.visuals;
+  });
+  editor.selectedLookCue = -1;
+}
+
+export function convertNightCuesToStage(): void {
+  let converted = 0;
+  doc.change(["visuals"], () => { converted = convertChartLooksFromNightToStage(doc.chart, doc.tempo); });
+  toast(converted ? `Converted ${converted} BossBattles Night cue${converted === 1 ? "" : "s"} to BossBattles Stage - the look is the same` : "No BossBattles Night cues to convert");
+}
+
+export function selectPhase(index: number): void {
+  editor.selectedPhase = index;
+  editor.selection.clear();
+  editor.tab = "phases";
+}
+
+export function toggleTimelineRow(row: TimelineRow): void {
+  if (editor.collapsedTimelineRows.has(row)) editor.collapsedTimelineRows.delete(row);
+  else editor.collapsedTimelineRows.add(row);
+  editor.rememberTimelineLayout();
+}
+
+export function setExtraTimelineHeight(pixels: number): void {
+  editor.extraTimelineHeightPixels = Math.round(Math.max(0, Math.min(MOST_EXTRA_TIMELINE_HEIGHT_PIXELS, pixels)));
 }

@@ -19,5 +19,6 @@ export type PhaseColours = NonNullable<NonNullable<BossBattlesChart["phases"]>[n
 export type LaneColours = NonNullable<BossBattlesChart["colours"]>;
 export type TrackClip = NonNullable<NonNullable<BossBattlesChart["tracks"]>[number]["clips"]>[number];
 export type TempoChange = { beat: number; bpm: number };
+export type LookCue = NonNullable<BossBattlesChart["visuals"]>[number];
 
 export type EventKind = "projectile" | "move" | "at" | "?";

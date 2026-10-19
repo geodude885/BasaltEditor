@@ -21,6 +21,7 @@
   --telegraph: #ffd166;   /* a projectile waiting */
   --move: #6fb7ff;        /* actor moves */
   --clip: #b38cff;        /* recorded clips */
+  --look: #ff8fd0;        /* shader look cues */
   --phase: #4fd1a5;       /* phases */
   --bad: #ff5a5a;
   --good: #4fd1a5;

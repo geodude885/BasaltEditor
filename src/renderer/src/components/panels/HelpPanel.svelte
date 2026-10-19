@@ -1,16 +1,11 @@
 <script lang="ts">
   import { doc } from "../../store/document.svelte";
   import { editor } from "../../store/editor.svelte";
+  import { SHORTCUTS } from "../../store/keyboard";
 
   const keys: [string, string][] = [
-    ["Space", "Play / pause"], ["Home", "Back to the start"],
-    ["P", "Add a projectile at the playhead"], ["M", "Add a move at the playhead"],
-    ["Delete", "Delete the selection"], ["X", "Mirror the selection left/right"],
-    ["Ctrl C / V", "Copy the selection / paste it at the playhead"],
-    ["← →", "Move the selection by the snap (Shift: by a bar); with nothing selected, move the playhead"],
-    ["Ctrl Z / Y", "Undo / redo"], ["[ ]", "Zoom the timeline (or Ctrl + scroll)"],
-    ["Ctrl S", "Save into the open chart folder (else save chart.json as…)"], ["Ctrl O", "Open chart files"],
-    ["Double-click", "On the lane: a projectile from there. On a timeline row: a projectile or move at that beat."],
+    ...SHORTCUTS.map((s): [string, string] => [s.keysShown, s.description]),
+    ["Double-click", "On the lane: a projectile from there. On a timeline row: a projectile, move or look at that beat."],
   ];
 </script>
 

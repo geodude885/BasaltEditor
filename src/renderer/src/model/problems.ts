@@ -1,6 +1,7 @@
 // The mod's own checks that a chart maker hits most - the game will not load a chart that fails one.
 import { actorsOf, endOf, evTime, laneOf, phaseTime } from "./chart";
 import { STRUCTURES } from "./constants";
+import { lookCueProblems } from "./looks";
 import { round, type Tempo } from "./tempo";
 import type { LoadedChart } from "./types";
 
@@ -56,6 +57,7 @@ export function problems(c: LoadedChart, tp: Tempo): string[] {
   if (c.zone?.height != null && c.zone.height < 1) out.push("zone.height must be at least 1 m");
   if (c.rules?.spawn != null && !["all", "discs", "none"].includes(String(c.rules.spawn).toLowerCase())) out.push("rules.spawn must be all, discs or none");
   if (c.music?.file && !/\.(wav|ogg|mp3)$/i.test(c.music.file)) out.push("music.file must be .wav, .ogg or .mp3");
+  (c.visuals ?? []).forEach((cue, i) => out.push(...lookCueProblems(cue, i, tp)));
   return out;
 }
 

@@ -1,8 +1,8 @@
 // Changes to a chart that are more than setting one field. Each mutates the chart it is given and
 // returns the top-level keys it touched, for the document to write back into the text.
-import { actorsOf, laneOf, phaseTime } from "./chart";
+import { actorsOf, coloursOf, laneOf, phaseTime, withAlpha } from "./chart";
 import { round, type Tempo } from "./tempo";
-import type { ChartEvent, LoadedChart, TempoChange } from "./types";
+import type { ChartEvent, LaneColours, LoadedChart, TempoChange } from "./types";
 
 /**
  * A longer or shorter lane takes the chart with it, as the game's lane setup does: every distance
@@ -77,4 +77,58 @@ export function addTempoChange(c: LoadedChart, t: number, tp: Tempo): void {
 export function addActor(c: LoadedChart): void {
   const all = actorsOf(c), n = all.length + 1;
   c.actors = [...all.map(a => ({ ...a })), { id: `actor${n}`, name: `Actor ${n}`, at: { x: 1, z: laneOf(c).length }, look: "default" }];
+}
+
+// ---- Settings that are more than one field ------------------------------------------------------
+
+const isEmptyValue = (value: unknown) => value === undefined || value === "" || (typeof value === "number" && Number.isNaN(value));
+
+export function setTopLevelValueOrRemoveIfEmpty<K extends keyof LoadedChart>(c: LoadedChart, key: K, value: LoadedChart[K] | undefined | ""): void {
+  if (isEmptyValue(value)) delete c[key];
+  else c[key] = value as LoadedChart[K];
+}
+
+// Writes "colours", dropping the American "colors" the mod also reads, so only one is left.
+export function setLaneColours(c: LoadedChart, next: LaneColours): void {
+  delete c.colors;
+  if (Object.keys(next).length) c.colours = next; else delete c.colours;
+}
+
+export function setLaneColour(c: LoadedChart, key: string, value: string | undefined): void {
+  const next: Record<string, string | undefined> = { ...coloursOf(c) };
+  if (value) next[key] = value; else delete next[key];
+  setLaneColours(c, next as LaneColours);
+}
+
+export function setWallsShown(c: LoadedChart, show: boolean, colour: string, opacity: number): void {
+  const next = { ...coloursOf(c) };
+  if (show) next.walls = withAlpha(colour, opacity || 0.2); else delete next.walls;
+  setLaneColours(c, next);
+}
+
+export function setZone(c: LoadedChart, lengthMetres: number | undefined, heightMetres: number | undefined): void {
+  const zone: { length?: number; height?: number } = {};
+  if (lengthMetres != null) zone.length = lengthMetres;
+  if (heightMetres != null) zone.height = heightMetres;
+  if (Object.keys(zone).length) c.zone = zone; else delete c.zone;
+}
+
+export function setRules(c: LoadedChart, spawn: string, cleanupSeconds: number | undefined): void {
+  const rules = { ...(c.rules ?? {}) };
+  if (spawn === "all") delete rules.spawn; else rules.spawn = spawn as "discs" | "none";
+  if (cleanupSeconds == null) delete rules.cleanup; else rules.cleanup = Math.max(0, cleanupSeconds);
+  if (Object.keys(rules).length) c.rules = rules; else delete c.rules;
+}
+
+// A spot needs both x and z; with either missing the lane is laid across the arena's middle.
+export function setArenaSpot(c: LoadedChart, x: number | undefined, z: number | undefined, facingDegrees: number | undefined): void {
+  const arena = { ...(c.arena ?? { map: "here" as const }) };
+  if (x != null && z != null) arena.at = { x, z }; else delete arena.at;
+  if (facingDegrees != null) arena.facing = facingDegrees; else delete arena.facing;
+  c.arena = arena;
+}
+
+export function setMusic(c: LoadedChart, file: string, startSeconds: number, volume: number): void {
+  if (!file.trim()) { delete c.music; return; }
+  c.music = { file: file.trim(), start: startSeconds || 0, volume: Math.min(1, Math.max(0, Number.isNaN(volume) ? 1 : volume)) };
 }

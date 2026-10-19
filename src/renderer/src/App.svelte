@@ -5,13 +5,11 @@
   import TopBar from "./components/TopBar.svelte";
   import Transport from "./components/Transport.svelte";
   import { SAMPLE } from "./model/samples";
-  import {
-    addMove, addProjectile, copySelected, fit, loadChart, mirrorSelected, nudge, paste, redo, removeSelected, toast, undo, zoom,
-  } from "./store/actions";
+  import { fit, loadChart, toast } from "./store/actions";
   import { doc, restoreDraft } from "./store/document.svelte";
   import { editor } from "./store/editor.svelte";
-  import { openDropped, openFiles, save } from "./store/files";
-  import { play, seek } from "./store/playback";
+  import { openDropped } from "./store/files";
+  import { handleShortcut } from "./store/keyboard";
   import LaneView from "./views/lane/LaneView.svelte";
   import Timeline from "./views/timeline/Timeline.svelte";
 
@@ -26,27 +24,6 @@
   });
 
   $effect(() => { document.title = `${doc.dirty ? "• " : ""}${doc.chart.name || "Untitled"} - Boss Battles Chart Editor`; });
-
-  function keydown(ev: KeyboardEvent): void {
-    const k = ev.key, ctrl = ev.ctrlKey || ev.metaKey;
-    if (ctrl && k.toLowerCase() === "s") { ev.preventDefault(); void save(); return; }
-    if (ctrl && k.toLowerCase() === "o") { ev.preventDefault(); void openFiles(); return; }
-    if ((ev.target as Element).closest?.("input, select, textarea")) return;
-    if (k === " ") { ev.preventDefault(); play(); }
-    else if (k === "Home") seek(0);
-    else if (ctrl && k.toLowerCase() === "z") { ev.preventDefault(); if (ev.shiftKey) redo(); else undo(); }
-    else if (ctrl && k.toLowerCase() === "y") { ev.preventDefault(); redo(); }
-    else if (ctrl && k.toLowerCase() === "c") copySelected();
-    else if (ctrl && k.toLowerCase() === "v") paste();
-    else if (ctrl) return;
-    else if (k === "p" || k === "P") addProjectile();
-    else if (k === "m" || k === "M") addMove();
-    else if (k === "x" || k === "X") mirrorSelected();
-    else if (k === "Delete" || k === "Backspace") removeSelected();
-    else if (k === "[") zoom(1 / 1.4);
-    else if (k === "]") zoom(1.4);
-    else if (k === "ArrowLeft" || k === "ArrowRight") { ev.preventDefault(); nudge(k === "ArrowLeft" ? -1 : 1, ev.shiftKey); }
-  }
 
   // Drop files anywhere. The hint shows only while files are being dragged over the window: every
   // dragover keeps it up, and it goes a moment after they stop (a cancelled drag sends no reliable "leave").
@@ -66,7 +43,7 @@
   }
 </script>
 
-<svelte:window onkeydown={keydown} ondragover={dragover} ondrop={drop} onblur={() => { dropping = false; }} />
+<svelte:window onkeydown={handleShortcut} ondragover={dragover} ondrop={drop} onblur={() => { dropping = false; }} />
 
 <div class="app">
   <TopBar />

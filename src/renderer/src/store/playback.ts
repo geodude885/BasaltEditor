@@ -5,8 +5,11 @@ import { endOf } from "../model/chart";
 import { doc } from "./document.svelte";
 import { editor } from "./editor.svelte";
 
-const audio = new Audio();
-audio.preservesPitch = true;
+let songElement: HTMLAudioElement | null = null;
+function songAudio(): HTMLAudioElement {
+  if (!songElement) { songElement = new Audio(); songElement.preservesPitch = true; }
+  return songElement;
+}
 let context: AudioContext | null = null;
 let startedAt = 0, startTime = 0, lastClickBeat = -1;
 
@@ -27,7 +30,7 @@ export function ensureAudio(): AudioContext | null {
 
 function now(): number {
   if (!editor.playing) return editor.time;
-  if (editor.song && !audio.paused) return audio.currentTime - songStart();
+  if (editor.song && !songAudio().paused) return songAudio().currentTime - songStart();
   return startTime + (performance.now() - startedAt) / 1000 * editor.rate;
 }
 
@@ -39,6 +42,7 @@ export function play(): void {
   if (editor.song) {
     const at = editor.time + songStart();
     if (at >= 0 && at < (editor.song.buffer?.duration ?? Infinity)) {
+      const audio = songAudio();
       audio.currentTime = at; audio.playbackRate = editor.rate; audio.volume = playbackVolume();
       audio.play().catch(() => {});
     }
@@ -49,7 +53,7 @@ export function play(): void {
 export function pause(): void {
   editor.time = now();
   editor.playing = false;
-  audio.pause();
+  songAudio().pause();
 }
 
 /** Moves the playhead; playing carries on from there. */
@@ -57,18 +61,18 @@ export function seek(t: number): void {
   editor.time = t;
   if (!editor.playing) return;
   startTime = t; startedAt = performance.now();
-  if (editor.song) audio.currentTime = Math.max(0, t + songStart());
+  if (editor.song) songAudio().currentTime = Math.max(0, t + songStart());
 }
 
 export function setRate(rate: number): void {
   if (editor.playing) { editor.time = now(); startTime = editor.time; startedAt = performance.now(); }
   editor.rate = rate;
-  audio.playbackRate = rate;
+  songAudio().playbackRate = rate;
 }
 
 export function setVolume(volume: number): void {
   editor.volume = volume;
-  audio.volume = playbackVolume();
+  songAudio().volume = playbackVolume();
   editor.rememberVolume();
 }
 
@@ -77,6 +81,7 @@ function tick(): void {
   editor.time = now();
   const at = editor.time + songStart();
   // Start the song when the chart reaches it, if the playhead began before it.
+  const audio = songAudio();
   if (editor.song && audio.paused && at >= 0 && at < audio.duration) { audio.currentTime = at; audio.play().catch(() => {}); }
   // Keep the playhead in view.
   const view = editor.view, w = editor.timelineWidth;
@@ -106,7 +111,7 @@ export async function loadSong(name: string, bytes: Uint8Array): Promise<boolean
   if (editor.song?.url) URL.revokeObjectURL(editor.song.url);
   const url = URL.createObjectURL(new Blob([bytes as BlobPart]));
   editor.song = { name, url, buffer: null, peaks: null };
-  audio.src = url;
+  songAudio().src = url;
   try {
     const decoder = ensureAudio() ?? new OfflineAudioContext(1, 1, 44100);
     const buffer = await decoder.decodeAudioData(bytes.slice().buffer);
@@ -120,5 +125,5 @@ export async function loadSong(name: string, bytes: Uint8Array): Promise<boolean
 export function unloadSong(): void {
   if (editor.song?.url) URL.revokeObjectURL(editor.song.url);
   editor.song = null;
-  audio.removeAttribute("src");
+  songAudio().removeAttribute("src");
 }
