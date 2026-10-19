@@ -110,4 +110,6 @@ the tests that check Stage at its defaults against a transcription of BossBattle
 - **Signing:** Windows builds ship unsigned for now (users see a SmartScreen warning they can click
   through); unsigned macOS builds are blocked by Gatekeeper and can't auto-update; Linux AppImages
   need no signing. Signing costs money (Azure Trusted Signing ~$10/month, Apple Developer $99/year).
-- No app icon yet: electron-builder uses Electron's. Put a 512x512+ `build/icon.png` in to fix it.
+- The app icons (`build/icon.png`, `build/icon.ico`, the favicon) are drawn from
+  `src/renderer/src/assets/logo*.svg` by `npm run icons`; rerun it after changing the mark, and commit
+  the outputs.

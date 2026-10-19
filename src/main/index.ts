@@ -17,6 +17,8 @@ function createWindow(): void {
     minHeight: 600,
     backgroundColor: "#15181c",
     autoHideMenuBar: true,
+    // Windows and macOS take the icon from the installed app; Linux windows need telling.
+    ...(process.platform === "linux" && { icon: join(import.meta.dirname, "../renderer/icon.png") }),
     show: false,
     webPreferences: {
       preload: join(import.meta.dirname, "../preload/index.cjs"),
