@@ -22,5 +22,5 @@ linux:
 publish:
   provider: github
   owner: geodude885
-  repo: RumbleBossBattlesEditor
+  repo: BasaltEditor
   releaseType: draft

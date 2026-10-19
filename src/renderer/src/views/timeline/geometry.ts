@@ -12,7 +12,7 @@ export const COLLAPSIBLE_ROWS: { row: TimelineRow; label: string }[] = [
   { row: "shot", label: "Projectiles" }, { row: "move", label: "Moves · spots" }, { row: "clip", label: "Recorded" },
 ];
 
-const EXPANDED_ROW_HEIGHT_PIXELS: Record<TimelineRow, number> = { ruler: 22, wave: 58, phase: 22, look: 34, shot: 46, move: 34, clip: 30 };
+const EXPANDED_ROW_HEIGHT_PIXELS: Record<TimelineRow, number> = { ruler: 22, wave: 58, phase: 22, look: 34, shot: 54, move: 34, clip: 30 };
 export const COLLAPSED_ROW_HEIGHT_PIXELS = 10;
 // The resize handle's extra height goes to the rows that use it.
 const SHARE_OF_EXTRA_HEIGHT: Partial<Record<TimelineRow, number>> = { wave: 0.35, look: 0.2, shot: 0.45 };
@@ -44,13 +44,17 @@ export const inRow = (layout: TimelineLayout, row: TimelineRow, y: number): bool
 
 export type Marker = { i: number; x: number; y: number };
 
+// An odd number, so a projectile from the middle of the lane sits on the middle of the row.
+const PROJECTILE_LINES = 5;
+const PROJECTILE_ROW_INSET_PIXELS = 7;
+
 /**
- * Where each event's marker is drawn: projectiles in four rows by where they start across the lane,
+ * Where each event's marker is drawn: projectiles on five lines by where they start across the lane,
  * moves and spots in theirs - and markers that would land on one another (the same time and row)
  * fanned out sideways, so every one can be seen and clicked.
  */
 export function markers(c: LoadedChart, tp: Tempo, view: View, layout: TimelineLayout): Marker[] {
-  const out: Marker[] = [], taken = new Map<string, number>(), lanes = 4, step = 8, width = laneOf(c).width;
+  const out: Marker[] = [], taken = new Map<string, number>(), step = 8, width = laneOf(c).width;
   const [shotTop, shotHeight] = layout.rows.shot, [moveTop, moveHeight] = layout.rows.move;
   c.events.forEach((e, i) => {
     const t = evTime(e, tp);
@@ -58,8 +62,9 @@ export function markers(c: LoadedChart, tp: Tempo, view: View, layout: TimelineL
     const x = xOf(view, t);
     let y: number;
     if (e.projectile) {
-      const lane = Math.min(lanes - 1, Math.max(0, Math.round(((+e.projectile.from?.x || 0) / width + 0.5) * (lanes - 1))));
-      y = layout.collapsed.has("shot") ? shotTop + shotHeight / 2 : shotTop + 7 + lane * ((shotHeight - 14) / (lanes - 1));
+      const last = PROJECTILE_LINES - 1, line = Math.min(last, Math.max(0, Math.round(((+e.projectile.from?.x || 0) / width + 0.5) * last)));
+      y = layout.collapsed.has("shot") ? shotTop + shotHeight / 2
+        : shotTop + PROJECTILE_ROW_INSET_PIXELS + line * ((shotHeight - 2 * PROJECTILE_ROW_INSET_PIXELS) / last);
     } else {
       y = moveTop + moveHeight / 2;
     }

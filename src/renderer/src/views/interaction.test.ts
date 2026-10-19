@@ -95,22 +95,31 @@ describe("laying out the timeline", () => {
     const layout = layoutTimeline(new Set(), 0);
     expect(layout.rows.ruler).toEqual([0, 22]);
     expect(layout.rows.look).toEqual([102, 34]);
-    expect(layout.height).toBe(246);
+    expect(layout.height).toBe(254);
   });
 
   it("shrinks a collapsed row to a strip and moves the rest up", () => {
     const layout = layoutTimeline(new Set<TimelineRow>(["wave", "look"]), 0);
     expect(layout.rows.wave).toEqual([22, COLLAPSED_ROW_HEIGHT_PIXELS]);
     expect(layout.rows.phase[0]).toBe(22 + COLLAPSED_ROW_HEIGHT_PIXELS);
-    expect(layout.height).toBe(246 - 58 - 34 + 2 * COLLAPSED_ROW_HEIGHT_PIXELS);
+    expect(layout.height).toBe(254 - 58 - 34 + 2 * COLLAPSED_ROW_HEIGHT_PIXELS);
   });
 
   it("gives extra height to the expanded rows that use it", () => {
     const taller = layoutTimeline(new Set(), 100), withLooksCollapsed = layoutTimeline(new Set<TimelineRow>(["look"]), 100);
-    expect(taller.height).toBe(346);
-    expect([taller.rows.wave[1], taller.rows.look[1], taller.rows.shot[1], taller.rows.move[1]]).toEqual([58 + 35, 34 + 20, 46 + 45, 34]);
+    expect(taller.height).toBe(354);
+    expect([taller.rows.wave[1], taller.rows.look[1], taller.rows.shot[1], taller.rows.move[1]]).toEqual([58 + 35, 34 + 20, 54 + 45, 34]);
     expect(withLooksCollapsed.rows.look[1]).toBe(COLLAPSED_ROW_HEIGHT_PIXELS);
-    expect(withLooksCollapsed.height).toBe(246 - 34 + COLLAPSED_ROW_HEIGHT_PIXELS + 100);
+    expect(withLooksCollapsed.height).toBe(254 - 34 + COLLAPSED_ROW_HEIGHT_PIXELS + 100);
+  });
+
+  it("puts a projectile from the middle of the lane on the middle of its row, however tall", () => {
+    for (const extra of [0, 100, 400]) {
+      const layout = layoutTimeline(new Set(), extra), [top, height] = layout.rows.shot;
+      const chart = sample();
+      chart.events = [{ t: 1, projectile: { structure: "Ball", from: { x: 0, y: 1, z: 20 } } }] as typeof chart.events;
+      expect(markers(chart, tempo, { t0: 0, pps: 50 }, layout)[0].y).toBe(top + height / 2);
+    }
   });
 
   it("puts every projectile on one line in a collapsed projectile row", () => {
