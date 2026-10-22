@@ -31,3 +31,10 @@ export function straightProjectile(c: LoadedChart, x: number, by: string): Proje
     speed: 11, telegraph: 0.8, by,
   };
 }
+
+/** Moves a projectile to a column, keeping its aim the same way off its start - straight stays straight. */
+export function moveToColumn(p: Projectile, column: number, laneWidth: number): void {
+  const x = xOfColumn(column, laneWidth), dx = x - (+p.from.x || 0);
+  p.from.x = x;
+  if (p.to && p.to !== "player") p.to.x = round((+p.to.x || 0) + dx, 2);
+}

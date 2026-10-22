@@ -27,6 +27,10 @@
   <select aria-label="Snap" value={String(editor.snap)} onchange={e => { editor.snap = num(e); }}>
     <option value="1">1 beat</option><option value="0.5">1/2</option><option value="0.25">1/4</option><option value="0.125">1/8</option><option value="0">no snap</option>
   </select>
+  <div class="views" role="group" aria-label="Editor">
+    <button class:on={mobile.view === "timeline"} aria-pressed={mobile.view === "timeline"} onclick={() => { mobile.view = "timeline"; }}>Timeline</button>
+    <button class:on={mobile.view === "highway"} aria-pressed={mobile.view === "highway"} onclick={() => { mobile.view = "highway"; }}>Highway</button>
+  </div>
   <div class="spacer"></div>
   <button class="icon" aria-label="Undo" disabled={!doc.canUndo} onclick={undo}>↶</button>
   <button class="icon" aria-label="Redo" disabled={!doc.canRedo} onclick={redo}>↷</button>
@@ -46,6 +50,10 @@
   .clock small { font-size: 11px; color: var(--text-dim); margin-left: 4px; }
   select { padding: 6px 4px; min-height: 36px; }
   .spacer { flex: 1; }
+  .views { display: flex; }
+  .views button { border-radius: 0; padding: 4px 8px; font: 600 13px var(--display); text-transform: uppercase; letter-spacing: .04em; }
+  .views button:first-child { border-radius: 6px 0 0 6px; }
+  .views button:last-child { border-radius: 0 6px 6px 0; border-left: 0; }
   .chip { min-width: 36px; border-radius: 999px; font: 500 13px var(--mono); color: var(--good); }
   .chip.bad { color: var(--bad); border-color: var(--bad); }
   @media (max-width: 520px) { .name, .clock small { display: none; } }

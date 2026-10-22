@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { columnOfX, PROJECTILE_COLUMNS, straightProjectile, xOfColumn } from "./columns";
+import { columnOfX, moveToColumn, PROJECTILE_COLUMNS, straightProjectile, xOfColumn } from "./columns";
 import type { LoadedChart } from "./types";
 
 describe("projectile columns", () => {
@@ -22,5 +22,17 @@ describe("projectile columns", () => {
     expect(p.from).toEqual({ x: 0.75, y: 1.4, z: 10 });
     expect(p.to).toEqual({ x: 0.75, y: 1.3 });
     expect(p.by).toBe("gunner");
+  });
+
+  it("moves a projectile to another column, keeping its aim alongside", () => {
+    const chart: LoadedChart = { events: [], lane: { length: 12, width: 3 } } as LoadedChart;
+    const p = straightProjectile(chart, 0, "gunner");
+    moveToColumn(p, 0, 3);
+    expect(p.from.x).toBe(-1.5);
+    expect(p.to).toEqual({ x: -1.5, y: 1.3 });
+    const atPlayer = { ...straightProjectile(chart, 0, "gunner"), to: "player" as const };
+    moveToColumn(atPlayer, 4, 3);
+    expect(atPlayer.from.x).toBe(1.5);
+    expect(atPlayer.to).toBe("player");
   });
 });

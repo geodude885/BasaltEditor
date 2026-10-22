@@ -6,6 +6,7 @@
   import { editor } from "../../store/editor.svelte";
   import { layout } from "../../store/layout.svelte";
   import { mobile } from "../../store/mobile.svelte";
+  import Highway from "../../views/highway/Highway.svelte";
   import LaneView from "../../views/lane/LaneView.svelte";
   import Timeline from "../../views/timeline/Timeline.svelte";
   import Inspector from "../Inspector.svelte";
@@ -28,7 +29,11 @@
   <div class="rail"><MobileDrawer part="rail" /></div>
   <main class="main">
     <div class="lanebox"><LaneView /></div>
-    <div class="timebox"><Timeline /></div>
+    {#if mobile.view === "highway"}
+      <div class="highwaybox"><Highway /></div>
+    {:else}
+      <div class="timebox"><Timeline /></div>
+    {/if}
     {#if inspecting}
       <aside class="float" aria-label="Selected">
         <Inspector />
@@ -62,6 +67,7 @@
   .lanebox { min-height: 0; min-width: 0; display: flex; align-items: center; justify-content: center; border-right: 1px solid var(--line); background: var(--bg); }
   .lanebox :global(canvas) { height: 100%; width: auto; max-width: 100%; aspect-ratio: 3 / 4; }
   .timebox { min-height: 0; min-width: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; background: var(--panel); }
+  .highwaybox { min-height: 0; min-width: 0; position: relative; }
   .timebox :global(.timeline) { grid-template-columns: 76px minmax(0, 1fr); }
   .float {
     position: absolute; z-index: 3; left: 6px; bottom: 6px; top: 6px; width: min(340px, 46%); overflow: auto; overscroll-behavior: contain;
