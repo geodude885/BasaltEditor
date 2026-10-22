@@ -4,7 +4,7 @@ import { readdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { basename, join, resolve } from "node:path";
 import updater from "electron-updater";
-import { Channels, type OpenedFile, type OpenedFolder } from "../shared/api";
+import { Channels, type FileKind, type OpenedFile, type OpenedFolder } from "../shared/api";
 
 /** Chart folders this session opened - the only places saveChart may write. */
 const openedFolders = new Set<string>();
@@ -55,16 +55,20 @@ async function readAll(paths: string[], name: (path: string) => string): Promise
   return Promise.all(paths.map(async path => ({ path: name(path), bytes: new Uint8Array(await readFile(path)) })));
 }
 
-ipcMain.handle(Channels.openFiles, async (event): Promise<OpenedFile[]> => {
+const PICKERS: Record<FileKind | "all", { title: string; name: string; extensions: string[]; several: boolean }> = {
+  all: { title: "Open chart files", name: "Charts, songs, covers and clips", extensions: ["json", "bbchart", "zip", "wav", "ogg", "mp3", "png", "jpg", "jpeg"], several: true },
+  song: { title: "Choose the song", name: "Songs", extensions: ["mp3", "ogg", "wav"], several: false },
+  cover: { title: "Choose the cover", name: "Images", extensions: ["png", "jpg", "jpeg"], several: false },
+};
+
+ipcMain.handle(Channels.openFiles, async (event, kind?: FileKind): Promise<OpenedFile[]> => {
   const window = BrowserWindow.fromWebContents(event.sender)!;
+  const picker = PICKERS[kind === "song" || kind === "cover" ? kind : "all"];
   const picked = await dialog.showOpenDialog(window, {
-    title: "Open chart files",
+    title: picker.title,
     defaultPath: chartsFolder(),
-    properties: ["openFile", "multiSelections"],
-    filters: [
-      { name: "Charts, songs, covers and clips", extensions: ["json", "bbchart", "zip", "wav", "ogg", "mp3", "png", "jpg", "jpeg"] },
-      { name: "All files", extensions: ["*"] },
-    ],
+    properties: picker.several ? ["openFile", "multiSelections"] : ["openFile"],
+    filters: [{ name: picker.name, extensions: picker.extensions }, { name: "All files", extensions: ["*"] }],
   });
   return picked.canceled ? [] : readAll(picked.filePaths, basename);
 });

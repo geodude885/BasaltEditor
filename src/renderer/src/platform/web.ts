@@ -2,7 +2,7 @@
 // EditorApi the desktop app's preload gives the page, done with file inputs, downloads and - on
 // phones and tablets - the share sheet. main.ts installs it only when the preload has not, so the
 // desktop app never runs any of this.
-import type { EditorApi, OpenedFile, OpenedFolder } from "../../../shared/api";
+import type { EditorApi, FileKind, OpenedFile, OpenedFolder } from "../../../shared/api";
 
 /** A touch screen without a mouse: phones and tablets, where sharing beats downloading. */
 const touchFirst = (): boolean => matchMedia("(pointer: coarse)").matches;
@@ -46,9 +46,15 @@ function download(name: string, bytes: Uint8Array): void {
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
+/** What each kind of picker offers. Phones show their music or photo pickers for these. */
+const ACCEPTS: Record<FileKind, string> = { song: "audio/*,.mp3,.ogg,.wav", cover: "image/png,image/jpeg,.png,.jpg,.jpeg" };
+
 export const webApi: EditorApi = {
-  async openFiles() {
-    const files = await pickFiles(input => { input.multiple = true; });
+  async openFiles(kind) {
+    const files = await pickFiles(input => {
+      if (kind) input.accept = ACCEPTS[kind];
+      else input.multiple = true;
+    });
     return Promise.all(files.map(f => read(f, f.name)));
   },
 

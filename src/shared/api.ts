@@ -3,10 +3,12 @@
 
 export type OpenedFile = { path: string; bytes: Uint8Array };
 export type OpenedFolder = { folder: string; files: OpenedFile[] };
+/** What a file picker is for: just a song, just a cover - or, left out, any of the chart's files. */
+export type FileKind = "song" | "cover";
 
 export interface EditorApi {
-  /** Picks chart files (chart.json, song, cover, clips, or a package). Empty when cancelled. */
-  openFiles(): Promise<OpenedFile[]>;
+  /** Picks chart files (chart.json, song, cover, clips, or a package) - or one song or cover. Empty when cancelled. */
+  openFiles(kind?: FileKind): Promise<OpenedFile[]>;
   /** Picks a chart folder and reads chart.json, the files beside it and clips/. Null when cancelled. */
   openFolder(): Promise<OpenedFolder | null>;
   /** Writes chart.json into a folder this session opened. */

@@ -46,13 +46,16 @@ export function relative(path: string, chartPath?: string): string {
 const sameName = (key: string, name: string) =>
   key.toLowerCase() === name.toLowerCase() || key.split("/").pop()!.toLowerCase() === name.toLowerCase();
 
+export const isSong = (path: string): boolean => /\.(wav|ogg|mp3)$/i.test(path);
+export const isCover = (path: string): boolean => /\.(png|jpe?g)$/i.test(path);
+
 /** The song the chart names - or any song, if it names none yet. */
 export const findSong = (files: Map<string, Uint8Array>, named?: string): string | undefined =>
-  [...files.keys()].find(k => named ? sameName(k, named) : /\.(wav|ogg|mp3)$/i.test(k));
+  [...files.keys()].find(k => named ? sameName(k, named) : isSong(k));
 
 /** The cover the chart names - or any image, if it names none yet. */
 export const findCover = (files: Map<string, Uint8Array>, named?: string): string | undefined =>
-  [...files.keys()].find(k => named ? k.toLowerCase() === named.toLowerCase() : /\.(png|jpe?g)$/i.test(k));
+  [...files.keys()].find(k => named ? k.toLowerCase() === named.toLowerCase() : isCover(k));
 
 export type ClipSpan = { start: number; end: number };
 

@@ -9,6 +9,7 @@
   import { recording } from "../../store/recording.svelte";
   import { canOpenFolders } from "../../platform/web";
   import { num } from "../fields";
+  import SongPicker from "../SongPicker.svelte";
 
   const THEME_NAMES: Record<ThemeChoice, string> = { system: "System theme", dark: "Basalt (dark)", light: "Ash (light)" };
   const showOpenFolder = canOpenFolders();
@@ -29,6 +30,7 @@
     <button onclick={then(savePackage)}>Package…</button>
     <button onclick={then(copyChart)}>Copy chart.json</button>
   </div>
+  <SongPicker />
   <h3>Playing</h3>
   <div class="settings">
     <label><span>Speed</span>

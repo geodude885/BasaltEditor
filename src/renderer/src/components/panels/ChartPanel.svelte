@@ -10,7 +10,8 @@
   import { endWithSong, toast } from "../../store/actions";
   import { doc } from "../../store/document.svelte";
   import { editor } from "../../store/editor.svelte";
-  import { newChart } from "../../store/files";
+  import { chooseCover, newChart } from "../../store/files";
+  import SongPicker from "../SongPicker.svelte";
   import { songLength } from "../../store/playback";
   import { checked, num, optionalNum, text } from "../fields";
 
@@ -116,17 +117,20 @@
 <div class="note">Walls are invisible unless shown: then a see-through pane marks each one, as high as your zone.</div>
 
 <h3>Song and cover</h3>
-<div class="grid3">
-  <label><span>Song file</span><input value={m?.file ?? ""} placeholder="song.mp3" onchange={e => doc.change(["music"], () => setMusic(c, text(e), m?.start ?? 0, m?.volume ?? 1))} /></label>
+<SongPicker />
+<div class="grid2">
   <label><span>Chart starts at song s</span><input type="number" step="0.01" value={m?.start ?? 0} onchange={e => doc.change(["music"], () => setMusic(c, m?.file ?? "", num(e), m?.volume ?? 1))} /></label>
   <label><span>Volume</span><input type="number" step="0.05" min="0" max="1" value={m?.volume ?? 1} onchange={e => doc.change(["music"], () => setMusic(c, m?.file ?? "", m?.start ?? 0, num(e)))} /></label>
 </div>
 <div class="grid2">
-  <label><span>Cover image</span><input value={c.cover ?? ""} placeholder="cover.png" onchange={e => set("cover", text(e).trim() || undefined)} /></label>
+  <div class="cover">
+    <label><span>Cover image</span><input value={c.cover ?? ""} placeholder="cover.png" onchange={e => set("cover", text(e).trim() || undefined)} /></label>
+    <button onclick={chooseCover}>{c.cover ? "Change cover…" : "Choose cover…"}</button>
+  </div>
   {#if editor.cover}
     <img src={editor.cover} alt="Cover" />
   {:else}
-    <div class="note">Open the song and cover files to hear and see them here. Songs: MP3, OGG or WAV.</div>
+    <div class="note">Choose a PNG or JPEG to see it here.</div>
   {/if}
 </div>
 
@@ -136,4 +140,5 @@
   .stat b { font: 600 20px var(--mono); font-variant-numeric: tabular-nums; }
   .stat span { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: .05em; }
   img { max-height: 96px; max-width: 100%; border-radius: 6px; }
+  .cover { display: grid; gap: 6px; align-content: start; }
 </style>
