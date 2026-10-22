@@ -25,9 +25,17 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 24, cache: npm }
       - run: npm ci
-      - run: npm run check
-      - run: npm test
-      - run: npm run build:web
+      # Each step's output is kept, and the end of a failing one is reported as an annotation, which
+      # can be read through the checks API without the logs.
+      - name: Check, test and build
+        run: |
+          report() {
+            echo "::error title=$1 failed::$(tail -n 80 "$1.log" | sed -e 's/%/%25/g' -e 's/\r//g' | awk '{printf "%s%%0A", $0}')"
+            exit 1
+          }
+          npm run check > check.log 2>&1 || report check
+          npm test > test.log 2>&1 || report test
+          npm run build:web > build.log 2>&1 || report build
       - name: Publish to gh-pages
         env:
           TOKEN: ${{ github.token }}

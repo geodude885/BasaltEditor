@@ -4,12 +4,14 @@
   import Panels from "./components/Panels.svelte";
   import TopBar from "./components/TopBar.svelte";
   import Transport from "./components/Transport.svelte";
+  import MobileApp from "./components/mobile/MobileApp.svelte";
   import { SAMPLE } from "./model/samples";
   import { fit, loadChart, toast } from "./store/actions";
   import { doc, restoreDraft } from "./store/document.svelte";
   import { editor } from "./store/editor.svelte";
   import { openDropped } from "./store/files";
   import { handleShortcut } from "./store/keyboard";
+  import { layout } from "./store/layout.svelte";
   import LaneView from "./views/lane/LaneView.svelte";
   import Timeline from "./views/timeline/Timeline.svelte";
 
@@ -45,6 +47,9 @@
 
 <svelte:window onkeydown={handleShortcut} ondragover={dragover} ondrop={drop} onblur={() => { dropping = false; }} />
 
+{#if layout.compact}
+<MobileApp />
+{:else}
 <div class="app">
   <TopBar />
   <main class="work">
@@ -60,6 +65,7 @@
     </section>
   </main>
 </div>
+{/if}
 
 <div class="drop" class:show={dropping}>Drop chart files</div>
 {#if editor.toast}
