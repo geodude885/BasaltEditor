@@ -7,7 +7,7 @@ import { laneMap } from "./lane/geometry";
 import { moveProjectilePoint, projectilesStartingInBox, whatALanePressHits } from "./lane/interaction";
 import { boxIsAClick } from "./theme";
 import { COLLAPSED_ROW_HEIGHT_PIXELS, layoutTimeline, markers, xOf, type TimelineRow } from "./timeline/geometry";
-import { markersInBox, phaseIndexAt, whatATimelinePressHits } from "./timeline/interaction";
+import { markersInBox, phaseIndexAt, pressWaitsOnTouch, whatATimelinePressHits, whatATouchTapAdds } from "./timeline/interaction";
 
 const sample = () => { const c = Jsonc.parse(SAMPLE) as LoadedChart; c.events ??= []; return c; };
 const tempo = new Tempo(120);
@@ -126,5 +126,29 @@ describe("laying out the timeline", () => {
     const layout = layoutTimeline(new Set<TimelineRow>(["shot"]), 0), [top, height] = layout.rows.shot;
     const shots = markers(sample(), tempo, { t0: 0, pps: 50 }, layout).filter(m => sample().events[m.i].projectile);
     expect(new Set(shots.map(m => m.y))).toEqual(new Set([top + height / 2]));
+  });
+});
+
+describe("touch taps on the timeline", () => {
+  const layout = layoutTimeline(new Set(), 0);
+  const middleOf = (row: "shot" | "look" | "move" | "clip") => layout.rows[row][0] + layout.rows[row][1] / 2;
+
+  it("adds in the column tapped in the projectile row", () => {
+    const [top, height] = layout.rows.shot;
+    expect(whatATouchTapAdds(layout, top + 1)).toEqual({ kind: "add-projectile", column: 0 });
+    expect(whatATouchTapAdds(layout, middleOf("shot"))).toEqual({ kind: "add-projectile", column: 2 });
+    expect(whatATouchTapAdds(layout, top + height - 1)).toEqual({ kind: "add-projectile", column: 4 });
+  });
+
+  it("adds a look cue or a move in their rows, and otherwise seeks", () => {
+    expect(whatATouchTapAdds(layout, middleOf("look")).kind).toBe("add-look-cue");
+    expect(whatATouchTapAdds(layout, middleOf("move")).kind).toBe("add-move");
+    expect(whatATouchTapAdds(layout, middleOf("clip")).kind).toBe("seek-and-clear-selection");
+  });
+
+  it("waits on empty rows but not on the ruler", () => {
+    expect(pressWaitsOnTouch({ kind: "box-select" }, layout, middleOf("shot"))).toBe(true);
+    expect(pressWaitsOnTouch({ kind: "seek" }, layout, middleOf("look"))).toBe(true);
+    expect(pressWaitsOnTouch({ kind: "seek" }, layout, 2)).toBe(false);
   });
 });

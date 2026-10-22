@@ -1,6 +1,7 @@
 // What the toolbar, keys and canvases do. Each edit goes through doc.change, so it can be undone and
 // lands in the chart's text.
-import { actorSpotAt, actorsOf, endOf, evTime, laneOf, setEvTime } from "../model/chart";
+import { actorSpotAt, actorsOf, endOf, evTime, firstActorId, laneOf, setEvTime } from "../model/chart";
+import { straightProjectile, xOfColumn } from "../model/columns";
 import { addPhaseAt, mirror, newTimed } from "../model/edits";
 import { newStageCue } from "../model/looks";
 import { round } from "../model/tempo";
@@ -68,6 +69,13 @@ export function addProjectile(at?: Point): void {
     from: { x: round(base.x, 1), y: 0, z: round(Math.max(0.5, Math.min(L.length, base.z - (at ? 0 : 1))), 1) },
     to: "player", speed: 10, telegraph: 0.2, by: first.id,
   };
+  insert(ev);
+}
+
+/** Adds a projectile flying straight down the lane from a column across it, at a time (snapped). */
+export function addProjectileInColumn(seconds: number, column: number): void {
+  const c = doc.chart, ev = newTimed(c, seconds, doc.tempo, editor.snap);
+  ev.projectile = straightProjectile(c, xOfColumn(column, laneOf(c).width), firstActorId(c));
   insert(ev);
 }
 

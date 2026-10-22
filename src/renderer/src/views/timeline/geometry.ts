@@ -1,5 +1,6 @@
 // The timeline's rows, its time-to-pixel mapping, and where each event's marker sits.
 import { evTime, laneOf } from "../../model/chart";
+import { columnOfX, PROJECTILE_COLUMNS } from "../../model/columns";
 import type { Tempo } from "../../model/tempo";
 import type { TimedLookCue } from "../../model/looks";
 import type { LoadedChart } from "../../model/types";
@@ -44,9 +45,25 @@ export const inRow = (layout: TimelineLayout, row: TimelineRow, y: number): bool
 
 export type Marker = { i: number; x: number; y: number };
 
-// An odd number, so a projectile from the middle of the lane sits on the middle of the row.
-const PROJECTILE_LINES = 5;
+// One line per column across the lane (model/columns.ts), so a projectile from the middle of the lane
+// sits on the middle of the row.
+const PROJECTILE_LINES = PROJECTILE_COLUMNS;
 const PROJECTILE_ROW_INSET_PIXELS = 7;
+
+/** How far down the timeline a column's line is drawn, in an expanded projectile row. */
+export function yOfColumn(layout: TimelineLayout, column: number): number {
+  const [top, height] = layout.rows.shot, last = PROJECTILE_LINES - 1;
+  return layout.collapsed.has("shot") ? top + height / 2
+    : top + PROJECTILE_ROW_INSET_PIXELS + column * ((height - 2 * PROJECTILE_ROW_INSET_PIXELS) / last);
+}
+
+/** The column whose line is nearest a point in the projectile row (the middle one when it is collapsed). */
+export function columnAtY(layout: TimelineLayout, y: number): number {
+  const [top, height] = layout.rows.shot, last = PROJECTILE_LINES - 1;
+  if (layout.collapsed.has("shot")) return Math.floor(last / 2);
+  const spacing = (height - 2 * PROJECTILE_ROW_INSET_PIXELS) / last;
+  return Math.min(last, Math.max(0, Math.round((y - top - PROJECTILE_ROW_INSET_PIXELS) / spacing)));
+}
 
 /**
  * Where each event's marker is drawn: projectiles on five lines by where they start across the lane,
@@ -55,16 +72,14 @@ const PROJECTILE_ROW_INSET_PIXELS = 7;
  */
 export function markers(c: LoadedChart, tp: Tempo, view: View, layout: TimelineLayout): Marker[] {
   const out: Marker[] = [], taken = new Map<string, number>(), step = 8, width = laneOf(c).width;
-  const [shotTop, shotHeight] = layout.rows.shot, [moveTop, moveHeight] = layout.rows.move;
+  const [moveTop, moveHeight] = layout.rows.move;
   c.events.forEach((e, i) => {
     const t = evTime(e, tp);
     if (!Number.isFinite(t)) return;
     const x = xOf(view, t);
     let y: number;
     if (e.projectile) {
-      const last = PROJECTILE_LINES - 1, line = Math.min(last, Math.max(0, Math.round(((+e.projectile.from?.x || 0) / width + 0.5) * last)));
-      y = layout.collapsed.has("shot") ? shotTop + shotHeight / 2
-        : shotTop + PROJECTILE_ROW_INSET_PIXELS + line * ((shotHeight - 2 * PROJECTILE_ROW_INSET_PIXELS) / last);
+      y = yOfColumn(layout, columnOfX(+e.projectile.from?.x || 0, width));
     } else {
       y = moveTop + moveHeight / 2;
     }

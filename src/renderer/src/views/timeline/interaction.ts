@@ -4,7 +4,7 @@ import type { TimedLookCue } from "../../model/looks";
 import type { Tempo } from "../../model/tempo";
 import type { LoadedChart } from "../../model/types";
 import { normalise, type Box } from "../theme";
-import { eventsAt, inRow, lookCueAt, tOf, type Marker, type TimelineLayout, type View } from "./geometry";
+import { columnAtY, eventsAt, inRow, lookCueAt, tOf, type Marker, type TimelineLayout, type View } from "./geometry";
 
 export type TimelinePress =
   | { kind: "seek" }
@@ -38,6 +38,27 @@ export function whatATimelinePressHits(
   if (doubleClick && inRow(layout, "shot", y)) return { kind: "add-projectile" };
   if (doubleClick && inRow(layout, "move", y)) return { kind: "add-move" };
   if (inRow(layout, "shot", y) || inRow(layout, "move", y)) return { kind: "box-select" };
+  return { kind: "seek-and-clear-selection" };
+}
+
+/**
+ * On a touch screen, a press on empty space waits to see what it becomes - a tap adds there, a drag
+ * pans, a long press box-selects - instead of acting as soon as the finger lands.
+ */
+export const pressWaitsOnTouch = (press: TimelinePress, layout: TimelineLayout, y: number): boolean =>
+  press.kind === "box-select" || press.kind === "seek-and-clear-selection" || (press.kind === "seek" && inRow(layout, "look", y));
+
+export type TouchTap =
+  | { kind: "add-projectile"; column: number }
+  | { kind: "add-look-cue" }
+  | { kind: "add-move" }
+  | { kind: "seek-and-clear-selection" };
+
+/** What a tap on empty space adds: whatever that row holds - a projectile in the column tapped. */
+export function whatATouchTapAdds(layout: TimelineLayout, y: number): TouchTap {
+  if (inRow(layout, "shot", y)) return { kind: "add-projectile", column: columnAtY(layout, y) };
+  if (inRow(layout, "look", y)) return { kind: "add-look-cue" };
+  if (inRow(layout, "move", y)) return { kind: "add-move" };
   return { kind: "seek-and-clear-selection" };
 }
 

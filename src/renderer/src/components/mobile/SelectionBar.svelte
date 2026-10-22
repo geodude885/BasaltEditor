@@ -1,7 +1,8 @@
 <script lang="ts">
   // The phone layout's edit buttons - the shortcuts a keyboard would give. What they offer follows the
   // selection: adding with nothing selected, editing what is.
-  import { addMove, addPhase, addProjectile, addStageCueAtPlayhead, copySelected, mirrorSelected, paste, removeSelected } from "../../store/actions";
+  import { PROJECTILE_COLUMNS } from "../../model/columns";
+  import { addMove, addPhase, addProjectileInColumn, addStageCueAtPlayhead, copySelected, mirrorSelected, paste, removeSelected } from "../../store/actions";
   import { editor } from "../../store/editor.svelte";
 
   const count = $derived(editor.selection.size);
@@ -16,7 +17,7 @@
     <button class="danger" onclick={removeSelected}>Delete</button>
     <button onclick={() => { editor.selection.clear(); }}>Done</button>
   {:else}
-    <button onclick={() => addProjectile()}>+ Projectile</button>
+    <button onclick={() => addProjectileInColumn(editor.time, Math.floor(PROJECTILE_COLUMNS / 2))}>+ Projectile</button>
     <button onclick={addMove}>+ Move</button>
     <button onclick={addStageCueAtPlayhead}>+ Look</button>
     <button onclick={addPhase}>+ Phase</button>
