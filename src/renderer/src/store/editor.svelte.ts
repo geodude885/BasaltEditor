@@ -33,6 +33,8 @@ function savedExtraTimelineHeight(): number {
 class EditorState {
   /** Indices into chart.events. */
   readonly selection = new SvelteSet<number>();
+  /** Presses add to the selection, as Shift does - for touch screens, which have no Shift. */
+  multiSelect = $state(false);
   selectedPhase = $state(-1);
   selectedLookCue = $state(-1);
 

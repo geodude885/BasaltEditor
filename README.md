@@ -18,7 +18,9 @@ Needs Node 24.
 ```sh
 npm install
 npm run dev            # the app, with hot reload
-npm run dev:renderer   # just the page, in a browser (no file dialogs)
+npm run dev:renderer   # just the page, in a browser
+npm run dev:web        # the web build, served on your network so a phone can open it
+npm run build:web      # the web build into out/web (any static host serves it)
 npm test               # Vitest: model, zip and file handling
 npm run check          # svelte-check and TypeScript
 npm run build          # into out/

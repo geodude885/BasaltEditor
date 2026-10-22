@@ -4,9 +4,12 @@
   import { doc } from "../store/document.svelte";
   import { editor } from "../store/editor.svelte";
   import { copyChart, openFiles, openFolder, save, saveChartAs, savePackage } from "../store/files";
+  import { canOpenFolders, inBrowser } from "../platform/web";
   import Logo from "./Logo.svelte";
 
   const count = $derived(editor.problems.length);
+  /** Phones can't pick folders; the desktop app always can. */
+  const showOpenFolder = !inBrowser() || canOpenFolders();
   const THEME_NAMES: Record<ThemeChoice, string> = { system: "System theme", dark: "Basalt (dark)", light: "Ash (light)" };
 </script>
 
@@ -16,7 +19,7 @@
   <div class="group">
     <button title="Start a new chart from the template" onclick={() => { editor.confirmNew = true; editor.tab = "chart"; }}>New</button>
     <button title="Open chart.json, its song, cover and clips - or a .bbchart (Ctrl+O)" onclick={openFiles}>Open files…</button>
-    <button title="Open a chart folder to edit it in place" onclick={openFolder}>Open folder…</button>
+    {#if showOpenFolder}<button title="Open a chart folder to edit it in place" onclick={openFolder}>Open folder…</button>{/if}
     <button class="primary" title={editor.folder ? `Write chart.json back into ${editor.folder} (Ctrl+S)` : "Save chart.json (Ctrl+S)"} onclick={save}>
       {editor.folder ? "Save" : "Save as…"}
     </button>

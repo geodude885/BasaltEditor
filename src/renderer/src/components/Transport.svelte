@@ -1,6 +1,6 @@
 <script lang="ts">
   import { round } from "../model/tempo";
-  import { addMove, addPhase, addProjectile, zoom } from "../store/actions";
+  import { addMove, addPhase, addProjectile, copySelected, mirrorSelected, paste, removeSelected, zoom } from "../store/actions";
   import { doc } from "../store/document.svelte";
   import { editor } from "../store/editor.svelte";
   import { ensureAudio, play, seek, setRate, setVolume } from "../store/playback";
@@ -41,9 +41,23 @@
     <button title="Add a move at the playhead (M)" onclick={addMove}>+ Move</button>
     <button title="Start a phase at the playhead" onclick={addPhase}>+ Phase</button>
   </div>
+  <!-- Touch screens have no keyboard: the shortcuts that edit the selection, as buttons. Hidden with a mouse. -->
+  <div class="row touch">
+    <button class:on={editor.multiSelect} aria-pressed={editor.multiSelect} title="Taps add to the selection, like holding Shift"
+      onclick={() => { editor.multiSelect = !editor.multiSelect; }}>Multi-select</button>
+    <button title="Delete the selection" disabled={!editor.selection.size} onclick={removeSelected}>Delete</button>
+    <button title="Mirror the selection left/right" disabled={!editor.selection.size} onclick={mirrorSelected}>Mirror</button>
+    <button title="Copy the selection" disabled={!editor.selection.size} onclick={copySelected}>Copy</button>
+    <button title="Paste at the playhead" onclick={paste}>Paste</button>
+  </div>
 </div>
 
 <style>
   .transport { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center; padding: 10px 12px; border-bottom: 1px solid var(--line); }
   select { padding: 3px 4px; }
+  .touch { display: none; }
+  @media (pointer: coarse) {
+    .touch { display: flex; flex-wrap: wrap; gap: 6px; }
+    button { min-height: 36px; }
+  }
 </style>
