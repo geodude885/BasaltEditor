@@ -31,6 +31,7 @@ export async function openEntries(entries: FileEntry[], folder: string | null = 
       loadChart(opened.chart.text, opened.chart.name);
       clearFiles();
       editor.folder = folder;
+      joinLibrary();
     }
     editor.files = new Map([...editor.files, ...opened.files]);
     // A song or cover opened on its own (not with a chart) becomes the chart's, replacing the one before.
@@ -140,6 +141,22 @@ export function newChart(): void {
   loadChart(template("My Chart"), "chart.json");
   clearFiles();
   editor.folder = null;
+  joinLibrary();
+}
+
+/** A chart just opened or started: a new entry in your charts, where there is a library. */
+function joinLibrary(): void {
+  editor.libraryId = null;
+  editor.libraryAdd = true;
+}
+
+/** Opens a chart kept in your charts, with its files. The library says which entry it is. */
+export async function openStored(text: string, name: string, files: Map<string, Uint8Array>): Promise<void> {
+  loadChart(text, name);
+  clearFiles();
+  editor.folder = null;
+  editor.files = new Map(files);
+  await useFiles();
 }
 
 /**

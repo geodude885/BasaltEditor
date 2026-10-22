@@ -59,8 +59,24 @@ src/renderer/src/
   store/        document (text, chart, undo), editor (UI state), actions, files, playback, keyboard
   views/lane/   lane canvas: geometry, draw, interaction (what a press hits), the component
   views/timeline/  timeline canvas: rows and markers, draw, interaction, the component
+  views/highway/   the phone layout's note-highway editor: columns, tiles, draw, the component
   components/   top bar, transport, inspector, the tab panels
+  components/mobile/   the phone layout: shell, bar, menu sheet, drawer, highway screen
+  components/library/  "Your charts"
+  platform/     the browser's stand-ins for the desktop app: file access, IndexedDB, the web library
 ```
+
+- **Two layouts, one editor.** `store/layout.svelte.ts` picks the phone layout on touch screens with a
+  phone-sized short side (`?mobile=1` / `?mobile=0` force it); App.svelte shows `MobileApp` or the
+  desktop workbench. Both use the same stores, canvases and panels - the phone layout only arranges
+  them differently and adds the highway and tap-along recording (`store/recording.svelte.ts`). Touch
+  gestures live in `views/touch.ts`; a mouse never reaches the code that differs.
+- **Menus come from `store/commands.ts`**, one table of File / Edit / View commands. Draw menus from
+  it rather than wiring buttons to actions by hand; `docs/plans/desktop-file-menu.md` covers a desktop
+  menu bar and chart browser built on it and on `store/library.svelte.ts`'s `LibrarySource`.
+- **The web build** (`npm run build:web`, `vite.config.web.ts`) is the same renderer with
+  `platform/web.ts` standing in for the preload; `web.yml` checks, tests and publishes it to GitHub
+  Pages from the `web` branch.
 
 - **The renderer never touches Node or the file system directly** - only `window.editor`, through
   `store/files.ts`. It stays a plain web app: `npm run dev:renderer` serves it in a browser, with

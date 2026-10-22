@@ -66,6 +66,10 @@ class EditorState {
   cover = $state<string | null>(null);
   /** The chart folder on disk, when one was opened - Save writes chart.json back into it. */
   folder = $state<string | null>(null);
+  /** Which of your charts (store/library.svelte.ts) this is, once it is kept there. */
+  libraryId = $state<string | null>(null);
+  /** This chart should join your charts as soon as it can - it was just opened or started. */
+  libraryAdd = $state(false);
 
   readonly problems = $derived(problems(doc.chart, doc.tempo));
   readonly lookCues = $derived(timedLookCues(doc.chart, doc.tempo));

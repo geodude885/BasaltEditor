@@ -5,6 +5,8 @@
   import TopBar from "./components/TopBar.svelte";
   import Transport from "./components/Transport.svelte";
   import MobileApp from "./components/mobile/MobileApp.svelte";
+  import Library from "./components/library/Library.svelte";
+  import { library } from "./store/library.svelte";
   import { SAMPLE } from "./model/samples";
   import { fit, loadChart, toast } from "./store/actions";
   import { doc, restoreDraft } from "./store/document.svelte";
@@ -67,6 +69,8 @@
 </div>
 {/if}
 
+{#if library.visible}<Library />{/if}
+
 <div class="drop" class:show={dropping}>Drop chart files</div>
 {#if editor.toast}
   {#key editor.toast.id}
@@ -83,7 +87,7 @@
   .timepane { display: grid; grid-template-rows: auto auto minmax(0, 1fr); }
   .toast {
     position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); background: var(--raised); border: 1px solid var(--accent);
-    padding: 8px 14px; border-radius: 8px; font-size: 13px; z-index: 5; max-width: calc(100% - 32px);
+    padding: 8px 14px; border-radius: 8px; font-size: 13px; z-index: 30; max-width: calc(100% - 32px);
   }
   .drop {
     position: fixed; inset: 0; background: color-mix(in srgb, var(--accent) 13%, transparent); border: 3px dashed var(--accent); display: none; place-items: center;

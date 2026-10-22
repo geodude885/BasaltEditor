@@ -5,6 +5,7 @@
   import { editor } from "../store/editor.svelte";
   import { copyChart, openFiles, openFolder, save, saveChartAs, savePackage } from "../store/files";
   import { canOpenFolders, inBrowser } from "../platform/web";
+  import { library } from "../store/library.svelte";
   import Logo from "./Logo.svelte";
 
   const count = $derived(editor.problems.length);
@@ -18,6 +19,7 @@
   <div class="chartname" title={editor.folder ?? doc.name}>{doc.chart.name || "Untitled"}{doc.dirty ? " •" : ""}</div>
   <div class="group">
     <button title="Start a new chart from the template" onclick={() => { editor.confirmNew = true; editor.tab = "chart"; }}>New</button>
+    {#if library.available}<button title="The charts kept in this browser" onclick={() => library.show()}>Your charts…</button>{/if}
     <button title="Open chart.json, its song, cover and clips - or a .bbchart (Ctrl+O)" onclick={openFiles}>Open files…</button>
     {#if showOpenFolder}<button title="Open a chart folder to edit it in place" onclick={openFolder}>Open folder…</button>{/if}
     <button class="primary" title={editor.folder ? `Write chart.json back into ${editor.folder} (Ctrl+S)` : "Save chart.json (Ctrl+S)"} onclick={save}>

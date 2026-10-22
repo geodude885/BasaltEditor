@@ -2,35 +2,39 @@
   // The phone layout's menu: files, playback settings and the theme - what the desktop's top bar and
   // transport hold, gathered behind one button.
   import { appearance, THEME_CHOICES, type ThemeChoice } from "../../store/appearance.svelte";
+  import { menus, visibleGroups, type Command } from "../../store/commands";
   import { editor } from "../../store/editor.svelte";
-  import { copyChart, openFiles, openFolder, save, saveChartAs, savePackage } from "../../store/files";
   import { mobile } from "../../store/mobile.svelte";
   import { ensureAudio, setRate, setVolume } from "../../store/playback";
   import { recording } from "../../store/recording.svelte";
-  import { canOpenFolders } from "../../platform/web";
   import { num } from "../fields";
   import SongPicker from "../SongPicker.svelte";
 
   const THEME_NAMES: Record<ThemeChoice, string> = { system: "System theme", dark: "Basalt (dark)", light: "Ash (light)" };
-  const showOpenFolder = canOpenFolders();
+  // File and Edit come from the shared command table; View's editors are in the top bar here.
+  const shown = $derived(menus().filter(m => m.id !== "view"));
 
-  /** Runs a menu action and shuts the menu. */
-  const then = (action: () => unknown) => () => { mobile.menu = false; void action(); };
+  /** Runs a command and shuts the menu. */
+  function run(command: Command): void {
+    mobile.menu = false;
+    void command.run();
+  }
 </script>
 
 <button class="scrim" aria-label="Close the menu" onclick={() => { mobile.menu = false; }}></button>
 <div class="sheet" role="dialog" aria-label="Menu">
-  <h3>Chart</h3>
-  <div class="actions">
-    <button onclick={then(() => { editor.confirmNew = true; mobile.drawer = "chart"; })}>New</button>
-    <button onclick={then(openFiles)}>Open files…</button>
-    {#if showOpenFolder}<button onclick={then(openFolder)}>Open folder…</button>{/if}
-    <button class="primary" onclick={then(save)}>{editor.folder ? "Save" : "Save as…"}</button>
-    {#if editor.folder}<button onclick={then(saveChartAs)}>Save as…</button>{/if}
-    <button onclick={then(savePackage)}>Package…</button>
-    <button onclick={then(copyChart)}>Copy chart.json</button>
-  </div>
-  <SongPicker />
+  {#each shown as menu (menu.id)}
+    <h3>{menu.label}</h3>
+    {#each visibleGroups(menu) as group, g (g)}
+      <div class="actions">
+        {#each group as command (command.id)}
+          <button class:primary={command.id === "save" || command.id === "library"} class:on={command.checked?.()}
+            disabled={command.enabled ? !command.enabled() : false} onclick={() => run(command)}>{command.label}</button>
+        {/each}
+      </div>
+    {/each}
+    {#if menu.id === "file"}<SongPicker />{/if}
+  {/each}
   <h3>Playing</h3>
   <div class="settings">
     <label><span>Speed</span>
