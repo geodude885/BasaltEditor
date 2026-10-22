@@ -11,6 +11,8 @@ reloads it within a second.
 
 Windows, macOS and Linux builds are on the Releases page; installed copies update themselves.
 
+Now includes webapp deployment & mobile support. 
+
 ## Developing
 
 Needs Node 24.
