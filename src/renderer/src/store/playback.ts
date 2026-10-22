@@ -28,6 +28,9 @@ export function ensureAudio(): AudioContext | null {
   return context;
 }
 
+/** Where the playhead is this instant - fresher than editor.time, which moves once a frame. */
+export const playheadNow = (): number => now();
+
 function now(): number {
   if (!editor.playing) return editor.time;
   if (editor.song && !songAudio().paused) return songAudio().currentTime - songStart();

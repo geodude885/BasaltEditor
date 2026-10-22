@@ -6,10 +6,10 @@
   import { editor } from "../../store/editor.svelte";
   import { layout } from "../../store/layout.svelte";
   import { mobile } from "../../store/mobile.svelte";
-  import Highway from "../../views/highway/Highway.svelte";
   import LaneView from "../../views/lane/LaneView.svelte";
   import Timeline from "../../views/timeline/Timeline.svelte";
   import Inspector from "../Inspector.svelte";
+  import HighwayScreen from "./HighwayScreen.svelte";
   import MenuSheet from "./MenuSheet.svelte";
   import MobileBar from "./MobileBar.svelte";
   import MobileDrawer from "./MobileDrawer.svelte";
@@ -30,7 +30,7 @@
   <main class="main">
     <div class="lanebox"><LaneView /></div>
     {#if mobile.view === "highway"}
-      <div class="highwaybox"><Highway /></div>
+      <div class="highwaybox"><HighwayScreen /></div>
     {:else}
       <div class="timebox"><Timeline /></div>
     {/if}

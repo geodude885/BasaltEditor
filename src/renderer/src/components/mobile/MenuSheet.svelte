@@ -6,6 +6,7 @@
   import { copyChart, openFiles, openFolder, save, saveChartAs, savePackage } from "../../store/files";
   import { mobile } from "../../store/mobile.svelte";
   import { ensureAudio, setRate, setVolume } from "../../store/playback";
+  import { recording } from "../../store/recording.svelte";
   import { canOpenFolders } from "../../platform/web";
   import { num } from "../fields";
 
@@ -39,6 +40,11 @@
       <input type="range" min="0" max="1" step="0.05" value={editor.volume} oninput={e => setVolume(num(e))} />
     </label>
     <button class:on={editor.click} onclick={() => { editor.click = !editor.click; ensureAudio(); }}>Beat click</button>
+    <label class="wide"><span>Tap timing: {recording.offsetMs > 0 ? "−" : recording.offsetMs < 0 ? "+" : ""}{Math.abs(recording.offsetMs)} ms</span>
+      <input type="range" min="-150" max="250" step="5" value={recording.offsetMs} oninput={e => recording.setOffset(num(e))}
+        aria-describedby="offset-note" />
+    </label>
+    <p class="note" id="offset-note">If your taps land late, move this right; early, move it left.</p>
   </div>
   <h3>Look</h3>
   <div class="settings">
@@ -59,5 +65,7 @@
   .actions, .settings { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
   button, select { min-height: 40px; }
   label { flex: 1 1 120px; }
+  label.wide { flex-basis: 100%; }
+  .note { margin: 0; font-size: 12px; }
   a { align-self: center; }
 </style>
