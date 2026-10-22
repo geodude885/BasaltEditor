@@ -28,7 +28,7 @@
 <style>
   .tools {
     display: flex; gap: 6px; align-items: center; padding: 4px 8px; overflow-x: auto; overscroll-behavior: contain;
-    border-top: 1px solid var(--line); background: var(--panel); padding-right: max(8px, env(safe-area-inset-right));
+    border-top: 1px solid var(--line); background: var(--panel);
   }
   button { min-height: 38px; flex: none; }
   .count { color: var(--text-dim); font-size: 12px; white-space: nowrap; }

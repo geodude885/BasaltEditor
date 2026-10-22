@@ -79,7 +79,10 @@
 {/if}
 
 <style>
-  .app { height: 100%; display: grid; grid-template-rows: auto 1fr; padding-inline: 16px; padding-top: env(safe-area-inset-top); }
+  .app {
+    height: 100%; display: grid; grid-template-rows: auto 1fr;
+    padding: env(safe-area-inset-top) max(16px, env(safe-area-inset-right)) env(safe-area-inset-bottom) max(16px, env(safe-area-inset-left));
+  }
   .work { display: grid; grid-template-columns: minmax(260px, 340px) minmax(0, 1fr); gap: 16px; padding-block: 12px; min-height: 0; }
   .pane { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
   .pane h2 { margin: 0; font: 700 15px/1 var(--display); text-transform: uppercase; letter-spacing: .08em; color: var(--text-dim); padding: 10px 12px 6px; }

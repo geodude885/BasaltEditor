@@ -45,6 +45,7 @@
   --lane-floor: #2a2622;
   --lane-ends: #ffd36a;
   --zone: #f2f2d9;
+  --status-bar: #1b1c1e;  /* behind the phone's status bar, whose text is white as a home-screen app */
   color-scheme: dark;
 }
 
@@ -76,9 +77,15 @@
   --lane-floor: #d8cfc0;
   --lane-ends: #a86b00;
   --zone: #3d3a35;
+  --status-bar: #1b1c1e;  /* dark in both themes: the status bar's text stays white */
   color-scheme: light;
 }
 html, body { height: 100%; margin: 0; }
+/* Behind the phone's status bar when the app runs from the home screen; no height anywhere else. */
+html::before {
+  content: ""; position: fixed; z-index: 1000; top: 0; left: 0; right: 0; height: env(safe-area-inset-top, 0px);
+  background: var(--status-bar); pointer-events: none;
+}
 body { background: var(--bg); color: var(--text); font: 14px/1.45 var(--body); }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }

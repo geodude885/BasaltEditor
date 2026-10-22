@@ -77,7 +77,7 @@
   .pad:global(.hit) { background: var(--accent); }
   .controls {
     display: flex; flex-direction: column; gap: 6px; padding: 6px; border-left: 1px solid var(--line); background: var(--panel);
-    overflow-y: auto; overscroll-behavior: contain; padding-right: max(6px, env(safe-area-inset-right));
+    overflow-y: auto; overscroll-behavior: contain;
   }
   .controls button { min-height: 40px; white-space: normal; padding: 4px; }
   .rec.on { background: var(--bad); border-color: var(--bad); color: var(--on-accent); }

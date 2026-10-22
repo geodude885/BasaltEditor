@@ -54,14 +54,20 @@
   :global(html.compact body) { position: fixed; inset: 0; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
   :global(html.compact input), :global(html.compact textarea) { -webkit-user-select: text; user-select: text; }
 
+  /*
+   * The phone's notch, status bar and home indicator: the whole shell keeps clear of them (the screen's
+   * "safe area", zero where there is nothing in the way), in the panel colour so the edges blend in.
+   * The menu sheet, absolutely placed over the shell, pads itself.
+   */
   .shell {
-    position: relative; height: 100dvh; display: grid; overflow: hidden;
+    position: relative; height: 100dvh; display: grid; overflow: hidden; background: var(--panel);
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
     grid-template-columns: 64px minmax(0, 1fr);
     grid-template-rows: auto minmax(0, 1fr) auto;
     grid-template-areas: "bar bar" "rail main" "rail tools";
   }
   .bar { grid-area: bar; min-width: 0; }
-  .rail { grid-area: rail; min-height: 0; display: flex; flex-direction: column; padding-left: env(safe-area-inset-left); background: var(--panel); }
+  .rail { grid-area: rail; min-height: 0; display: flex; flex-direction: column; background: var(--panel); }
   .rail > :global(*) { flex: 1; }
   .tools { grid-area: tools; min-width: 0; }
   .main {
@@ -85,7 +91,6 @@
     grid-template-rows: auto minmax(0, 1fr) auto auto;
     grid-template-areas: "bar" "main" "tools" "rail";
   }
-  .shell.portrait .rail { padding-left: 0; }
   .shell.portrait .main { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) minmax(120px, 34%); }
   .shell.portrait .lanebox { order: 2; border-right: 0; border-top: 1px solid var(--line); }
   .shell.portrait .float { top: auto; width: auto; right: 6px; max-height: 55%; }

@@ -56,7 +56,7 @@
   .panel { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 12px; display: grid; gap: 12px; align-content: start; }
 
   /* Portrait: the rail runs along the bottom, and the drawer rises from it. */
-  :global(.shell.portrait) .rail { flex-direction: row; border-right: 0; border-top: 1px solid var(--line); padding-bottom: max(4px, env(safe-area-inset-bottom)); }
+  :global(.shell.portrait) .rail { flex-direction: row; border-right: 0; border-top: 1px solid var(--line); }
   :global(.shell.portrait) .rail button { flex: 1 1 0; min-width: 0; font-size: 11px; }
   :global(.shell.portrait) .drawer { top: auto; right: 0; width: auto; height: 62%; border-right: 0; border-top: 1px solid var(--line); }
 </style>

@@ -43,9 +43,7 @@
 
 <style>
   .bar {
-    padding-top: max(4px, env(safe-area-inset-top));
-    display: flex; align-items: center; gap: 6px; padding: 4px 8px; padding-left: max(8px, env(safe-area-inset-left));
-    padding-right: max(8px, env(safe-area-inset-right)); border-bottom: 1px solid var(--line); background: var(--panel); min-width: 0;
+    display: flex; align-items: center; gap: 6px; padding: 4px 8px; border-bottom: 1px solid var(--line); background: var(--panel); min-width: 0;
   }
   button { min-height: 36px; }
   .icon { min-width: 40px; padding: 4px 8px; font-size: 18px; line-height: 1; }
