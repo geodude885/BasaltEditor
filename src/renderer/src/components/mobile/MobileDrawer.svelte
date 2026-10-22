@@ -1,5 +1,6 @@
 <script lang="ts">
   // The phone layout's settings: a rail of tabs, and the open tab's panel in a drawer over the editor.
+  import Icon from "../Icon.svelte";
   import type { Tab } from "../../store/editor.svelte";
   import { mobile } from "../../store/mobile.svelte";
   import ActorsPanel from "../panels/ActorsPanel.svelte";
@@ -26,7 +27,7 @@
   </nav>
 {:else if mobile.drawer}
   <section class="drawer" aria-label={title}>
-    <header><h3>{title}</h3><button aria-label="Close" onclick={() => { mobile.drawer = null; }}>✕</button></header>
+    <header><h3>{title}</h3><button aria-label="Close" onclick={() => { mobile.drawer = null; }}><Icon name="close" /></button></header>
     <div class="panel">
       {#if mobile.drawer === "chart"}<ChartPanel />
       {:else if mobile.drawer === "phases"}<PhasesPanel />

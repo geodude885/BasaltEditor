@@ -1,6 +1,7 @@
 <script lang="ts">
   // The highway with its recording pads under it, one per column, and its controls beside it. Arm
   // recording and play: each pad tap drops a projectile in that column, snapped. Pausing ends the take.
+  import Icon from "../Icon.svelte";
   import { untrack } from "svelte";
   import { editor } from "../../store/editor.svelte";
   import { mobile } from "../../store/mobile.svelte";
@@ -42,7 +43,7 @@
   </div>
   <div class="controls">
     <button class="rec" class:on={recording.armed} aria-pressed={recording.armed}
-      onclick={() => { recording.finish(); recording.armed = !recording.armed; }}>● Rec</button>
+      onclick={() => { recording.finish(); recording.armed = !recording.armed; }}><Icon name="record" /> Rec</button>
     {#if recording.armed}
       <div class="modes" role="group" aria-label="Recording mode">
         {#each MODES as [mode, label] (mode)}
@@ -55,7 +56,7 @@
       <button aria-label="Back a bar" onclick={() => rewindBars(1)}>−bar</button>
       <button aria-label="Back 5 seconds" onclick={() => rewindSeconds(5)}>−5s</button>
     </div>
-    <button aria-label="Back to where playing started" onclick={backToPlayStart}>↩ Start</button>
+    <button aria-label="Back to where playing started" onclick={backToPlayStart}><Icon name="back" /> Start</button>
     <button class:on={!!mobile.loop || mobile.loopStart != null} onclick={loopPoint}>
       {mobile.loop ? "Loop off" : mobile.loopStart != null ? "Set B" : "Loop A"}
     </button>

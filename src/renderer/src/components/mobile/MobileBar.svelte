@@ -1,5 +1,6 @@
 <script lang="ts">
   // The phone layout's one bar: the menu, the chart, playing, snapping, undo and the problem count.
+  import Icon from "../Icon.svelte";
   import { round } from "../../model/tempo";
   import { redo, undo } from "../../store/actions";
   import { doc } from "../../store/document.svelte";
@@ -20,10 +21,12 @@
 </script>
 
 <header class="bar">
-  <button class="icon" aria-label="Menu" aria-expanded={mobile.menu} onclick={() => { mobile.menu = !mobile.menu; mobile.drawer = null; }}>☰</button>
-  <div class="name">{doc.chart.name || "Untitled"}{doc.dirty ? " •" : ""}</div>
-  <button class="icon" aria-label="Back to the start" onclick={() => seek(0)}>⏮</button>
+  <button class="icon" aria-label="Menu" aria-expanded={mobile.menu} onclick={() => { mobile.menu = !mobile.menu; mobile.drawer = null; }}><Icon name="menu" /></button>
   <button class="primary play" onclick={playOrPause}>{editor.playing ? "Pause" : "Play"}</button>
+  <!-- The rest scrolls sideways when the screen is too narrow for it all (portrait). -->
+  <div class="scroll">
+  <div class="name">{doc.chart.name || "Untitled"}{doc.dirty ? " •" : ""}</div>
+  <button class="icon" aria-label="Back to the start" onclick={() => seek(0)}><Icon name="start" /></button>
   <div class="clock" aria-label="Playhead">{clock.time}{#if clock.beat}<small>b{clock.beat}</small>{/if}</div>
   <select aria-label="Snap" value={String(editor.snap)} onchange={e => { editor.snap = num(e); }}>
     <option value="1">1 beat</option><option value="0.5">1/2</option><option value="0.25">1/4</option><option value="0.125">1/8</option><option value="0">no snap</option>
@@ -32,14 +35,15 @@
     <button class:on={mobile.view === "timeline"} aria-pressed={mobile.view === "timeline"} onclick={() => { mobile.view = "timeline"; }}>Timeline</button>
     <button class:on={mobile.view === "highway"} aria-pressed={mobile.view === "highway"} onclick={() => { mobile.view = "highway"; }}>Highway</button>
   </div>
-  <div class="spacer"></div>
-  <button class="icon" aria-label="Undo" disabled={!doc.canUndo} onclick={undo}>↶</button>
-  <button class="icon" aria-label="Redo" disabled={!doc.canRedo} onclick={redo}>↷</button>
+  </div>
+  <button class="icon" aria-label="Undo" disabled={!doc.canUndo} onclick={undo}><Icon name="undo" /></button>
+  <button class="icon" aria-label="Redo" disabled={!doc.canRedo} onclick={redo}><Icon name="redo" /></button>
   <button class="chip" class:bad={count} aria-label="{count} problems" onclick={() => mobile.toggleDrawer("problems")}>{count}</button>
 </header>
 
 <style>
   .bar {
+    padding-top: max(4px, env(safe-area-inset-top));
     display: flex; align-items: center; gap: 6px; padding: 4px 8px; padding-left: max(8px, env(safe-area-inset-left));
     padding-right: max(8px, env(safe-area-inset-right)); border-bottom: 1px solid var(--line); background: var(--panel); min-width: 0;
   }
@@ -50,12 +54,17 @@
   .clock { font: 500 14px/1 var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
   .clock small { font-size: 11px; color: var(--text-dim); margin-left: 4px; }
   select { padding: 6px 4px; min-height: 36px; }
-  .spacer { flex: 1; }
+  .scroll {
+    flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; overflow-x: auto; overscroll-behavior-x: contain;
+    scrollbar-width: none; touch-action: pan-x;
+  }
+  .scroll::-webkit-scrollbar { display: none; }
+  .scroll > * { flex: none; }
   .views { display: flex; }
   .views button { border-radius: 0; padding: 4px 8px; font: 600 13px var(--display); text-transform: uppercase; letter-spacing: .04em; }
   .views button:first-child { border-radius: 6px 0 0 6px; }
   .views button:last-child { border-radius: 0 6px 6px 0; border-left: 0; }
   .chip { min-width: 36px; border-radius: 999px; font: 500 13px var(--mono); color: var(--good); }
   .chip.bad { color: var(--bad); border-color: var(--bad); }
-  @media (max-width: 520px) { .name, .clock small { display: none; } }
+  .name { max-width: 14ch; }
 </style>

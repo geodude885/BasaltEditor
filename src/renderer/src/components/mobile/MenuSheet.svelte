@@ -65,7 +65,7 @@
   .scrim { position: absolute; inset: 0; border: 0; border-radius: 0; background: color-mix(in srgb, var(--bg) 60%, transparent); z-index: 6; }
   .sheet {
     position: absolute; top: 0; left: 0; bottom: 0; width: min(360px, 86vw); z-index: 7; overflow: auto; overscroll-behavior: contain;
-    background: var(--panel); border-right: 1px solid var(--line); padding: 12px 14px; padding-left: max(14px, env(safe-area-inset-left));
+    background: var(--panel); border-right: 1px solid var(--line); padding: max(12px, env(safe-area-inset-top)) 14px 12px max(14px, env(safe-area-inset-left));
     display: grid; gap: 10px; align-content: start;
   }
   .actions, .settings { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }

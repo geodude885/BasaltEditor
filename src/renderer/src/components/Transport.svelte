@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Icon from "./Icon.svelte";
   import { round } from "../model/tempo";
   import { addMove, addPhase, addProjectile, copySelected, mirrorSelected, paste, removeSelected, zoom } from "../store/actions";
   import { doc } from "../store/document.svelte";
@@ -17,7 +18,7 @@
 
 <div class="transport">
   <button class="primary" title="Play / pause (Space)" onclick={play}>{editor.playing ? "Pause" : "Play"}</button>
-  <button title="Back to the start (Home)" onclick={() => seek(0)}>⏮</button>
+  <button title="Back to the start (Home)" onclick={() => seek(0)} aria-label="Back to the start"><Icon name="start" /></button>
   <div class="clock">{clock.time}<small>{clock.beat}</small></div>
   <label><span>Speed</span>
     <select value={String(editor.rate)} onchange={e => setRate(num(e))}>

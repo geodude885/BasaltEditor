@@ -3,6 +3,7 @@
   // select it; drag events to move them, drag empty rows to box-select, double-click a row to add there.
   // With a finger, empty space waits to see what a press becomes: a tap adds there (a projectile in
   // the column tapped), a drag pans, a long press box-selects; two fingers pinch and pan.
+  import Icon from "../../components/Icon.svelte";
   import { evTime, setEvTime } from "../../model/chart";
   import type { ChartEvent } from "../../model/types";
   import {
@@ -212,7 +213,7 @@
       {@const collapsed = layout.collapsed.has(row)}
       <button class="row-header" class:collapsed style:top="{top}px" style:height="{height}px" aria-expanded={!collapsed}
         title={collapsed ? `Show ${label.toLowerCase()}` : `Collapse ${label.toLowerCase()} to a thin strip`} onclick={() => toggleTimelineRow(row)}>
-        <span class="chevron">{collapsed ? "▸" : "▾"}</span>{collapsed ? "" : label}
+        <span class="chevron"><Icon name={collapsed ? "right" : "down"} size="10px" /></span>{collapsed ? "" : label}
       </button>
     {/each}
   </div>

@@ -2,6 +2,7 @@
   // Your charts, as cards: cover, name, who made it, how many projectiles, the song, when it last
   // changed. Tap one to open it; each can be duplicated or deleted. New and Import start or bring in
   // another. Works in both layouts, over everything else.
+  import Icon from "../Icon.svelte";
   import { startNewChart } from "../../store/commands";
   import { editor } from "../../store/editor.svelte";
   import { openFiles } from "../../store/files";
@@ -34,7 +35,7 @@
     <div class="spacer"></div>
     <button onclick={startNewChart}>New</button>
     <button title="Open a .bbchart package or chart files" onclick={() => { library.visible = false; void openFiles(); }}>Import…</button>
-    <button class="close" aria-label="Close" onclick={() => { library.visible = false; }}>✕</button>
+    <button class="close" aria-label="Close" onclick={() => { library.visible = false; }}><Icon name="close" /></button>
   </header>
   <p class="note">
     Kept in this browser, with their songs and covers, and saved as you go. Browsers can clear what
@@ -76,7 +77,7 @@
 <style>
   .library {
     position: fixed; inset: 0; z-index: 20; display: flex; flex-direction: column; gap: 8px; background: var(--bg); overflow: auto;
-    overscroll-behavior: contain; padding: 12px max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+    overscroll-behavior: contain; padding: max(12px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
   }
   header { display: flex; align-items: center; gap: 8px; }
   h2 { margin: 0; font: 700 22px/1 var(--display); text-transform: uppercase; letter-spacing: .06em; }
