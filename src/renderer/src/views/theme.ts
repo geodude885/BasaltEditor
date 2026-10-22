@@ -1,4 +1,5 @@
 // The page's colours and fonts for canvas drawing, read once from the CSS variables in app.css.
+import { createSubscriber } from "svelte/reactivity";
 
 const NAMES = {
   text: "text", textDim: "text-dim", accent: "accent", wash: "wash", telegraph: "telegraph", move: "move", clip: "clip", look: "look",
@@ -10,13 +11,25 @@ export type Theme = Record<keyof typeof NAMES, string>;
 
 const cached = new Map<string, Theme>();
 
+/**
+ * Redraws once the page has finished loading. On the web, a canvas can draw before the stylesheet has
+ * arrived; the colours read then are blank, so they are not kept, and the draw runs again when it has.
+ */
+const subscribeToLoading = createSubscriber(update => {
+  if (document.readyState === "complete") return;
+  window.addEventListener("load", update, { once: true });
+  return () => window.removeEventListener("load", update);
+});
+
 /** The colours for a scheme ("dark" or "light"), once <html> carries it. Passing it makes a draw depend on it. */
 export function theme(scheme: string): Theme {
+  subscribeToLoading();
   let t = cached.get(scheme);
   if (t) return t;
   const style = getComputedStyle(document.documentElement);
   t = Object.fromEntries(Object.entries(NAMES).map(([key, name]) => [key, style.getPropertyValue(`--${name}`).trim()])) as Theme;
-  cached.set(scheme, t);
+  // Keep only a full set: a blank colour means the stylesheet isn't in yet, and would stick.
+  if (Object.values(t).every(Boolean)) cached.set(scheme, t);
   return t;
 }
 
