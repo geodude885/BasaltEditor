@@ -5,7 +5,8 @@
   import { doc } from "../../store/document.svelte";
   import { editor } from "../../store/editor.svelte";
   import { mobile } from "../../store/mobile.svelte";
-  import { play, seek } from "../../store/playback";
+  import { seek } from "../../store/playback";
+  import { playOrPause } from "../../store/practice";
   import { num } from "../fields";
 
   const count = $derived(editor.problems.length);
@@ -22,7 +23,7 @@
   <button class="icon" aria-label="Menu" aria-expanded={mobile.menu} onclick={() => { mobile.menu = !mobile.menu; mobile.drawer = null; }}>☰</button>
   <div class="name">{doc.chart.name || "Untitled"}{doc.dirty ? " •" : ""}</div>
   <button class="icon" aria-label="Back to the start" onclick={() => seek(0)}>⏮</button>
-  <button class="primary play" onclick={play}>{editor.playing ? "Pause" : "Play"}</button>
+  <button class="primary play" onclick={playOrPause}>{editor.playing ? "Pause" : "Play"}</button>
   <div class="clock" aria-label="Playhead">{clock.time}{#if clock.beat}<small>b{clock.beat}</small>{/if}</div>
   <select aria-label="Snap" value={String(editor.snap)} onchange={e => { editor.snap = num(e); }}>
     <option value="1">1 beat</option><option value="0.5">1/2</option><option value="0.25">1/4</option><option value="0.125">1/8</option><option value="0">no snap</option>
