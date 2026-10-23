@@ -59,6 +59,12 @@ class Library {
     void this.#restore();
   }
 
+  /** Saves the open chart now, if a save is waiting - before another chart replaces it. */
+  async flush(): Promise<void> {
+    clearTimeout(this.#timer);
+    await this.#sync();
+  }
+
   show(): void {
     this.visible = true;
     void this.refresh();
@@ -78,7 +84,6 @@ class Library {
   async open(id: string): Promise<void> {
     if (this.isCurrent(id)) { this.visible = false; return; }
     if (!await mayReplaceChart()) return;
-    await this.#sync();
     try {
       const stored = await this.#source?.load(id);
       if (!stored) { toast("That chart is gone"); await this.refresh(); return; }

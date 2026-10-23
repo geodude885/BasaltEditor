@@ -11,6 +11,7 @@
   import { doc } from "../../store/document.svelte";
   import { editor } from "../../store/editor.svelte";
   import { chooseCover, newChart } from "../../store/files";
+  import { library } from "../../store/library.svelte";
   import SongPicker from "../SongPicker.svelte";
   import { songLength } from "../../store/playback";
   import { checked, num, optionalNum, text } from "../fields";
@@ -38,7 +39,7 @@
 
 {#if editor.confirmNew}
   <div class="confirm">
-    Start a new chart? Unsaved changes to this one stay only in the editor's draft.
+    Start a new chart? {library.available ? "This one stays in Your charts." : "Changes to this one that aren't saved will be lost."}
     <button class="primary" onclick={() => { editor.confirmNew = false; void newChart(); }}>Start new</button>
     <button onclick={() => { editor.confirmNew = false; }}>Keep editing</button>
   </div>

@@ -2,9 +2,12 @@
 // process. An entry's id is its folder's path. Saving stays explicit (Ctrl S writes chart.json into the
 // folder), so this source saves nothing itself; deleting moves the folder to the bin.
 import type { EditorApi } from "../../../shared/api";
-import { summaryOfText } from "../io/summary";
+import { findCover } from "../io/files";
+import { chartOfText, summaryOfText } from "../io/summary";
 import * as Jsonc from "../model/jsonc";
 import type { LibrarySource, StoredChart } from "../store/library.svelte";
+
+const NO_BYTES = new Uint8Array();
 
 export function desktopLibrary(api: Required<EditorApi>): LibrarySource {
   async function load(id: string): Promise<StoredChart | null> {
@@ -19,8 +22,15 @@ export function desktopLibrary(api: Required<EditorApi>): LibrarySource {
   return {
     autosaves: false,
 
+    /** The chart folders - reading, of the images beside each chart.json, only the one that is its cover. */
     async list() {
-      return (await api.listCharts()).map(f => summaryOfText(f.folder, f.text, new Map(f.images.map(i => [i.path, i.bytes])), f.modified));
+      return Promise.all((await api.listCharts()).map(async f => {
+        const files = new Map<string, Uint8Array>();
+        const cover = findCover(new Map(f.images.map(name => [name, NO_BYTES])), chartOfText(f.text).cover);
+        const bytes = cover ? await api.readCover(f.folder, cover).catch(() => null) : null;
+        if (cover && bytes) files.set(cover, bytes);
+        return summaryOfText(f.folder, f.text, files, f.modified);
+      }));
     },
 
     load,
@@ -33,10 +43,9 @@ export function desktopLibrary(api: Required<EditorApi>): LibrarySource {
 
     /** Copies the folder beside itself, and names the copy's chart "… (copy)". */
     async duplicate(id) {
-      const copy = await api.duplicateFolder(id);
-      const stored = await load(copy);
-      if (!stored) return;
-      try { await api.saveChart(copy, Jsonc.set(stored.text, "name", `${stored.summary.name} (copy)`)); } catch { /* keeps its name */ }
+      // Not through load(), which would put the copy among the recent folders.
+      const copy = await api.duplicateFolder(id), name = summaryOfText(id, copy.text, new Map(), 0).name;
+      try { await api.saveChart(copy.folder, Jsonc.set(copy.text, "name", `${name} (copy)`)); } catch { /* keeps its name */ }
     },
   };
 }

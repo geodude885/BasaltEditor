@@ -2,6 +2,7 @@
   // The chart's song: which it is, whether it's open (so it plays and shows its waveform), and buttons
   // to choose another, switch between songs already open, or take it out.
   import { findSong, isSong } from "../io/files";
+  import { clockText } from "../model/tempo";
   import { doc } from "../store/document.svelte";
   import { editor } from "../store/editor.svelte";
   import { chooseSong, removeSong, useSong } from "../store/files";
@@ -14,7 +15,7 @@
     if (!playing) return "Not open here - choose the file to hear it.";
     if (findSong(editor.files, named) !== playing) return `Playing ${playing} until ${named} is open.`;
     const seconds = editor.song?.buffer?.duration;
-    return seconds ? `Open · ${Math.floor(seconds / 60)}:${String(Math.round(seconds % 60)).padStart(2, "0")}` : "Open · reading…";
+    return seconds ? `Open · ${clockText(seconds, 0)}` : "Open · reading…";
   });
 </script>
 

@@ -35,8 +35,10 @@ export function playOrPause(): void {
   play();
 }
 
+/** Back by bars - not past the loop's start while inside the loop, nor past the chart's. */
 export function rewindBars(bars: number): void {
-  seek(Math.max(practice.loop?.[0] ?? 0, barsBefore(doc.tempo, editor.time, bars)));
+  const loop = practice.loop, inLoop = !!loop && editor.time >= loop[0] && editor.time <= loop[1];
+  seek(Math.max(inLoop ? loop![0] : 0, barsBefore(doc.tempo, editor.time, bars)));
 }
 
 export function rewindSeconds(seconds: number): void {

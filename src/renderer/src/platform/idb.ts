@@ -1,5 +1,5 @@
 // A few promise-shaped calls over IndexedDB - the browser's storage for things too big for
-// localStorage, such as songs. Small on purpose: the library needs gets, puts, deletes and listings.
+// localStorage, such as songs. Small on purpose: the library needs gets, listings and transactions.
 
 export type Stores = Record<string, { keyPath?: string }>;
 
@@ -30,9 +30,17 @@ export class Idb {
     });
   }
 
+  /** Several requests over several stores in one transaction: all of them happen, or none do. */
+  async transaction(stores: string[], mode: IDBTransactionMode, act: (tx: IDBTransaction) => void): Promise<void> {
+    const db = await this.#open();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(stores, mode);
+      tx.oncomplete = () => resolve();
+      tx.onerror = tx.onabort = () => reject(tx.error);
+      act(tx);
+    });
+  }
+
   get<T>(store: string, key: IDBValidKey): Promise<T | undefined> { return this.#run(store, "readonly", s => s.get(key)); }
   all<T>(store: string, range?: IDBKeyRange): Promise<T[]> { return this.#run(store, "readonly", s => s.getAll(range)); }
-  keys(store: string, range?: IDBKeyRange): Promise<IDBValidKey[]> { return this.#run(store, "readonly", s => s.getAllKeys(range)); }
-  put(store: string, value: unknown, key?: IDBValidKey): Promise<IDBValidKey> { return this.#run(store, "readwrite", s => s.put(value, key)); }
-  delete(store: string, key: IDBValidKey | IDBKeyRange): Promise<undefined> { return this.#run(store, "readwrite", s => s.delete(key)); }
 }

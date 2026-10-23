@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { editor } from "./editor.svelte";
-import { keepLooping, loopPoint, loopPointLabel, practice } from "./practice.svelte";
+import { keepLooping, loopPoint, loopPointLabel, practice, rewindBars } from "./practice.svelte";
 
 describe("the A-B loop", () => {
   beforeEach(() => {
@@ -41,5 +41,15 @@ describe("the A-B loop", () => {
     editor.playing = true;
     keepLooping();
     expect(editor.time).toBe(4);
+  });
+
+  it("rewinds no further than A inside the loop, and never forwards to it from before", () => {
+    practice.loop = [30, 40];
+    editor.time = 31;
+    rewindBars(1);
+    expect(editor.time).toBe(30);
+    editor.time = 10;
+    rewindBars(1);
+    expect(editor.time).toBeLessThan(10);
   });
 });

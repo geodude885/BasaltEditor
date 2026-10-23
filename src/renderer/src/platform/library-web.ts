@@ -26,18 +26,28 @@ export const webLibrary: LibrarySource = {
     return { summary: record.summary, text: record.text, files };
   },
 
+  // Each in one transaction, so a chart is never left with half its files - and saves made close
+  // together run one after the other, each reading the paths the one before wrote.
   async save(summary, text, changed, removed) {
-    const id = summary.id, before = await db.get<Entry>("charts", id);
-    for (const [path, bytes] of changed) await db.put("files", bytes, fileKey(id, path));
-    for (const path of removed) await db.delete("files", fileKey(id, path));
-    const paths = new Set(before?.paths ?? []);
-    for (const [path] of changed) paths.add(path);
-    for (const path of removed) paths.delete(path);
-    await db.put("charts", { summary, text, paths: [...paths] } satisfies Entry, id);
+    const id = summary.id;
+    await db.transaction(["charts", "files"], "readwrite", tx => {
+      const charts = tx.objectStore("charts"), files = tx.objectStore("files");
+      for (const [path, bytes] of changed) files.put(bytes, fileKey(id, path));
+      for (const path of removed) files.delete(fileKey(id, path));
+      const before = charts.get(id);
+      before.onsuccess = () => {
+        const paths = new Set((before.result as Entry | undefined)?.paths ?? []);
+        for (const [path] of changed) paths.add(path);
+        for (const path of removed) paths.delete(path);
+        charts.put({ summary, text, paths: [...paths] } satisfies Entry, id);
+      };
+    });
   },
 
   async remove(id) {
-    await db.delete("files", filesOf(id));
-    await db.delete("charts", id);
+    await db.transaction(["charts", "files"], "readwrite", tx => {
+      tx.objectStore("files").delete(filesOf(id));
+      tx.objectStore("charts").delete(id);
+    });
   },
 };

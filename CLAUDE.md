@@ -86,8 +86,8 @@ src/renderer/src/
   folders inside the Charts folder; `BASALT_CHARTS_FOLDER` points it at another folder, to try it
   without touching real charts.
 - **The web build** (`npm run build:web`, `vite.config.web.ts`) is the same renderer with
-  `platform/web.ts` standing in for the preload; `web.yml` checks, tests and publishes it to GitHub
-  Pages on every push to `main`.
+  `platform/web.ts` standing in for the preload; `ci.yml` builds it and, on every push to `main`
+  that passes, publishes it to GitHub Pages (the `gh-pages` branch).
 
 - **The renderer never touches Node or the file system directly** - only `window.editor`, through
   `store/files.ts`. It stays a plain web app: `npm run dev:renderer` serves it in a browser, with
@@ -136,9 +136,10 @@ the tests that check Stage against a transcription of the retired BossBattles Ni
 
 ## Releases
 
-- `ci.yml` runs check, tests and build on every push. Pushing a `v*` tag runs `release.yml`: a
-  matrix (`windows-latest`, `macos-latest`, `ubuntu-latest`) builds and publishes to a draft
-  release; publish the draft by hand. Keep the tag and `package.json`'s version in step.
+- `ci.yml` runs check, tests and both builds on every push and pull request, then publishes the
+  website from `main`; only that publish job can write to the repository. Pushing a `v*` tag runs
+  `release.yml`: a matrix (`windows-latest`, `macos-latest`, `ubuntu-latest`) builds and publishes
+  to a draft release; publish the draft by hand. Keep the tag and `package.json`'s version in step.
 - Don't commit build output (`out/`, `dist/`); release assets aren't subject to git's 100 MB limit.
 - `electron-builder.yml`'s `publish` names the GitHub owner and repo the updater reads - it must
   match where releases actually go.

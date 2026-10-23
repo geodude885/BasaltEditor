@@ -97,7 +97,9 @@ export const packageName = (chartName: string | undefined): string => `${(chartN
 export function packageContents(text: string, chart: Pick<Chart, "music" | "cover">, files: Map<string, Uint8Array>): { entries: FileEntry[]; unwrapped?: string } {
   const entries: FileEntry[] = [];
   let chartText = text, unwrapped: string | undefined;
-  const song = findSong(files, chart.music?.file), cover = findCover(files, chart.cover);
+  // Only what chart.json names: a song or image it doesn't name, the game never uses.
+  const song = chart.music?.file ? findSong(files, chart.music.file) : undefined;
+  const cover = chart.cover ? findCover(files, chart.cover) : undefined;
   if (song) {
     const bytes = files.get(song)!, inside = mp3InsideWav(bytes);
     if (inside) {

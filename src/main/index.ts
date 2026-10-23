@@ -1,13 +1,16 @@
 import { app, BrowserWindow, dialog, ipcMain, nativeTheme, shell } from "electron";
 import { cpSync, existsSync, readFileSync } from "node:fs";
-import { cp, readdir, readFile, stat, writeFile } from "node:fs/promises";
+import { cp, readdir, readFile, realpath, stat, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
-import { basename, isAbsolute, join, relative, resolve } from "node:path";
+import { basename, dirname, join, relative, resolve } from "node:path";
 import updater from "electron-updater";
-import { Channels, type ChartFolder, type FileKind, type OpenedFile, type OpenedFolder, type UnsavedChoice } from "../shared/api";
+import { Channels, type ChartFolder, type DuplicatedFolder, type FileKind, type OpenedFile, type OpenedFolder, type UnsavedChoice } from "../shared/api";
 
 /** Chart folders this session opened - the only places saveChart may write. */
 const openedFolders = new Set<string>();
+
+/** Ctrl and these keys zoom the page in or out, by the default menu's steps. */
+const PAGE_ZOOM_STEPS: Record<string, number> = { "=": 0.5, "+": 0.5, "-": -0.5 };
 
 function createWindow(): void {
   const window = new BrowserWindow({
@@ -31,9 +34,16 @@ function createWindow(): void {
   // The page draws its own menu bar. Electron's default menu would come back on Alt, so it goes - except
   // on macOS, where the app menu lives outside the window and gives text boxes Cmd C / V.
   if (process.platform !== "darwin") window.removeMenu();
-  // Developer tools on F12, which the default menu used to give.
-  window.webContents.on("before-input-event", (_, input) => {
-    if (input.type === "keyDown" && input.key === "F12") window.webContents.toggleDevTools();
+  // What the default menu used to give: developer tools on F12, and zooming the page with Ctrl + / - / 0.
+  window.webContents.on("before-input-event", (event, input) => {
+    if (input.type !== "keyDown") return;
+    if (input.key === "F12") { window.webContents.toggleDevTools(); return; }
+    if (process.platform === "darwin" || !input.control || input.alt || input.meta) return;
+    const contents = window.webContents, step = PAGE_ZOOM_STEPS[input.key];
+    if (input.key === "0") contents.setZoomLevel(0);
+    else if (step) contents.setZoomLevel(contents.getZoomLevel() + step);
+    else return;
+    event.preventDefault();
   });
   // Links open in the browser, never in the app.
   window.webContents.setWindowOpenHandler(({ url }) => {
@@ -108,22 +118,25 @@ async function readFolder(folder: string): Promise<OpenedFolder> {
 }
 
 // "Your charts" on the desktop: the chart folders in the game's Charts folder. The page names folders
-// by path, so each call checks the folder is one it may touch - in the Charts folder, or (for reading)
-// one opened before.
+// by path, so each call checks the folder is one it may touch - a chart folder straight inside the
+// Charts folder, or (for reading) one opened before.
 
-/** Whether `child` is somewhere inside `parent`. */
-function isInside(parent: string, child: string): boolean {
-  const rel = relative(resolve(parent), resolve(child));
-  return !!rel && !rel.startsWith("..") && !isAbsolute(rel);
-}
-
-/** The folder, resolved, if it is in the Charts folder; else an error. */
-function inCharts(folder: string): string {
+/**
+ * The folder, resolved, if it is a chart folder (one with chart.json) straight inside the Charts
+ * folder; else an error. Checked on the real paths, so a link inside the Charts folder can't lead
+ * out of it - but the path handed back is the one asked about, which is how the page knows it.
+ */
+async function chartFolderIn(folder: string): Promise<string> {
   const charts = chartsFolder(), target = resolve(folder);
-  if (!charts || !isInside(charts, target)) throw new Error("that folder isn't in the game's Charts folder");
+  const refuse = () => new Error("that isn't a chart folder in the game's Charts folder");
+  if (!charts || !existsSync(join(target, "chart.json"))) throw refuse();
+  const [realCharts, realTarget] = await Promise.all([realpath(charts), realpath(target)]);
+  if (relative(realCharts, dirname(realTarget)) !== "") throw refuse();
   return target;
 }
 
+/** Images beside chart.json, any of which may be its cover. */
+const IMAGE = /\.(png|jpe?g)$/i;
 /** Bigger images are left off the cards. */
 const COVER_MOST_BYTES = 4 * 1024 * 1024;
 
@@ -139,12 +152,7 @@ ipcMain.handle(Channels.listCharts, async (): Promise<ChartFolder[]> => {
     if (!existsSync(chartPath)) continue;
     try {
       const [text, info, names] = await Promise.all([readFile(chartPath, "utf8"), stat(chartPath), readdir(folder, { withFileTypes: true })]);
-      const images: OpenedFile[] = [];
-      for (const name of names) {
-        if (!name.isFile() || !/\.(png|jpe?g)$/i.test(name.name)) continue;
-        const path = join(folder, name.name);
-        if ((await stat(path)).size <= COVER_MOST_BYTES) images.push({ path: name.name, bytes: new Uint8Array(await readFile(path)) });
-      }
+      const images = names.filter(n => n.isFile() && IMAGE.test(n.name)).map(n => n.name);
       found.push({ folder, text, modified: info.mtimeMs, images });
     } catch (e) {
       console.error("could not read", folder, e);
@@ -153,23 +161,31 @@ ipcMain.handle(Channels.listCharts, async (): Promise<ChartFolder[]> => {
   return found;
 });
 
+ipcMain.handle(Channels.readCover, async (_event, folder: string, name: string): Promise<Uint8Array | null> => {
+  const target = await chartFolderIn(folder);
+  if (basename(name) !== name || !IMAGE.test(name)) throw new Error("that isn't an image beside chart.json");
+  const path = join(target, name);
+  if ((await stat(path)).size > COVER_MOST_BYTES) return null;
+  return new Uint8Array(await readFile(path));
+});
+
 ipcMain.handle(Channels.readFolder, async (_event, folder: string): Promise<OpenedFolder> => {
   const target = resolve(folder);
-  if (!recentFolders.includes(target) && !openedFolders.has(target)) inCharts(target);
+  if (!recentFolders.includes(target) && !openedFolders.has(target)) await chartFolderIn(target);
   return readFolder(target);
 });
 
-ipcMain.handle(Channels.duplicateFolder, async (_event, folder: string): Promise<string> => {
-  const source = inCharts(folder);
+ipcMain.handle(Channels.duplicateFolder, async (_event, folder: string): Promise<DuplicatedFolder> => {
+  const source = await chartFolderIn(folder);
   let copy = `${source} (copy)`;
   for (let n = 2; existsSync(copy); n++) copy = `${source} (copy ${n})`;
   await cp(source, copy, { recursive: true, errorOnExist: true });
   openedFolders.add(copy);
-  return copy;
+  return { folder: copy, text: await readFile(join(copy, "chart.json"), "utf8") };
 });
 
 ipcMain.handle(Channels.trashFolder, async (_event, folder: string): Promise<void> => {
-  const target = inCharts(folder);
+  const target = await chartFolderIn(folder);
   await shell.trashItem(target);
   openedFolders.delete(target);
   recentFolders = recentFolders.filter(f => f !== target);

@@ -5,8 +5,10 @@ export type OpenedFile = { path: string; bytes: Uint8Array };
 export type OpenedFolder = { folder: string; files: OpenedFile[] };
 /** What a file picker is for: just a song, just a cover - or, left out, any of the chart's files. */
 export type FileKind = "song" | "cover";
-/** A chart folder in the game's Charts folder, for "Your charts": chart.json's text and the images beside it. */
-export type ChartFolder = { folder: string; text: string; modified: number; images: OpenedFile[] };
+/** A chart folder in the game's Charts folder, for "Your charts": chart.json's text and the names of the images beside it. */
+export type ChartFolder = { folder: string; text: string; modified: number; images: string[] };
+/** A chart folder's copy: where it is, and its chart.json's text. */
+export type DuplicatedFolder = { folder: string; text: string };
 /** What to do with unsaved changes before opening another chart. */
 export type UnsavedChoice = "save" | "discard" | "cancel";
 
@@ -28,10 +30,12 @@ export interface EditorApi {
   chartsFolder?(): Promise<string | null>;
   /** Every chart folder in the Charts folder. */
   listCharts?(): Promise<ChartFolder[]>;
+  /** One image beside chart.json in a chart folder of the Charts folder, for its card; null when it is too big to show. */
+  readCover?(folder: string, name: string): Promise<Uint8Array | null>;
   /** Reads a chart folder as Open folder does, without asking: one in the Charts folder, or opened before. */
   readFolder?(folder: string): Promise<OpenedFolder>;
-  /** Copies a chart folder in the Charts folder beside itself; the copy's path. */
-  duplicateFolder?(folder: string): Promise<string>;
+  /** Copies a chart folder in the Charts folder beside itself. */
+  duplicateFolder?(folder: string): Promise<DuplicatedFolder>;
   /** Moves a chart folder in the Charts folder to the bin. */
   trashFolder?(folder: string): Promise<void>;
   /** The chart folders opened lately, newest first. */
@@ -48,6 +52,7 @@ export const Channels = {
   setTheme: "editor:set-theme",
   chartsFolder: "editor:charts-folder",
   listCharts: "editor:list-charts",
+  readCover: "editor:read-cover",
   readFolder: "editor:read-folder",
   duplicateFolder: "editor:duplicate-folder",
   trashFolder: "editor:trash-folder",

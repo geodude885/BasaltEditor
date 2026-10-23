@@ -8,7 +8,7 @@ import {
 } from "./actions";
 import { doc } from "./document.svelte";
 import { editor } from "./editor.svelte";
-import { copyChart, openFiles, openFolder, openRecent, save, saveChartAs, savePackage } from "./files";
+import { copyChart, newChart, openFiles, openFolder, openRecent, save, saveChartAs, savePackage } from "./files";
 import { layout } from "./layout.svelte";
 import { library } from "./library.svelte";
 import { mobile } from "./mobile.svelte";
@@ -45,9 +45,13 @@ export type Menu = { id: MenuId; label: string; groups: Command[][] };
 
 const selection = () => editor.selection.size > 0;
 
-/** Asks whether to start a new chart, where the Chart tab shows the question. */
+/**
+ * Starts a new chart. The desktop app asks about unsaved changes in its own dialog; elsewhere the
+ * Chart tab asks first.
+ */
 export function startNewChart(): void {
   library.visible = false;
+  if (window.editor.askUnsaved) { void newChart(); return; }
   editor.confirmNew = true;
   editor.tab = "chart";
   if (layout.compact) { mobile.menu = false; mobile.drawer = "chart"; }

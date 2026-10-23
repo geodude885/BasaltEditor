@@ -40,6 +40,11 @@ describe("what a package holds", () => {
     const packaged = Jsonc.parse(new TextDecoder().decode(entries[0].bytes)) as { music: { file: string; start: number } };
     expect(packaged.music).toEqual({ file: "song.mp3", start: 0.5 });
   });
+
+  it("leaves out a song and cover the chart doesn't name", () => {
+    const files = new Map([["song.mp3", bytes(1)], ["cover.png", bytes(3)]]);
+    expect(packageContents("{}", {}, files).entries.map(e => e.path)).toEqual(["chart.json"]);
+  });
 });
 
 describe("problems with the chart's files", () => {

@@ -7,6 +7,8 @@ import { template } from "../model/samples";
 import { loadChart, toast } from "./actions";
 import { doc } from "./document.svelte";
 import { editor } from "./editor.svelte";
+// library.svelte.ts imports this module too; each only calls the other from inside functions.
+import { library } from "./library.svelte";
 import { loadSong, unloadSong } from "./playback";
 
 const api = () => window.editor;
@@ -156,9 +158,11 @@ export async function refreshRecent(): Promise<void> {
 
 /**
  * Before another chart replaces the open one: in the desktop app, unsaved changes are saved, thrown
- * away or kept by asking. False to leave the open chart alone. On the web the library keeps them.
+ * away or kept by asking. False to leave the open chart alone. On the web the library keeps them -
+ * saved now, not when its timer would have, which would be after the next chart had replaced them.
  */
 export async function mayReplaceChart(): Promise<boolean> {
+  await library.flush();
   const ask = api().askUnsaved;
   if (!doc.dirty || !ask) return true;
   const choice = await ask(doc.chart.name || "Untitled");

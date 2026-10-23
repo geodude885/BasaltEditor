@@ -9,6 +9,7 @@ const api: EditorApi = {
   setTheme: theme => ipcRenderer.invoke(Channels.setTheme, theme),
   chartsFolder: () => ipcRenderer.invoke(Channels.chartsFolder),
   listCharts: () => ipcRenderer.invoke(Channels.listCharts),
+  readCover: (folder, name) => ipcRenderer.invoke(Channels.readCover, folder, name),
   readFolder: folder => ipcRenderer.invoke(Channels.readFolder, folder),
   duplicateFolder: folder => ipcRenderer.invoke(Channels.duplicateFolder, folder),
   trashFolder: folder => ipcRenderer.invoke(Channels.trashFolder, folder),

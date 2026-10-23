@@ -30,13 +30,18 @@ export function summaryOf(id: string, chart: Partial<Chart>, files: Map<string, 
   };
 }
 
-/** A summary from chart.json's text, as a folder keeps it. A chart that won't parse still gets a card. */
-export function summaryOfText(id: string, text: string, files: Map<string, Uint8Array>, updated: number): ChartSummary {
-  let chart: Partial<Chart> = {};
+/** chart.json's text, parsed as far as a summary needs - a chart that won't parse as nothing at all. */
+export function chartOfText(text: string): Partial<Chart> {
   try {
     const parsed = Jsonc.parse(text);
-    if (parsed && typeof parsed === "object") chart = parsed as Partial<Chart>;
+    if (parsed && typeof parsed === "object") return parsed as Partial<Chart>;
   } catch { /* summarised as untitled */ }
+  return {};
+}
+
+/** A summary from chart.json's text, as a folder keeps it. A chart that won't parse still gets a card. */
+export function summaryOfText(id: string, text: string, files: Map<string, Uint8Array>, updated: number): ChartSummary {
+  const chart = chartOfText(text);
   const folderName = id.split(/[\\/]/).filter(Boolean).pop() ?? "Untitled";
   return { ...summaryOf(id, chart, files, updated, updated), name: chart.name || folderName };
 }

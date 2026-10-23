@@ -170,6 +170,7 @@ describe("clock readouts", () => {
     expect(clockText(5.1, 2)).toBe("0:05.10");
     expect(clockText(65, 3)).toBe("1:05.000");
     expect(clockText(59.9996, 3)).toBe("1:00.000");
+    expect(clockText(119.6, 0)).toBe("2:00");
     expect(beatText(4, 1)).toBe("5.0");
     expect(beatText(4.25, 2)).toBe("5.25");
   });
