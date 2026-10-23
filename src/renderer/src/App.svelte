@@ -4,12 +4,18 @@
   import Panels from "./components/Panels.svelte";
   import TopBar from "./components/TopBar.svelte";
   import Transport from "./components/Transport.svelte";
+  import HighwayScreen from "./components/HighwayScreen.svelte";
+  import MobileApp from "./components/mobile/MobileApp.svelte";
+  import Library from "./components/library/Library.svelte";
+  import { library } from "./store/library.svelte";
   import { SAMPLE } from "./model/samples";
   import { fit, loadChart, toast } from "./store/actions";
   import { doc, restoreDraft } from "./store/document.svelte";
   import { editor } from "./store/editor.svelte";
   import { openDropped } from "./store/files";
   import { handleShortcut } from "./store/keyboard";
+  import { layout } from "./store/layout.svelte";
+  import { keepLooping } from "./store/practice.svelte";
   import LaneView from "./views/lane/LaneView.svelte";
   import Timeline from "./views/timeline/Timeline.svelte";
 
@@ -22,6 +28,9 @@
     requestAnimationFrame(() => requestAnimationFrame(fit));
     if (!draft) toast("This is an example chart - open your own chart's files, or press New");
   });
+
+  // Keep an A-B loop going round, in either layout and whichever editor is showing.
+  $effect(() => { void editor.time; keepLooping(); });
 
   $effect(() => { document.title = `${doc.dirty ? "• " : ""}${doc.chart.name || "Untitled"} - Basalt Editor`; });
 
@@ -45,6 +54,9 @@
 
 <svelte:window onkeydown={handleShortcut} ondragover={dragover} ondrop={drop} onblur={() => { dropping = false; }} />
 
+{#if layout.compact}
+<MobileApp />
+{:else}
 <div class="app">
   <TopBar />
   <main class="work">
@@ -53,13 +65,16 @@
       <LaneView />
       <Inspector />
     </section>
-    <section class="pane timepane" aria-label="Timeline">
+    <section class="pane timepane" class:highway={editor.mainView === "highway"} aria-label={editor.mainView === "highway" ? "Highway" : "Timeline"}>
       <Transport />
-      <Timeline />
+      {#if editor.mainView === "highway"}<div class="highwaybox"><HighwayScreen /></div>{:else}<Timeline />{/if}
       <Panels />
     </section>
   </main>
 </div>
+{/if}
+
+{#if library.visible}<Library />{/if}
 
 <div class="drop" class:show={dropping}>Drop chart files</div>
 {#if editor.toast}
@@ -69,20 +84,26 @@
 {/if}
 
 <style>
-  .app { height: 100%; display: grid; grid-template-rows: auto 1fr; padding-inline: 16px; }
+  .app {
+    height: 100%; display: grid; grid-template-rows: auto minmax(0, 1fr);
+    padding: env(safe-area-inset-top) max(16px, env(safe-area-inset-right)) env(safe-area-inset-bottom) max(16px, env(safe-area-inset-left));
+  }
   .work { display: grid; grid-template-columns: minmax(260px, 340px) minmax(0, 1fr); gap: 16px; padding-block: 12px; min-height: 0; }
   .pane { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
   .pane h2 { margin: 0; font: 700 15px/1 var(--display); text-transform: uppercase; letter-spacing: .08em; color: var(--text-dim); padding: 10px 12px 6px; }
   .lanepane { overflow: auto; }
   .timepane { display: grid; grid-template-rows: auto auto minmax(0, 1fr); }
+  /* The highway takes most of the pane's height; the tabs keep what's left, and scroll. */
+  .highwaybox { height: clamp(320px, 58vh, 720px); min-height: 0; border-bottom: 1px solid var(--line); }
   .toast {
     position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); background: var(--raised); border: 1px solid var(--accent);
-    padding: 8px 14px; border-radius: 8px; font-size: 13px; z-index: 5; max-width: calc(100% - 32px);
+    padding: 8px 14px; border-radius: 8px; font-size: 13px; z-index: 30; max-width: calc(100% - 32px);
   }
   .drop {
     position: fixed; inset: 0; background: color-mix(in srgb, var(--accent) 13%, transparent); border: 3px dashed var(--accent); display: none; place-items: center;
     font: 700 28px var(--display); text-transform: uppercase; z-index: 4; pointer-events: none;
   }
   .drop.show { display: grid; }
-  @media (max-width: 860px) { .work { grid-template-columns: minmax(0, 1fr); } }
+  /* Narrow: the panes stack, and the page scrolls instead of each pane. */
+  @media (max-width: 860px) { .app { height: auto; } .work { grid-template-columns: minmax(0, 1fr); } }
 </style>

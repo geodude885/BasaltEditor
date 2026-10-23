@@ -11,5 +11,5 @@
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": ["src/main/**/*", "src/preload/**/*", "src/shared/**/*", "electron.vite.config.ts", "vitest.config.ts", "scripts/*.mjs"]
+  "include": ["src/main/**/*", "src/preload/**/*", "src/shared/**/*", "electron.vite.config.ts", "vite.config.web.ts", "vite.plugins.ts", "vitest.config.ts", "scripts/*.mjs"]
 }

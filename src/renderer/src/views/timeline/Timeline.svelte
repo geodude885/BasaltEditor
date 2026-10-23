@@ -1,26 +1,33 @@
 <script lang="ts">
   // The chart over time. Click the ruler or waveform to seek, a phase or look to edit it, an event to
   // select it; drag events to move them, drag empty rows to box-select, double-click a row to add there.
+  // With a finger, empty space waits to see what a press becomes: a tap adds there (a projectile in
+  // the column tapped), a drag pans, a long press box-selects; two fingers pinch and pan.
+  import Icon from "../../components/Icon.svelte";
   import { evTime, setEvTime } from "../../model/chart";
   import type { ChartEvent } from "../../model/types";
   import {
-    addMove, addProjectile, addStageCueAtPlayhead, pickCycled, select, selectLookCue, selectPhase, setExtraTimelineHeight, toggleTimelineRow, zoom,
+    addMove, addProjectile, addProjectileInColumn, addStageCueAtPlayhead, pickCycled, select, selectLookCue, selectPhase, setExtraTimelineHeight, toggleTimelineRow, zoom,
   } from "../../store/actions";
   import { doc } from "../../store/document.svelte";
   import { appearance } from "../../store/appearance.svelte";
   import { editor } from "../../store/editor.svelte";
-  import { seek, songStart } from "../../store/playback";
+  import { keepPlayheadInView, seek, songStart } from "../../store/playback";
+  import { practice } from "../../store/practice.svelte";
+  import { untrack } from "svelte";
   import { boxIsAClick, prepare, theme, type Box } from "../theme";
   import { drawTimeline } from "./draw";
   import { COLLAPSIBLE_ROWS, layoutTimeline, markers, tOf } from "./geometry";
-  import { DRAG_STARTS_AFTER_PIXELS, markersInBox, whatATimelinePressHits } from "./interaction";
+  import { DRAG_STARTS_AFTER_PIXELS, markersInBox, pressWaitsOnTouch, touchTapWith, whatATimelinePressHits, whatATouchTapAdds, type TouchTap } from "./interaction";
+  import { Pinch, Taps, WaitingPress, type PinchStep } from "../touch";
 
   let canvas: HTMLCanvasElement;
   let w = $state(0);
   type Drag =
     | { kind: "seek" }
     | { kind: "box"; adding: boolean; addsTo: number[] }
-    | { kind: "move"; startSeconds: number; textBefore: string; startTimes: [ChartEvent, number][]; moved: boolean };
+    | { kind: "move"; startSeconds: number; textBefore: string; startTimes: [ChartEvent, number][]; moved: boolean }
+    | { kind: "touch"; press: WaitingPress; t0: number; tap: TouchTap; adding: boolean };
   let drag: Drag | null = null;
   let box = $state<Box | null>(null);
 
@@ -28,13 +35,15 @@
   const placed = $derived(markers(doc.chart, doc.tempo, editor.view, layout));
 
   $effect(() => { editor.timelineWidth = w; });
+  // Showing again (say, after the highway moved the playhead): start where the playhead is.
+  $effect(() => { if (w) untrack(keepPlayheadInView); });
 
   $effect(() => {
     if (!w) return;
     drawTimeline(prepare(canvas, w, layout.height), w, layout.height, {
       chart: doc.chart, tempo: doc.tempo, view: editor.view, time: editor.time, snap: editor.snap,
       selection: editor.selection, selectedPhase: editor.selectedPhase, lookCues: editor.lookCues, selectedLookCue: editor.selectedLookCue,
-      markers: placed, song: editor.song, songStart: songStart(), clips: editor.clips, box, layout,
+      markers: placed, song: editor.song, songStart: songStart(), clips: editor.clips, box, layout, loop: practice.loop, loopStart: practice.loopStart,
     }, theme(appearance.scheme));
   });
 
@@ -42,10 +51,60 @@
   const snapped = (seconds: number) => doc.tempo.snap(seconds, editor.snap);
   const pointerAt = (ev: PointerEvent | WheelEvent): [number, number] => { const r = canvas.getBoundingClientRect(); return [ev.clientX - r.left, ev.clientY - r.top]; };
 
+  const taps = new Taps(), pinch = new Pinch();
+  /** Shift, or the touch screens' multi-select button, adds to the selection. */
+  const adds = (ev: PointerEvent) => ev.shiftKey || editor.multiSelect;
+
+  /** A finger lifted without moving: do what the tap means there. */
+  function touchTap(d: Extract<Drag, { kind: "touch" }>): void {
+    const t = secondsAt(d.press.x0), tap = touchTapWith(d.tap, editor.selection.size > 0, d.adding);
+    switch (tap.kind) {
+      case "let-go": editor.selection.clear(); return;
+      case "add-projectile": addProjectileInColumn(t, tap.column); return;
+      case "add-look-cue": seek(snapped(t)); addStageCueAtPlayhead(); return;
+      case "add-move": seek(snapped(t)); addMove(); return;
+      case "seek-and-clear-selection":
+        if (!d.adding) editor.selection.clear();
+        seek(Math.max(0, t));
+    }
+  }
+
+  function pinchStep({ zoom: factor, atX, panX }: PinchStep): void {
+    editor.view.t0 = Math.max(-1, editor.view.t0 - panX / editor.view.pps);
+    zoom(factor, atX);
+  }
+
   function pointerdown(ev: PointerEvent): void {
     const [x, y] = pointerAt(ev);
     canvas.setPointerCapture(ev.pointerId);
-    const press = whatATimelinePressHits(doc.chart, doc.tempo, editor.view, layout, placed, editor.lookCues, x, y, ev.detail === 2);
+    if (ev.pointerType === "touch" && pinch.down(ev.pointerId, x, y)) {
+      // A second finger: the first one's press becomes a pinch. Keep a move already made; drop a box.
+      if (drag?.kind === "move") pointerup();
+      else { if (drag?.kind === "touch") drag.press.end(); drag = null; box = null; }
+      return;
+    }
+    if (pinch.busy) return;
+    const press = whatATimelinePressHits(doc.chart, doc.tempo, editor.view, layout, placed, editor.lookCues, x, y, taps.isDouble(ev));
+    // Select mode: empty space boxes straight away, with any pointer.
+    if (editor.selectMode && pressWaitsOnTouch(press, layout, y)) {
+      drag = { kind: "box", adding: adds(ev), addsTo: adds(ev) ? [...editor.selection] : [] };
+      box = { x0: x, y0: y, x1: x, y1: y };
+      return;
+    }
+    if (ev.pointerType === "touch" && pressWaitsOnTouch(press, layout, y)) {
+      const adding = adds(ev);
+      // Held still: box-select from here.
+      const d: Extract<Drag, { kind: "touch" }> = {
+        kind: "touch", t0: editor.view.t0, tap: whatATouchTapAdds(layout, y), adding,
+        press: new WaitingPress(x, y, () => {
+          if (drag !== d) return;
+          drag = { kind: "box", adding, addsTo: adding ? [...editor.selection] : [] };
+          box = { x0: x, y0: y, x1: x, y1: y };
+        }),
+      };
+      drag = d;
+      return;
+    }
     switch (press.kind) {
       case "select-phase": selectPhase(press.index); return;
       case "select-look-cue": selectLookCue(press.index); return;
@@ -54,7 +113,7 @@
       case "add-move": seek(snapped(secondsAt(x))); addMove(); return;
       case "select-events": {
         const hit = pickCycled(press.underPointer, "timeline", x, y);
-        if (!editor.selection.has(hit)) select(hit, ev.shiftKey);
+        if (!editor.selection.has(hit)) select(hit, adds(ev));
         const events = doc.chart.events;
         drag = {
           kind: "move", startSeconds: secondsAt(x), textBefore: doc.text, moved: false,
@@ -63,11 +122,11 @@
         return;
       }
       case "box-select":
-        drag = { kind: "box", adding: ev.shiftKey, addsTo: ev.shiftKey ? [...editor.selection] : [] };
+        drag = { kind: "box", adding: adds(ev), addsTo: adds(ev) ? [...editor.selection] : [] };
         box = { x0: x, y0: y, x1: x, y1: y };
         return;
       case "seek-and-clear-selection":
-        if (!ev.shiftKey) editor.selection.clear();
+        if (!adds(ev)) editor.selection.clear();
         seek(Math.max(0, secondsAt(x)));
         drag = { kind: "seek" };
         return;
@@ -78,9 +137,15 @@
   }
 
   function pointermove(ev: PointerEvent): void {
-    if (!drag) return;
     const [x, y] = pointerAt(ev);
-    if (drag.kind === "box") {
+    if (ev.pointerType === "touch") {
+      const step = pinch.move(ev.pointerId, x, y);
+      if (step) { pinchStep(step); return; }
+    }
+    if (!drag) return;
+    if (drag.kind === "touch") {
+      if (drag.press.pans(x, y)) editor.view.t0 = Math.max(-1, drag.t0 - (x - drag.press.x0) / editor.view.pps);
+    } else if (drag.kind === "box") {
       if (!box) return;
       box = { ...box, x1: x, y1: y };
       editor.setSelection(new Set([...drag.addsTo, ...markersInBox(placed, box)]));
@@ -94,8 +159,12 @@
     }
   }
 
-  function pointerup(): void {
-    if (drag?.kind === "box" && box) {
+  function pointerup(ev?: PointerEvent): void {
+    if (ev?.pointerType === "touch") pinch.up(ev.pointerId);
+    if (drag?.kind === "touch") {
+      drag.press.end();
+      if (!drag.press.panning && ev?.type === "pointerup") touchTap(drag);
+    } else if (drag?.kind === "box" && box) {
       if (boxIsAClick(box)) {
         if (!drag.adding) editor.selection.clear();
         seek(Math.max(0, secondsAt(box.x0)));
@@ -147,7 +216,7 @@
       {@const collapsed = layout.collapsed.has(row)}
       <button class="row-header" class:collapsed style:top="{top}px" style:height="{height}px" aria-expanded={!collapsed}
         title={collapsed ? `Show ${label.toLowerCase()}` : `Collapse ${label.toLowerCase()} to a thin strip`} onclick={() => toggleTimelineRow(row)}>
-        <span class="chevron">{collapsed ? "▸" : "▾"}</span>{collapsed ? "" : label}
+        <span class="chevron"><Icon name={collapsed ? "right" : "down"} size="10px" /></span>{collapsed ? "" : label}
       </button>
     {/each}
   </div>
@@ -158,6 +227,7 @@
       onpointerdown={pointerdown}
       onpointermove={pointermove}
       onpointerup={pointerup}
+      onpointercancel={pointerup}
       aria-label="Timeline: song waveform, beats, phases, looks, projectiles, moves and recorded clips"
     ></canvas>
   </div>

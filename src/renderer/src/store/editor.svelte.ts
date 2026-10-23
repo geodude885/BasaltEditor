@@ -2,13 +2,15 @@
 // opened beside the chart.
 import { SvelteSet } from "svelte/reactivity";
 import type { Peaks } from "../audio/peaks";
-import type { ClipSpan } from "../io/files";
+import { fileProblems, type ClipSpan } from "../io/files";
 import { timedLookCues } from "../model/looks";
 import { problems } from "../model/problems";
 import { MOST_EXTRA_TIMELINE_HEIGHT_PIXELS, type TimelineRow } from "../views/timeline/geometry";
 import { doc } from "./document.svelte";
 
 export type Tab = "chart" | "phases" | "looks" | "tempo" | "actors" | "problems" | "help";
+/** The editors the timeline's place can show, in either layout. */
+export type MainView = "timeline" | "highway";
 export type Song = { name: string; url: string; buffer: AudioBuffer | null; peaks: Peaks | null };
 
 const VOLUME_KEY = "basalt-volume";
@@ -33,11 +35,17 @@ function savedExtraTimelineHeight(): number {
 class EditorState {
   /** Indices into chart.events. */
   readonly selection = new SvelteSet<number>();
+  /** Presses add to the selection, as Shift does - for touch screens, which have no Shift. */
+  multiSelect = $state(false);
+  /** Select mode: a drag on empty space draws a selection box at once, instead of panning or scrubbing. */
+  selectMode = $state(false);
   selectedPhase = $state(-1);
   selectedLookCue = $state(-1);
 
   time = $state(0);
   playing = $state(false);
+  /** Which editor is showing: the timeline, or the highway. */
+  mainView = $state<MainView>("timeline");
   /** The timeline's view: its left edge in seconds, and pixels a second. */
   view = $state({ t0: -1, pps: 60 });
   timelineWidth = $state(800);
@@ -64,8 +72,14 @@ class EditorState {
   cover = $state<string | null>(null);
   /** The chart folder on disk, when one was opened - Save writes chart.json back into it. */
   folder = $state<string | null>(null);
+  /** Chart folders opened lately, newest first - the desktop app's File > Open recent. */
+  recentFolders = $state.raw<string[]>([]);
+  /** Which of your charts (store/library.svelte.ts) this is, once it is kept there. */
+  libraryId = $state<string | null>(null);
+  /** This chart should join your charts as soon as it can - it was just opened or started. */
+  libraryAdd = $state(false);
 
-  readonly problems = $derived(problems(doc.chart, doc.tempo));
+  readonly problems = $derived([...problems(doc.chart, doc.tempo), ...fileProblems(this.files, doc.chart)]);
   readonly lookCues = $derived(timedLookCues(doc.chart, doc.tempo));
 
   setSelection(indices: Iterable<number>): void {

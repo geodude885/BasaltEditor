@@ -10,6 +10,7 @@
   import { drawLane } from "./draw";
   import { laneMap } from "./geometry";
   import { moveProjectilePoint, projectilesStartingInBox, whatALanePressHits, type ProjectilePoint } from "./interaction";
+  import { Taps } from "../touch";
 
   let canvas: HTMLCanvasElement;
   let w = $state(0), h = $state(0);
@@ -26,14 +27,18 @@
 
   const pointerAt = (ev: PointerEvent): [number, number] => { const r = canvas.getBoundingClientRect(); return [ev.clientX - r.left, ev.clientY - r.top]; };
 
+  const taps = new Taps();
+
   function pointerdown(ev: PointerEvent): void {
     const [px, py] = pointerAt(ev);
-    const press = whatALanePressHits(doc.chart, doc.tempo, editor.time, editor.selection, map, px, py, ev.detail === 2 || ev.altKey);
-    if (press.kind === "select-projectile") { select(pickCycled(press.underPointer, "lane", px, py), ev.shiftKey); return; }
+    // Shift, or the touch screens' multi-select button, adds to the selection.
+    const adding = ev.shiftKey || editor.multiSelect;
+    const press = whatALanePressHits(doc.chart, doc.tempo, editor.time, editor.selection, map, px, py, taps.isDouble(ev) || ev.altKey);
+    if (press.kind === "select-projectile") { select(pickCycled(press.underPointer, "lane", px, py), adding); return; }
     if (press.kind === "add-projectile") { addProjectile(press.at); return; }
     canvas.setPointerCapture(ev.pointerId);
     if (press.kind === "drag-projectile-point") pointDrag = { index: press.index, point: press.point, textBefore: doc.text, moved: false };
-    else { boxDrag = { addsTo: ev.shiftKey ? [...editor.selection] : [], adding: ev.shiftKey }; box = { x0: px, y0: py, x1: px, y1: py }; }
+    else { boxDrag = { addsTo: adding ? [...editor.selection] : [], adding }; box = { x0: px, y0: py, x1: px, y1: py }; }
   }
 
   function pointermove(ev: PointerEvent): void {
@@ -66,6 +71,7 @@
   onpointerdown={pointerdown}
   onpointermove={pointermove}
   onpointerup={pointerup}
+  onpointercancel={pointerup}
   aria-label="The lane from above: you at the bottom, the actor at the top"
 ></canvas>
 

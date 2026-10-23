@@ -2,6 +2,7 @@
 //   build/icon.png             <- 1024 px, macOS grid (the tile inset in the canvas); electron-builder makes the .icns from it
 //   build/icon.ico             <- Windows: 16-32 px frames from the small mark (wider gaps), 48-256 px from the full one
 //   src/renderer/public/favicon.svg, icon.png  <- the browser tab in dev:renderer, and the Linux window icon
+//   src/renderer/public/apple-touch-icon.png, icon-192.png, icon-512.png  <- the web build's home-screen icons
 // usage: npm run icons (after changing src/renderer/src/assets/logo*.svg)
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -16,11 +17,14 @@ function readMark(name) {
   return { viewBox: /viewBox="([^"]+)"/.exec(svg)[1], paths: svg.match(/<path [^>]*\/>/g).join("") };
 }
 
-/** The mark in ash on a rounded basalt tile. inset: canvas margin around the tile; mark: its share of the tile. */
-function tile(mark, { inset, mark: share, keyline }) {
+/**
+ * The mark in ash on a rounded basalt tile. inset: canvas margin around the tile; mark: its share of
+ * the tile; square: no rounding, for home screens, which round the corners themselves.
+ */
+function tile(mark, { inset, mark: share, keyline, square = false }) {
   const t = 1024 * (1 - 2 * inset), x = 1024 * inset, m = t * share, mx = 512 - m / 2;
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">`
-    + `<rect x="${x}" y="${x}" width="${t}" height="${t}" rx="${t * 0.225}" fill="${BASALT}"/>`
+    + `<rect x="${x}" y="${x}" width="${t}" height="${t}" rx="${square ? 0 : t * 0.225}" fill="${BASALT}"/>`
     + (keyline ? `<rect x="${x + 2}" y="${x + 2}" width="${t - 4}" height="${t - 4}" rx="${t * 0.225 - 2}" fill="none" stroke="#ffffff14" stroke-width="4"/>` : "")
     + `<svg x="${mx}" y="${mx}" width="${m}" height="${m}" viewBox="${mark.viewBox}" fill="${ASH}">${mark.paths}</svg></svg>\n`;
 }
@@ -72,6 +76,12 @@ async function main() {
   write("build/icon.ico", ico(frames));
   write("src/renderer/public/favicon.svg", filled(small));
   write("src/renderer/public/icon.png", frames.at(-1).png);
+  // Home screens: full-bleed squares (iOS fills transparency with black), the mark inside the safe zone
+  // Android's masks keep.
+  const home = tile(full, { inset: 0, mark: 0.6, keyline: false, square: true });
+  write("src/renderer/public/apple-touch-icon.png", await render(home, 180));
+  write("src/renderer/public/icon-192.png", await render(home, 192));
+  write("src/renderer/public/icon-512.png", await render(home, 512));
 }
 
 // Not a top-level await: Electron holds back "ready" until the main module has finished loading.

@@ -1,33 +1,26 @@
 <script lang="ts">
-  import { redo, undo } from "../store/actions";
-  import { appearance, THEME_CHOICES, type ThemeChoice } from "../store/appearance.svelte";
+  // The desktop layout's top bar: the menus, the chart, Save, Undo/Redo, the problem count and the theme.
+  // What the menus do is in store/commands.ts.
+  import { appearance, THEME_CHOICES, THEME_NAMES, type ThemeChoice } from "../store/appearance.svelte";
+  import { commandButton } from "../store/commands";
+  import { saveTarget } from "../store/files";
   import { doc } from "../store/document.svelte";
   import { editor } from "../store/editor.svelte";
-  import { copyChart, openFiles, openFolder, save, saveChartAs, savePackage } from "../store/files";
   import Logo from "./Logo.svelte";
+  import MenuBar from "./MenuBar.svelte";
 
   const count = $derived(editor.problems.length);
-  const THEME_NAMES: Record<ThemeChoice, string> = { system: "System theme", dark: "Basalt (dark)", light: "Ash (light)" };
 </script>
 
 <header class="bar">
   <div class="brand"><Logo size={26} /> Basalt <span>Editor</span></div>
+  <MenuBar />
   <div class="chartname" title={editor.folder ?? doc.name}>{doc.chart.name || "Untitled"}{doc.dirty ? " •" : ""}</div>
-  <div class="group">
-    <button title="Start a new chart from the template" onclick={() => { editor.confirmNew = true; editor.tab = "chart"; }}>New</button>
-    <button title="Open chart.json, its song, cover and clips - or a .bbchart (Ctrl+O)" onclick={openFiles}>Open files…</button>
-    <button title="Open a chart folder to edit it in place" onclick={openFolder}>Open folder…</button>
-    <button class="primary" title={editor.folder ? `Write chart.json back into ${editor.folder} (Ctrl+S)` : "Save chart.json (Ctrl+S)"} onclick={save}>
-      {editor.folder ? "Save" : "Save as…"}
-    </button>
-    <button title="Copy chart.json - paste it over your chart's file; the game reloads it" onclick={copyChart}>Copy chart.json</button>
-    {#if editor.folder}<button title="Save chart.json somewhere else" onclick={saveChartAs}>Save as…</button>{/if}
-    <button title="Save a package (.bbchart) with the song, cover and clips - drop it into the game's Charts folder" onclick={savePackage}>Package…</button>
-  </div>
   <div class="spacer"></div>
   <div class="group">
-    <button title="Undo (Ctrl+Z)" disabled={!doc.canUndo} onclick={undo}>Undo</button>
-    <button title="Redo (Ctrl+Y)" disabled={!doc.canRedo} onclick={redo}>Redo</button>
+    <button class="primary" {...commandButton("save")}>{saveTarget() === "file" ? "Save as…" : "Save"}</button>
+    <button {...commandButton("undo")}>Undo</button>
+    <button {...commandButton("redo")}>Redo</button>
     <button class="chip" class:bad={count} class:ok={!count} onclick={() => { editor.tab = "problems"; }}>
       {count ? `${count} problem${count === 1 ? "" : "s"}` : "no problems"}
     </button>

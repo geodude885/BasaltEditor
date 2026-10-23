@@ -45,6 +45,8 @@
   --lane-floor: #2a2622;
   --lane-ends: #ffd36a;
   --zone: #f2f2d9;
+  --status-bar: #1b1c1e;  /* behind the phone's status bar, whose text is white as a home-screen app */
+  --shadow: rgb(0 0 0 / .5);  /* under menus that drop over the page */
   color-scheme: dark;
 }
 
@@ -76,9 +78,16 @@
   --lane-floor: #d8cfc0;
   --lane-ends: #a86b00;
   --zone: #3d3a35;
+  --status-bar: #1b1c1e;  /* dark in both themes: the status bar's text stays white */
+  --shadow: rgb(0 0 0 / .18);
   color-scheme: light;
 }
-html, body { height: 100%; margin: 0; }
+html, body, #app { height: 100%; margin: 0; }
+/* Behind the phone's status bar when the app runs from the home screen; no height anywhere else. */
+html::before {
+  content: ""; position: fixed; z-index: 1000; top: 0; left: 0; right: 0; height: env(safe-area-inset-top, 0px);
+  background: var(--status-bar); pointer-events: none;
+}
 body { background: var(--bg); color: var(--text); font: 14px/1.45 var(--body); }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
@@ -90,7 +99,7 @@ button {
 button:hover { border-color: var(--text-dim); }
 button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 button.primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 600; }
-button.on { border-color: var(--accent); color: var(--accent); }
+button.on, button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
 button:disabled { opacity: .45; cursor: default; }
 input, select, textarea { background: var(--bg); border: 1px solid var(--line); border-radius: 5px; padding: 4px 6px; min-width: 0; }
 input[type=number] { font-family: var(--mono); font-variant-numeric: tabular-nums; }
@@ -109,6 +118,6 @@ h3 { margin: 4px 0 0; font: 700 14px var(--display); text-transform: uppercase; 
 .list .item { display: flex; flex-wrap: wrap; gap: 6px; align-items: end; padding: 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
 .list .item label { flex: 1 1 90px; }
 .clock { font: 500 20px/1 var(--mono); font-variant-numeric: tabular-nums; min-width: 9ch; }
-.clock small { font-size: 12px; color: var(--text-dim); margin-left: 6px; }
+.clock small { display: inline-block; min-width: 11ch; font-size: 12px; color: var(--text-dim); margin-left: 6px; font-variant-numeric: tabular-nums; }
 
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto; } }

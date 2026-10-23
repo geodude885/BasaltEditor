@@ -1,7 +1,7 @@
 {
   "name": "basalt-editor",
   "productName": "Basalt Editor",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Basalt Editor - a chart editor for Basalt, the RUMBLE boss battle mod",
   "author": "ACutiePi",
   "private": true,
@@ -19,6 +19,8 @@
     "dist:linux": "npm run build && electron-builder --linux",
     "sync": "node scripts/sync-mod-data.mjs",
     "dev:renderer": "electron-vite dev --rendererOnly",
+    "dev:web": "vite --config vite.config.web.ts --host",
+    "build:web": "vite build --config vite.config.web.ts",
     "icons": "electron scripts/icons.mjs"
   },
   "dependencies": {

@@ -1,13 +1,16 @@
 import { app, BrowserWindow, dialog, ipcMain, nativeTheme, shell } from "electron";
-import { cpSync, existsSync } from "node:fs";
-import { readdir, readFile, writeFile } from "node:fs/promises";
+import { cpSync, existsSync, readFileSync } from "node:fs";
+import { cp, mkdir, readdir, readFile, realpath, stat, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
-import { basename, join, resolve } from "node:path";
+import { basename, dirname, join, relative, resolve } from "node:path";
 import updater from "electron-updater";
-import { Channels, type OpenedFile, type OpenedFolder } from "../shared/api";
+import { Channels, type ChartFolder, type DuplicatedFolder, type FileKind, type OpenedFile, type OpenedFolder, type UnsavedChoice } from "../shared/api";
 
 /** Chart folders this session opened - the only places saveChart may write. */
 const openedFolders = new Set<string>();
+
+/** Ctrl and these keys zoom the page in or out, by the default menu's steps. */
+const PAGE_ZOOM_STEPS: Record<string, number> = { "=": 0.5, "+": 0.5, "-": -0.5 };
 
 function createWindow(): void {
   const window = new BrowserWindow({
@@ -28,6 +31,20 @@ function createWindow(): void {
     },
   });
   window.once("ready-to-show", () => window.show());
+  // The page draws its own menu bar. Electron's default menu would come back on Alt, so it goes - except
+  // on macOS, where the app menu lives outside the window and gives text boxes Cmd C / V.
+  if (process.platform !== "darwin") window.removeMenu();
+  // What the default menu used to give: developer tools on F12, and zooming the page with Ctrl + / - / 0.
+  window.webContents.on("before-input-event", (event, input) => {
+    if (input.type !== "keyDown") return;
+    if (input.key === "F12") { window.webContents.toggleDevTools(); return; }
+    if (process.platform === "darwin" || !input.control || input.alt || input.meta) return;
+    const contents = window.webContents, step = PAGE_ZOOM_STEPS[input.key];
+    if (input.key === "0") contents.setZoomLevel(0);
+    else if (step) contents.setZoomLevel(contents.getZoomLevel() + step);
+    else return;
+    event.preventDefault();
+  });
   // Links open in the browser, never in the app.
   window.webContents.setWindowOpenHandler(({ url }) => {
     if (/^https:\/\//.test(url)) void shell.openExternal(url);
@@ -41,6 +58,9 @@ function createWindow(): void {
 
 /** Where the game keeps charts, if RUMBLE is installed somewhere usual - where dialogs start. */
 function chartsFolder(): string | undefined {
+  // Another folder stands in for the game's, for trying the editor without touching real charts.
+  const instead = process.env.BASALT_CHARTS_FOLDER;
+  if (instead) return existsSync(instead) ? resolve(instead) : undefined;
   const steam = process.platform === "win32"
     ? ["C:/Program Files (x86)/Steam", "C:/Program Files/Steam"]
     : [join(homedir(), ".steam/steam"), join(homedir(), ".local/share/Steam")];
@@ -55,16 +75,20 @@ async function readAll(paths: string[], name: (path: string) => string): Promise
   return Promise.all(paths.map(async path => ({ path: name(path), bytes: new Uint8Array(await readFile(path)) })));
 }
 
-ipcMain.handle(Channels.openFiles, async (event): Promise<OpenedFile[]> => {
+const PICKERS: Record<FileKind | "all", { title: string; name: string; extensions: string[]; several: boolean }> = {
+  all: { title: "Open chart files", name: "Charts, songs, covers and clips", extensions: ["json", "bbchart", "zip", "wav", "ogg", "mp3", "png", "jpg", "jpeg"], several: true },
+  song: { title: "Choose the song", name: "Songs", extensions: ["mp3", "ogg", "wav"], several: false },
+  cover: { title: "Choose the cover", name: "Images", extensions: ["png", "jpg", "jpeg"], several: false },
+};
+
+ipcMain.handle(Channels.openFiles, async (event, kind?: FileKind): Promise<OpenedFile[]> => {
   const window = BrowserWindow.fromWebContents(event.sender)!;
+  const picker = PICKERS[kind === "song" || kind === "cover" ? kind : "all"];
   const picked = await dialog.showOpenDialog(window, {
-    title: "Open chart files",
+    title: picker.title,
     defaultPath: chartsFolder(),
-    properties: ["openFile", "multiSelections"],
-    filters: [
-      { name: "Charts, songs, covers and clips", extensions: ["json", "bbchart", "zip", "wav", "ogg", "mp3", "png", "jpg", "jpeg"] },
-      { name: "All files", extensions: ["*"] },
-    ],
+    properties: picker.several ? ["openFile", "multiSelections"] : ["openFile"],
+    filters: [{ name: picker.name, extensions: picker.extensions }, { name: "All files", extensions: ["*"] }],
   });
   return picked.canceled ? [] : readAll(picked.filePaths, basename);
 });
@@ -73,7 +97,11 @@ ipcMain.handle(Channels.openFolder, async (event): Promise<OpenedFolder | null> 
   const window = BrowserWindow.fromWebContents(event.sender)!;
   const picked = await dialog.showOpenDialog(window, { title: "Open a chart folder", defaultPath: chartsFolder(), properties: ["openDirectory"] });
   if (picked.canceled || !picked.filePaths[0]) return null;
-  const folder = resolve(picked.filePaths[0]);
+  return readFolder(resolve(picked.filePaths[0]));
+});
+
+/** Reads chart.json, the files beside it and clips/; the folder then counts as opened, and recent. */
+async function readFolder(folder: string): Promise<OpenedFolder> {
   const paths: string[] = [];
   for (const entry of await readdir(folder, { withFileTypes: true })) {
     if (entry.isFile()) paths.push(join(folder, entry.name));
@@ -84,14 +112,175 @@ ipcMain.handle(Channels.openFolder, async (event): Promise<OpenedFolder | null> 
     }
   }
   openedFolders.add(folder);
+  rememberRecent(folder);
   const files = await readAll(paths, path => path.slice(folder.length + 1).replace(/\\/g, "/"));
   return { folder, files };
+}
+
+// "Your charts" on the desktop: the chart folders in the game's Charts folder. The page names folders
+// by path, so each call checks the folder is one it may touch - a chart folder straight inside the
+// Charts folder, or (for reading) one opened before.
+
+/**
+ * The folder, resolved, if it is a chart folder (one with chart.json) straight inside the Charts
+ * folder; else an error. Checked on the real paths, so a link inside the Charts folder can't lead
+ * out of it - but the path handed back is the one asked about, which is how the page knows it.
+ */
+async function chartFolderIn(folder: string): Promise<string> {
+  const charts = chartsFolder(), target = resolve(folder);
+  const refuse = () => new Error("that isn't a chart folder in the game's Charts folder");
+  if (!charts || !existsSync(join(target, "chart.json"))) throw refuse();
+  const [realCharts, realTarget] = await Promise.all([realpath(charts), realpath(target)]);
+  if (relative(realCharts, dirname(realTarget)) !== "") throw refuse();
+  return target;
+}
+
+/** Images beside chart.json, any of which may be its cover. */
+const IMAGE = /\.(png|jpe?g)$/i;
+/** Bigger images are left off the cards. */
+const COVER_MOST_BYTES = 4 * 1024 * 1024;
+
+ipcMain.handle(Channels.chartsFolder, () => chartsFolder() ?? null);
+
+ipcMain.handle(Channels.listCharts, async (): Promise<ChartFolder[]> => {
+  const charts = chartsFolder();
+  if (!charts) return [];
+  const found: ChartFolder[] = [];
+  for (const entry of await readdir(charts, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    const folder = join(charts, entry.name), chartPath = join(folder, "chart.json");
+    if (!existsSync(chartPath)) continue;
+    try {
+      const [text, info, names] = await Promise.all([readFile(chartPath, "utf8"), stat(chartPath), readdir(folder, { withFileTypes: true })]);
+      const images = names.filter(n => n.isFile() && IMAGE.test(n.name)).map(n => n.name);
+      found.push({ folder, text, modified: info.mtimeMs, images });
+    } catch (e) {
+      console.error("could not read", folder, e);
+    }
+  }
+  return found;
+});
+
+ipcMain.handle(Channels.readCover, async (_event, folder: string, name: string): Promise<Uint8Array | null> => {
+  const target = await chartFolderIn(folder);
+  if (basename(name) !== name || !IMAGE.test(name)) throw new Error("that isn't an image beside chart.json");
+  const path = join(target, name);
+  if ((await stat(path)).size > COVER_MOST_BYTES) return null;
+  return new Uint8Array(await readFile(path));
+});
+
+ipcMain.handle(Channels.readFolder, async (_event, folder: string): Promise<OpenedFolder> => {
+  const target = resolve(folder);
+  if (!recentFolders.includes(target) && !openedFolders.has(target)) await chartFolderIn(target);
+  return readFolder(target);
+});
+
+ipcMain.handle(Channels.duplicateFolder, async (_event, folder: string): Promise<DuplicatedFolder> => {
+  const source = await chartFolderIn(folder);
+  let copy = `${source} (copy)`;
+  for (let n = 2; existsSync(copy); n++) copy = `${source} (copy ${n})`;
+  await cp(source, copy, { recursive: true, errorOnExist: true });
+  openedFolders.add(copy);
+  return { folder: copy, text: await readFile(join(copy, "chart.json"), "utf8") };
+});
+
+ipcMain.handle(Channels.trashFolder, async (_event, folder: string): Promise<void> => {
+  const target = await chartFolderIn(folder);
+  await shell.trashItem(target);
+  openedFolders.delete(target);
+  recentFolders = recentFolders.filter(f => f !== target);
+  saveRecent();
+});
+
+// Recent folders, newest first, kept in the app's own data folder.
+const RECENT_KEPT = 8;
+const recentFile = (): string => join(app.getPath("userData"), "recent-folders.json");
+let recentFolders: string[] = [];
+
+function loadRecent(): void {
+  try {
+    const list: unknown = JSON.parse(readFileSync(recentFile(), "utf8"));
+    if (Array.isArray(list)) recentFolders = list.filter((f): f is string => typeof f === "string" && existsSync(f)).slice(0, RECENT_KEPT);
+  } catch { /* none yet */ }
+}
+
+function saveRecent(): void {
+  writeFile(recentFile(), JSON.stringify(recentFolders)).catch(e => console.error("could not keep the recent folders:", e));
+}
+
+function rememberRecent(folder: string): void {
+  recentFolders = [folder, ...recentFolders.filter(f => f !== folder)].slice(0, RECENT_KEPT);
+  saveRecent();
+}
+
+ipcMain.handle(Channels.recentFolders, () => recentFolders.filter(f => existsSync(f)));
+
+ipcMain.handle(Channels.askUnsaved, async (event, name: string): Promise<UnsavedChoice> => {
+  const window = BrowserWindow.fromWebContents(event.sender)!;
+  const { response } = await dialog.showMessageBox(window, {
+    type: "warning",
+    message: `Save the changes to ${name}?`,
+    detail: "They'll be lost if you don't save them.",
+    buttons: ["Save", "Don't save", "Cancel"],
+    defaultId: 0,
+    cancelId: 2,
+    noLink: true,
+  });
+  return response === 0 ? "save" : response === 1 ? "discard" : "cancel";
 });
 
 ipcMain.handle(Channels.saveChart, async (_event, folder: string, text: string): Promise<void> => {
+  await writeFile(join(openedFolder(folder), "chart.json"), text, "utf8");
+});
+
+/** The folder, resolved, if this session opened it (or made it); else an error. */
+function openedFolder(folder: string): string {
   const target = resolve(folder);
   if (!openedFolders.has(target)) throw new Error("that folder was not opened in this session");
-  await writeFile(join(target, "chart.json"), text, "utf8");
+  return target;
+}
+
+/**
+ * Where a chart's file goes inside its folder, if it is a place a chart's file may go: beside
+ * chart.json, or in clips/ - never anywhere else, however the page names it.
+ */
+function chartFilePath(folder: string, path: string): string {
+  const parts = path.split(/[\\/]/);
+  const fine = (name: string) => !!name && name !== "." && name !== ".." && !/[<>:"|?*\0]/.test(name);
+  if (!parts.every(fine) || !(parts.length === 1 || (parts.length === 2 && parts[0].toLowerCase() === "clips"))) {
+    throw new Error(`${path} isn't a place for a chart's file`);
+  }
+  return join(folder, ...parts);
+}
+
+async function writeChartFiles(folder: string, files: OpenedFile[]): Promise<void> {
+  for (const file of files) {
+    const path = chartFilePath(folder, file.path);
+    await mkdir(dirname(path), { recursive: true });
+    await writeFile(path, file.bytes);
+  }
+}
+
+ipcMain.handle(Channels.saveFiles, async (_event, folder: string, files: OpenedFile[]): Promise<void> => {
+  await writeChartFiles(openedFolder(folder), files);
+});
+
+/** A folder name from a chart's name: what Windows, macOS and Linux all allow. */
+function folderName(chartName: string): string {
+  return chartName.replace(/[<>:"/\\|?*\0-\x1f]/g, "").replace(/[. ]+$/, "").trim().slice(0, 80) || "My Chart";
+}
+
+ipcMain.handle(Channels.createChartFolder, async (_event, chartName: string, files: OpenedFile[]): Promise<string> => {
+  const charts = chartsFolder();
+  if (!charts) throw new Error("the game's Charts folder isn't here");
+  const base = join(charts, folderName(chartName));
+  let folder = base;
+  for (let n = 2; existsSync(folder); n++) folder = `${base} (${n})`;
+  await mkdir(folder);
+  openedFolders.add(folder);
+  await writeChartFiles(folder, files);
+  rememberRecent(folder);
+  return folder;
 });
 
 ipcMain.handle(Channels.saveFile, async (event, suggestedName: string, bytes: Uint8Array): Promise<string | null> => {
@@ -121,6 +310,7 @@ function moveOldStorage(): void {
 
 void app.whenReady().then(() => {
   moveOldStorage();
+  loadRecent();
   createWindow();
   app.on("activate", () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
   // Installed copies update themselves from GitHub Releases.

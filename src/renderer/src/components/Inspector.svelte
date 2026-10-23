@@ -8,6 +8,7 @@
   import { copySelected, editSelected, mirrorSelected, removeSelected, throwFromActor } from "../store/actions";
   import { doc } from "../store/document.svelte";
   import { editor } from "../store/editor.svelte";
+  import BatchInspector from "./BatchInspector.svelte";
   import { checked, num, text } from "./fields";
 
   const selected = $derived([...editor.selection].filter(i => doc.chart.events[i]));
@@ -36,6 +37,7 @@
     </div>
   {:else if selected.length > 1}
     <div class="kind">{selected.length} selected</div>
+    <BatchInspector />
     <div class="row">
       <button onclick={mirrorSelected}>Mirror left/right</button><button onclick={copySelected}>Copy</button><button onclick={removeSelected}>Delete</button>
     </div>

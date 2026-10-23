@@ -1,11 +1,13 @@
 // What the toolbar, keys and canvases do. Each edit goes through doc.change, so it can be undone and
 // lands in the chart's text.
-import { actorSpotAt, actorsOf, endOf, evTime, laneOf, setEvTime } from "../model/chart";
+import { actorSpotAt, actorsOf, endOf, evTime, firstActorId, laneOf, setEvTime } from "../model/chart";
+import { straightProjectile, xOfColumn } from "../model/columns";
+import { barAround, projectilesBetween } from "../model/ranges";
 import { addPhaseAt, mirror, newTimed } from "../model/edits";
 import { newStageCue } from "../model/looks";
 import { round } from "../model/tempo";
 import type { Point } from "../model/chart";
-import type { ChartEvent } from "../model/types";
+import type { ChartEvent, Projectile } from "../model/types";
 import { MOST_EXTRA_TIMELINE_HEIGHT_PIXELS, type TimelineRow } from "../views/timeline/geometry";
 import { doc } from "./document.svelte";
 import { editor } from "./editor.svelte";
@@ -26,6 +28,22 @@ export function select(i: number, add: boolean): void {
   else editor.selection.add(i);
   editor.selectedPhase = -1;
 }
+
+/** Selects the projectiles in a span of time, saying how many; `where` finishes "Selected 4 projectiles …". */
+export function selectProjectilesBetween(from: number, to: number, where: string): void {
+  const found = projectilesBetween(doc.chart.events, doc.tempo, from, to);
+  editor.setSelection(found);
+  editor.selectedPhase = -1;
+  toast(found.length ? `Selected ${found.length} projectile${found.length === 1 ? "" : "s"} ${where}` : `No projectiles ${where}`);
+}
+
+export function selectBar(): void {
+  const [from, to] = barAround(doc.tempo, editor.time);
+  selectProjectilesBetween(from, to, "in this bar");
+}
+
+export const selectToEnd = (): void => selectProjectilesBetween(editor.time, Infinity, "from the playhead on");
+export const selectAll = (): void => selectProjectilesBetween(-Infinity, Infinity, "in the chart");
 
 /** The selected events themselves, which keep their identity when the list is re-sorted. */
 const chosen = (): ChartEvent[] => [...editor.selection].map(i => doc.chart.events[i]).filter(Boolean);
@@ -71,6 +89,13 @@ export function addProjectile(at?: Point): void {
   insert(ev);
 }
 
+/** Adds a projectile flying straight down the lane from a column across it, at a time (snapped). */
+export function addProjectileInColumn(seconds: number, column: number): void {
+  const c = doc.chart, ev = newTimed(c, seconds, doc.tempo, editor.snap);
+  ev.projectile = straightProjectile(c, xOfColumn(column, laneOf(c).width), firstActorId(c));
+  insert(ev);
+}
+
 export function addMove(): void {
   const ev = newTimed(doc.chart, editor.time, doc.tempo, editor.snap);
   ev.move = "Straight";
@@ -91,6 +116,14 @@ export function editSelected(mutate: (e: ChartEvent) => void): void {
   if (!e) return;
   doc.change(["events"], () => mutate(e));
   reselect([e]);
+}
+
+/** Edits every selected projectile at once - one undo step - keeping them selected. */
+export function editSelectedProjectiles(mutate: (p: Projectile) => void): void {
+  const events = chosen().filter(e => e.projectile);
+  if (!events.length) return;
+  doc.change(["events"], () => events.forEach(e => mutate(e.projectile!)));
+  reselect(events);
 }
 
 export function removeSelected(): void {
