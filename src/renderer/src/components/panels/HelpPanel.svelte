@@ -1,13 +1,13 @@
 <script lang="ts">
   import { doc } from "../../store/document.svelte";
   import { editor } from "../../store/editor.svelte";
-  import { SHORTCUTS } from "../../store/keyboard";
+  import { shortcutCommands } from "../../store/commands";
   import Logo from "../Logo.svelte";
 
-  const keys: [string, string][] = [
-    ...SHORTCUTS.map((s): [string, string] => [s.keysShown, s.description]),
+  const keys: [string, string][] = $derived([
+    ...shortcutCommands().map((c): [string, string] => [c.keys!, c.help ?? c.label]),
     ["Double-click", "On the lane: a projectile from there. On a timeline row: a projectile, move or look at that beat."],
-  ];
+  ]);
 </script>
 
 <div class="about">

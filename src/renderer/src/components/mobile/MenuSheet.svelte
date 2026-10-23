@@ -1,17 +1,17 @@
 <script lang="ts">
-  // The phone layout's menu: files, playback settings and the theme - what the desktop's top bar and
-  // transport hold, gathered behind one button.
+  // The phone layout's menu: the command table's File, Edit and Playback menus, then the playing
+  // settings and the theme - what the desktop's menu bar and transport hold, behind one button.
   import { appearance, THEME_CHOICES, type ThemeChoice } from "../../store/appearance.svelte";
   import { menus, visibleGroups, type Command } from "../../store/commands";
   import { editor } from "../../store/editor.svelte";
   import { mobile } from "../../store/mobile.svelte";
-  import { ensureAudio, setRate, setVolume } from "../../store/playback";
+  import { setRate, setVolume } from "../../store/playback";
   import { recording } from "../../store/recording.svelte";
   import { num } from "../fields";
   import SongPicker from "../SongPicker.svelte";
 
   const THEME_NAMES: Record<ThemeChoice, string> = { system: "System theme", dark: "Basalt (dark)", light: "Ash (light)" };
-  // File and Edit come from the shared command table; View's editors are in the top bar here.
+  // View's editors are in the top bar here; the rest of the table is drawn as it is.
   const shown = $derived(menus().filter(m => m.id !== "view"));
 
   /** Runs a command and shuts the menu. */
@@ -35,7 +35,7 @@
     {/each}
     {#if menu.id === "file"}<SongPicker />{/if}
   {/each}
-  <h3>Playing</h3>
+  <h3>Settings</h3>
   <div class="settings">
     <label><span>Speed</span>
       <select value={String(editor.rate)} onchange={e => setRate(num(e))}>
@@ -45,7 +45,6 @@
     <label><span>Volume</span>
       <input type="range" min="0" max="1" step="0.05" value={editor.volume} oninput={e => setVolume(num(e))} />
     </label>
-    <button class:on={editor.click} onclick={() => { editor.click = !editor.click; ensureAudio(); }}>Beat click</button>
     <label class="wide"><span>Tap timing: {recording.offsetMs > 0 ? "−" : recording.offsetMs < 0 ? "+" : ""}{Math.abs(recording.offsetMs)} ms</span>
       <input type="range" min="-150" max="250" step="5" value={recording.offsetMs} oninput={e => recording.setOffset(num(e))}
         aria-describedby="offset-note" />
