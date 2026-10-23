@@ -249,7 +249,7 @@ export async function save(): Promise<void> {
   if (target === "file") { await saveChartAs(); return; }
   if (target === "library") {
     editor.libraryAdd = true;
-    await library.flush();
+    if (!await library.flush()) return;
     doc.markSaved();
     toast(savedNote("Saved in Your charts, in this browser - Package keeps a copy outside it"));
     return;

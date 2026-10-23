@@ -59,10 +59,10 @@ class Library {
     void this.#restore();
   }
 
-  /** Saves the open chart now, if a save is waiting - before another chart replaces it. */
-  async flush(): Promise<void> {
+  /** Saves the open chart now, if a save is waiting - before another chart replaces it. False if it couldn't (and said so). */
+  async flush(): Promise<boolean> {
     clearTimeout(this.#timer);
-    await this.#sync();
+    return this.#sync();
   }
 
   show(): void {
@@ -146,14 +146,17 @@ class Library {
     this.#become(stored);
   }
 
-  /** Saves the open chart, where the source saves as you go: a new entry if it isn't in the library yet but should be. */
-  async #sync(): Promise<void> {
+  /**
+   * Saves the open chart, where the source saves as you go: a new entry if it isn't in the library yet
+   * but should be. False only when saving failed.
+   */
+  async #sync(): Promise<boolean> {
     const source = this.#source;
-    if (!source || !this.autosaves) return;
+    if (!source || !this.autosaves) return true;
     let id = editor.libraryId;
     if (!id) {
       // Opened or started charts join straight away; the example only once it's been changed.
-      if (!editor.libraryAdd && !doc.dirty) return;
+      if (!editor.libraryAdd && !doc.dirty) return true;
       id = crypto.randomUUID();
       editor.libraryId = id;
       editor.libraryAdd = false;
@@ -170,8 +173,10 @@ class Library {
       for (const [path, bytes] of changed) this.#saved.set(path, bytes);
       for (const path of removed) this.#saved.delete(path);
       if (this.visible) await this.refresh();
+      return true;
     } catch (e) {
       toast(`Could not keep this chart in your charts: ${(e as Error).message}`);
+      return false;
     }
   }
 
