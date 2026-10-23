@@ -73,9 +73,10 @@
     </section>
   </main>
 </div>
+<!-- The phone layout shows its own, under its menu sheet. -->
+{#if editor.lookPreview}<LookPreview />{/if}
 {/if}
 
-{#if editor.lookPreview}<LookPreview />{/if}
 {#if library.visible}<Library />{/if}
 
 <div class="drop" class:show={dropping}>Drop chart files</div>
