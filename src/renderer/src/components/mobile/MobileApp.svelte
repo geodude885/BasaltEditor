@@ -6,7 +6,6 @@
   import { editor } from "../../store/editor.svelte";
   import { layout } from "../../store/layout.svelte";
   import { mobile } from "../../store/mobile.svelte";
-  import { keepLooping } from "../../store/practice";
   import LaneView from "../../views/lane/LaneView.svelte";
   import Timeline from "../../views/timeline/Timeline.svelte";
   import Inspector from "../Inspector.svelte";
@@ -21,9 +20,6 @@
     document.documentElement.classList.add("compact");
     return () => document.documentElement.classList.remove("compact");
   });
-
-  // Keep an A-B loop going round, whichever editor is showing.
-  $effect(() => { void editor.time; keepLooping(); });
 
   const inspecting = $derived(editor.selection.size > 0 && !mobile.drawer);
 </script>

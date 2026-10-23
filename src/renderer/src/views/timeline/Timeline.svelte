@@ -13,6 +13,7 @@
   import { appearance } from "../../store/appearance.svelte";
   import { editor } from "../../store/editor.svelte";
   import { keepPlayheadInView, seek, songStart } from "../../store/playback";
+  import { practice } from "../../store/practice.svelte";
   import { untrack } from "svelte";
   import { boxIsAClick, prepare, theme, type Box } from "../theme";
   import { drawTimeline } from "./draw";
@@ -42,7 +43,7 @@
     drawTimeline(prepare(canvas, w, layout.height), w, layout.height, {
       chart: doc.chart, tempo: doc.tempo, view: editor.view, time: editor.time, snap: editor.snap,
       selection: editor.selection, selectedPhase: editor.selectedPhase, lookCues: editor.lookCues, selectedLookCue: editor.selectedLookCue,
-      markers: placed, song: editor.song, songStart: songStart(), clips: editor.clips, box, layout,
+      markers: placed, song: editor.song, songStart: songStart(), clips: editor.clips, box, layout, loop: practice.loop, loopStart: practice.loopStart,
     }, theme(appearance.scheme));
   });
 

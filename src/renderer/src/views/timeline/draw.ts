@@ -25,6 +25,10 @@ export type TimelineScene = {
   clips: Map<string, ClipSpan>;
   box: Box | null;
   layout: TimelineLayout;
+  /** The A-B loop, shaded, or null. */
+  loop: readonly [number, number] | null;
+  /** A loop's first point while the second isn't set yet, or null. */
+  loopStart: number | null;
 };
 
 export function drawTimeline(ctx: CanvasRenderingContext2D, w: number, h: number, s: TimelineScene, t: Theme): void {
@@ -60,6 +64,7 @@ export function drawTimeline(ctx: CanvasRenderingContext2D, w: number, h: number
   }
 
   drawWave(ctx, w, s, t);
+  drawLoop(ctx, h, s, t);
 
   // Row bands.
   ctx.fillStyle = alpha(t.wash, 0.03);
@@ -119,6 +124,19 @@ export function drawTimeline(ctx: CanvasRenderingContext2D, w: number, h: number
   // End and playhead.
   ctx.fillStyle = t.bad; ctx.fillRect(x(end), rulerBottom, 2, h);
   ctx.fillStyle = t.text; ctx.fillRect(x(s.time), 0, 2, h);
+}
+
+/** The A-B loop as a shaded span with edges, or just its first point while the second isn't set. */
+function drawLoop(ctx: CanvasRenderingContext2D, h: number, s: TimelineScene, t: Theme): void {
+  const x = (time: number) => xOf(s.view, time);
+  ctx.fillStyle = t.accent;
+  if (s.loop) {
+    const a = x(s.loop[0]), b = x(s.loop[1]);
+    ctx.fillRect(a, 0, 2, h); ctx.fillRect(b - 1, 0, 2, h);
+    ctx.fillStyle = alpha(t.accent, 0.08); ctx.fillRect(a, 0, b - a, h);
+  } else if (s.loopStart != null) {
+    ctx.fillRect(x(s.loopStart), 0, 2, h);
+  }
 }
 
 /** The song's waveform, lined up with chart time (song time - music.start). */

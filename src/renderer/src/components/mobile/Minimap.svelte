@@ -5,7 +5,7 @@
   import { appearance } from "../../store/appearance.svelte";
   import { doc } from "../../store/document.svelte";
   import { editor } from "../../store/editor.svelte";
-  import { mobile } from "../../store/mobile.svelte";
+  import { practice } from "../../store/practice.svelte";
   import { seek, songLength } from "../../store/playback";
   import { alpha, prepare, theme } from "../../views/theme";
 
@@ -21,10 +21,10 @@
     const ctx = prepare(canvas, w, h), t = theme(appearance.scheme);
     ctx.fillStyle = t.timeline;
     ctx.fillRect(0, 0, w, h);
-    if (mobile.loop) {
-      const top = yOf(mobile.loop[1]);
+    if (practice.loop) {
+      const top = yOf(practice.loop[1]);
       ctx.fillStyle = alpha(t.accent, 0.2);
-      ctx.fillRect(0, top, w, yOf(mobile.loop[0]) - top);
+      ctx.fillRect(0, top, w, yOf(practice.loop[0]) - top);
     }
     ctx.fillStyle = alpha(t.text, 0.55);
     for (const e of doc.chart.events) {

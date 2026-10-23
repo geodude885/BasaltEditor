@@ -14,6 +14,7 @@
   import { openDropped } from "./store/files";
   import { handleShortcut } from "./store/keyboard";
   import { layout } from "./store/layout.svelte";
+  import { keepLooping } from "./store/practice.svelte";
   import LaneView from "./views/lane/LaneView.svelte";
   import Timeline from "./views/timeline/Timeline.svelte";
 
@@ -26,6 +27,9 @@
     requestAnimationFrame(() => requestAnimationFrame(fit));
     if (!draft) toast("This is an example chart - open your own chart's files, or press New");
   });
+
+  // Keep an A-B loop going round, in either layout and whichever editor is showing.
+  $effect(() => { void editor.time; keepLooping(); });
 
   $effect(() => { document.title = `${doc.dirty ? "• " : ""}${doc.chart.name || "Untitled"} - Basalt Editor`; });
 

@@ -6,8 +6,7 @@
     addMove, addPhase, addProjectileInColumn, addStageCueAtPlayhead, copySelected, mirrorSelected, paste, removeSelected, selectAll, selectBar, selectToEnd,
   } from "../../store/actions";
   import { editor } from "../../store/editor.svelte";
-  import { mobile } from "../../store/mobile.svelte";
-  import { selectLoop } from "../../store/practice";
+  import { practice, selectLoop } from "../../store/practice.svelte";
 
   const count = $derived(editor.selection.size);
 </script>
@@ -21,7 +20,7 @@
     <!-- Whole sections at once: the projectiles in the bar at the playhead, the loop, the rest, or all. -->
     <span class="group" role="group" aria-label="Select projectiles">
       <button onclick={selectBar}>Bar</button>
-      {#if mobile.loop}<button onclick={selectLoop}>Loop</button>{/if}
+      {#if practice.loop}<button onclick={selectLoop}>Loop</button>{/if}
       <button onclick={selectToEnd}>To end</button>
       <button onclick={selectAll}>All</button>
     </span>

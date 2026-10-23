@@ -1,7 +1,8 @@
 // Every keyboard shortcut, in one table: App listens with handleShortcut, the Help tab lists them.
 import { addMove, addProjectile, copySelected, mirrorSelected, nudge, paste, redo, removeSelected, undo, zoom } from "./actions";
 import { openFiles, save } from "./files";
-import { play, seek } from "./playback";
+import { seek } from "./playback";
+import { playOrPause } from "./practice.svelte";
 
 export type Shortcut = {
   keysShown: string;
@@ -13,7 +14,7 @@ export type Shortcut = {
 };
 
 export const SHORTCUTS: Shortcut[] = [
-  { keysShown: "Space", description: "Play / pause", matches: (_, ctrl, key) => !ctrl && key === " ", run: play },
+  { keysShown: "Space", description: "Play / pause", matches: (_, ctrl, key) => !ctrl && key === " ", run: playOrPause },
   { keysShown: "Home", description: "Back to the start", matches: (_, ctrl, key) => !ctrl && key === "home", run: () => seek(0) },
   { keysShown: "P", description: "Add a projectile at the playhead", matches: (_, ctrl, key) => !ctrl && key === "p", run: () => addProjectile() },
   { keysShown: "M", description: "Add a move at the playhead", matches: (_, ctrl, key) => !ctrl && key === "m", run: addMove },

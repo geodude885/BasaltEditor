@@ -7,7 +7,7 @@
   import { editor } from "../../store/editor.svelte";
   import { mobile } from "../../store/mobile.svelte";
   import { seek } from "../../store/playback";
-  import { playOrPause } from "../../store/practice";
+  import { playOrPause } from "../../store/practice.svelte";
   import { num } from "../fields";
 
   const count = $derived(editor.problems.length);

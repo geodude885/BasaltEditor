@@ -4,8 +4,7 @@
   import Icon from "../Icon.svelte";
   import { untrack } from "svelte";
   import { editor } from "../../store/editor.svelte";
-  import { mobile } from "../../store/mobile.svelte";
-  import { backToPlayStart, loopPoint, rewindBars, rewindSeconds } from "../../store/practice";
+  import { backToPlayStart, loopPoint, loopPointLabel, practice, rewindBars, rewindSeconds } from "../../store/practice.svelte";
   import { recording, type RecordMode } from "../../store/recording.svelte";
   import Highway from "../../views/highway/Highway.svelte";
   import { highwayColumns } from "../../views/highway/geometry";
@@ -32,7 +31,7 @@
 
 <div class="screen">
   <div class="road">
-    <div class="canvasbox"><Highway loop={mobile.loop} /></div>
+    <div class="canvasbox"><Highway loop={practice.loop} /></div>
     {#if recording.armed}
       <div class="pads" style:grid-template-columns="repeat({columns.length}, minmax(0, 1fr))">
         {#each columns as column, index (index)}
@@ -57,10 +56,10 @@
       <button aria-label="Back 5 seconds" onclick={() => rewindSeconds(5)}>−5s</button>
     </div>
     <button title="Back to where you last pressed Play" onclick={backToPlayStart}><Icon name="back" /> Last play</button>
-    <button class:on={!!mobile.loop || mobile.loopStart != null} onclick={loopPoint}>
-      {mobile.loop ? "Loop off" : mobile.loopStart != null ? "Set B" : "Loop A"}
+    <button class:on={!!practice.loop || practice.loopStart != null} onclick={loopPoint}>
+      {loopPointLabel()}
     </button>
-    <button class:on={mobile.preroll} aria-pressed={mobile.preroll} onclick={() => { mobile.preroll = !mobile.preroll; }}>Pre-roll</button>
+    <button class:on={practice.preroll} aria-pressed={practice.preroll} onclick={() => { practice.preroll = !practice.preroll; }}>Pre-roll</button>
     <Minimap />
   </div>
 </div>

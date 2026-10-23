@@ -10,7 +10,7 @@
   import { appearance } from "../../store/appearance.svelte";
   import { doc } from "../../store/document.svelte";
   import { editor } from "../../store/editor.svelte";
-  import { mobile } from "../../store/mobile.svelte";
+  import { practice } from "../../store/practice.svelte";
   import { seek, songStart } from "../../store/playback";
   import { boxIsAClick, prepare, theme, type Box } from "../theme";
   import { Pinch } from "../touch";
@@ -27,7 +27,7 @@
   let box = $state<Box | null>(null);
   const columns = highwayColumns();
 
-  const view = $derived<HighwayView>({ w, h, hitY: h * HIT_LINE_FROM_TOP, pps: mobile.highwayPps, time: editor.time });
+  const view = $derived<HighwayView>({ w, h, hitY: h * HIT_LINE_FROM_TOP, pps: practice.highwayPps, time: editor.time });
   const placed = $derived(tiles(doc.chart, doc.tempo, view, columns));
 
   $effect(() => {
@@ -53,7 +53,7 @@
   const snapped = (seconds: number) => doc.tempo.snap(seconds, editor.snap);
 
   function stretch(factor: number): void {
-    mobile.highwayPps = Math.max(SMALLEST_HIGHWAY_PPS, Math.min(LARGEST_HIGHWAY_PPS, mobile.highwayPps * factor));
+    practice.highwayPps = Math.max(SMALLEST_HIGHWAY_PPS, Math.min(LARGEST_HIGHWAY_PPS, practice.highwayPps * factor));
   }
 
   /** Lets go of a drag in progress, keeping tiles already moved. */
@@ -111,7 +111,7 @@
       const step = pinch.move(ev.pointerId, y, x);
       if (step) {
         stretch(step.zoom);
-        seek(Math.max(0, editor.time + step.panX / mobile.highwayPps));
+        seek(Math.max(0, editor.time + step.panX / practice.highwayPps));
         return;
       }
     }
@@ -120,7 +120,7 @@
       if (!drag.panning && Math.hypot(x - drag.x0, y - drag.y0) < DRAG_STARTS_AFTER_PIXELS) return;
       if (!drag.panning) { drag.panning = true; clearTimeout(drag.timer); }
       // The highway follows the finger: pulling it down brings later times to the hit line.
-      seek(Math.max(0, drag.time0 + (y - drag.y0) / mobile.highwayPps));
+      seek(Math.max(0, drag.time0 + (y - drag.y0) / practice.highwayPps));
     } else if (drag.kind === "box") {
       if (!box) return;
       box = { ...box, x1: x, y1: y };
@@ -128,7 +128,7 @@
     } else {
       if (!drag.moved && Math.hypot(x - drag.x0, y - drag.y0) < DRAG_STARTS_AFTER_PIXELS) return;
       drag.moved = true;
-      const deltaSeconds = (drag.y0 - y) / mobile.highwayPps;
+      const deltaSeconds = (drag.y0 - y) / practice.highwayPps;
       const deltaColumns = columnIndexAtX(view, columns.length, x) - columnIndexAtX(view, columns.length, drag.x0);
       const width = laneOf(doc.chart).width;
       for (const [e, t, column] of drag.starts) {
@@ -167,7 +167,7 @@
   function wheel(ev: WheelEvent): void {
     ev.preventDefault();
     if (ev.ctrlKey || ev.metaKey) stretch(ev.deltaY < 0 ? 1.15 : 1 / 1.15);
-    else seek(Math.max(0, editor.time - ev.deltaY / mobile.highwayPps));
+    else seek(Math.max(0, editor.time - ev.deltaY / practice.highwayPps));
   }
 </script>
 
