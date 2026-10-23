@@ -88,6 +88,12 @@
     }
     if (pinch.busy) return;
     const press = whatATimelinePressHits(doc.chart, doc.tempo, editor.view, layout, placed, editor.lookCues, x, y, taps.isDouble(ev));
+    // Select mode: empty space boxes straight away, with any pointer.
+    if (editor.selectMode && pressWaitsOnTouch(press, layout, y)) {
+      drag = { kind: "box", adding: adds(ev), addsTo: adds(ev) ? [...editor.selection] : [] };
+      box = { x0: x, y0: y, x1: x, y1: y };
+      return;
+    }
     if (ev.pointerType === "touch" && pressWaitsOnTouch(press, layout, y)) {
       const adding = adds(ev);
       const d: Extract<Drag, { kind: "touch" }> = {

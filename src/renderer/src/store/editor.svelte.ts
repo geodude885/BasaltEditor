@@ -35,6 +35,8 @@ class EditorState {
   readonly selection = new SvelteSet<number>();
   /** Presses add to the selection, as Shift does - for touch screens, which have no Shift. */
   multiSelect = $state(false);
+  /** Select mode: a drag on empty space draws a selection box at once, instead of panning or scrubbing. */
+  selectMode = $state(false);
   selectedPhase = $state(-1);
   selectedLookCue = $state(-1);
 

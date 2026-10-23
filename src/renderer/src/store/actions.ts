@@ -2,6 +2,7 @@
 // lands in the chart's text.
 import { actorSpotAt, actorsOf, endOf, evTime, firstActorId, laneOf, setEvTime } from "../model/chart";
 import { straightProjectile, xOfColumn } from "../model/columns";
+import { barAround, projectilesBetween } from "../model/ranges";
 import { addPhaseAt, mirror, newTimed } from "../model/edits";
 import { newStageCue } from "../model/looks";
 import { round } from "../model/tempo";
@@ -27,6 +28,22 @@ export function select(i: number, add: boolean): void {
   else editor.selection.add(i);
   editor.selectedPhase = -1;
 }
+
+/** Selects the projectiles in a span of time, saying how many; `where` finishes "Selected 4 projectiles …". */
+export function selectProjectilesBetween(from: number, to: number, where: string): void {
+  const found = projectilesBetween(doc.chart.events, doc.tempo, from, to);
+  editor.setSelection(found);
+  editor.selectedPhase = -1;
+  toast(found.length ? `Selected ${found.length} projectile${found.length === 1 ? "" : "s"} ${where}` : `No projectiles ${where}`);
+}
+
+export function selectBar(): void {
+  const [from, to] = barAround(doc.tempo, editor.time);
+  selectProjectilesBetween(from, to, "in this bar");
+}
+
+export const selectToEnd = (): void => selectProjectilesBetween(editor.time, Infinity, "from the playhead on");
+export const selectAll = (): void => selectProjectilesBetween(-Infinity, Infinity, "in the chart");
 
 /** The selected events themselves, which keep their identity when the list is re-sorted. */
 const chosen = (): ChartEvent[] => [...editor.selection].map(i => doc.chart.events[i]).filter(Boolean);

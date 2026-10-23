@@ -56,7 +56,7 @@
       <button aria-label="Back a bar" onclick={() => rewindBars(1)}>−bar</button>
       <button aria-label="Back 5 seconds" onclick={() => rewindSeconds(5)}>−5s</button>
     </div>
-    <button aria-label="Back to where playing started" onclick={backToPlayStart}><Icon name="back" /> Start</button>
+    <button title="Back to where you last pressed Play" onclick={backToPlayStart}><Icon name="back" /> Last play</button>
     <button class:on={!!mobile.loop || mobile.loopStart != null} onclick={loopPoint}>
       {mobile.loop ? "Loop off" : mobile.loopStart != null ? "Set B" : "Loop A"}
     </button>

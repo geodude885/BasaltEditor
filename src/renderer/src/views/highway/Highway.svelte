@@ -86,6 +86,12 @@
       };
       return;
     }
+    // Select mode: empty space boxes straight away instead of scrubbing.
+    if (editor.selectMode) {
+      drag = { kind: "box", adding, addsTo: adding ? [...editor.selection] : [] };
+      box = { x0: x, y0: y, x1: x, y1: y };
+      return;
+    }
     const d: Extract<Drag, { kind: "empty" }> = {
       kind: "empty", x0: x, y0: y, time0: editor.time, tapTime: timeOfY(view, y), panning: false, adding, timer: 0,
     };

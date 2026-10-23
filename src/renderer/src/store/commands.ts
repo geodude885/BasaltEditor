@@ -2,13 +2,14 @@
 // this, whichever layout draws it: the phone's menu sheet now, and a desktop menu bar later (in the
 // page, or as the app's native menu over IPC). Commands say what they do and when they apply; the
 // menus only lay them out.
-import { copySelected, fit, mirrorSelected, paste, redo, removeSelected, undo, zoom } from "./actions";
+import { copySelected, fit, mirrorSelected, paste, redo, removeSelected, selectAll, selectBar, selectToEnd, undo, zoom } from "./actions";
 import { doc } from "./document.svelte";
 import { editor } from "./editor.svelte";
 import { copyChart, openFiles, openFolder, save, saveChartAs, savePackage } from "./files";
 import { layout } from "./layout.svelte";
 import { library } from "./library.svelte";
 import { mobile } from "./mobile.svelte";
+import { selectLoop } from "./practice";
 
 export type Command = {
   id: string;
@@ -81,6 +82,13 @@ export function menus(): Menu[] {
           { id: "mirror", label: "Mirror", keys: "X", run: mirrorSelected, enabled: selection },
           { id: "delete", label: "Delete", keys: "Delete", run: removeSelected, enabled: selection },
           { id: "select-none", label: "Select none", run: () => editor.selection.clear(), enabled: selection },
+        ],
+        [
+          { id: "select-mode", label: "Select mode", run: () => { editor.selectMode = !editor.selectMode; }, checked: () => editor.selectMode },
+          { id: "select-bar", label: "Select this bar", run: selectBar },
+          { id: "select-loop", label: "Select the loop", run: selectLoop, shown: () => !!mobile.loop },
+          { id: "select-to-end", label: "Select to the end", run: selectToEnd },
+          { id: "select-all", label: "Select all projectiles", run: selectAll },
         ],
       ],
     },

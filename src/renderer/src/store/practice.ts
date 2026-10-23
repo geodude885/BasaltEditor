@@ -1,6 +1,7 @@
 // The phone layout's practice tools: stepping back, jumping back to where playing started, the A-B
 // loop and pre-roll. The sums are in model/practice.ts.
 import { barsBefore, loopBetween } from "../model/practice";
+import { selectProjectilesBetween } from "./actions";
 import { doc } from "./document.svelte";
 import { editor } from "./editor.svelte";
 import { mobile } from "./mobile.svelte";
@@ -37,6 +38,11 @@ export function loopPoint(): void {
   if (mobile.loopStart == null) { mobile.loopStart = editor.time; return; }
   mobile.loop = loopBetween(mobile.loopStart, editor.time);
   mobile.loopStart = null;
+}
+
+/** Selects the projectiles in the A-B loop. */
+export function selectLoop(): void {
+  if (mobile.loop) selectProjectilesBetween(mobile.loop[0], mobile.loop[1], "in the loop");
 }
 
 /** Keeps a playing loop going round: past its end, back to its start. Called every frame by the layout. */
