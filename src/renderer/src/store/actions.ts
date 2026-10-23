@@ -7,7 +7,7 @@ import { addPhaseAt, mirror, newTimed } from "../model/edits";
 import { newStageCue } from "../model/looks";
 import { round } from "../model/tempo";
 import type { Point } from "../model/chart";
-import type { ChartEvent } from "../model/types";
+import type { ChartEvent, Projectile } from "../model/types";
 import { MOST_EXTRA_TIMELINE_HEIGHT_PIXELS, type TimelineRow } from "../views/timeline/geometry";
 import { doc } from "./document.svelte";
 import { editor } from "./editor.svelte";
@@ -116,6 +116,14 @@ export function editSelected(mutate: (e: ChartEvent) => void): void {
   if (!e) return;
   doc.change(["events"], () => mutate(e));
   reselect([e]);
+}
+
+/** Edits every selected projectile at once - one undo step - keeping them selected. */
+export function editSelectedProjectiles(mutate: (p: Projectile) => void): void {
+  const events = chosen().filter(e => e.projectile);
+  if (!events.length) return;
+  doc.change(["events"], () => events.forEach(e => mutate(e.projectile!)));
+  reselect(events);
 }
 
 export function removeSelected(): void {

@@ -1,6 +1,6 @@
 <script lang="ts">
   import Icon from "./Icon.svelte";
-  import { round } from "../model/tempo";
+  import { beatText, clockText } from "../model/tempo";
   import { addMove, addPhase, addProjectile, copySelected, mirrorSelected, paste, removeSelected, zoom } from "../store/actions";
   import { doc } from "../store/document.svelte";
   import { editor } from "../store/editor.svelte";
@@ -10,8 +10,8 @@
   const clock = $derived.by(() => {
     const t = Math.max(0, editor.time), tp = doc.tempo;
     return {
-      time: `${Math.floor(t / 60)}:${(t % 60).toFixed(3).padStart(6, "0")}`,
-      beat: tp.ok ? `beat ${round(tp.beat(editor.time) + 1, 2)}` : "no tempo",
+      time: clockText(t, 3),
+      beat: tp.ok ? `beat ${beatText(tp.beat(t), 2)}` : "no tempo",
     };
   });
 </script>

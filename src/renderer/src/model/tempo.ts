@@ -47,3 +47,19 @@ export class Tempo {
 }
 
 export const round = (v: number, d: number): number => Math.round(v * 10 ** d) / 10 ** d;
+
+/**
+ * A playhead readout that keeps its width as it runs: minutes, then seconds always to `decimals`
+ * places ("1:05.20", never "1:5.2"), so a clock beside it doesn't jump about.
+ */
+export function clockText(seconds: number, decimals = 3): string {
+  const t = Math.max(0, seconds), minutes = Math.floor(t / 60);
+  let rest = (t - minutes * 60).toFixed(decimals);
+  // 59.9996 rounds up to "60.000": carry it into the minutes.
+  if (parseFloat(rest) >= 60) return clockText((minutes + 1) * 60, decimals);
+  rest = rest.padStart(decimals ? decimals + 3 : 2, "0");
+  return `${minutes}:${rest}`;
+}
+
+/** A beat readout, counting from 1, always to `decimals` places ("5.00", not "5"). */
+export const beatText = (beat: number, decimals = 2): string => (Math.max(0, beat) + 1).toFixed(decimals);

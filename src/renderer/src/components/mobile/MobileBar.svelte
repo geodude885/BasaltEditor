@@ -1,7 +1,7 @@
 <script lang="ts">
   // The phone layout's one bar: the menu, the chart, playing, snapping, undo and the problem count.
   import Icon from "../Icon.svelte";
-  import { round } from "../../model/tempo";
+  import { beatText, clockText } from "../../model/tempo";
   import { redo, undo } from "../../store/actions";
   import { doc } from "../../store/document.svelte";
   import { editor } from "../../store/editor.svelte";
@@ -14,8 +14,8 @@
   const clock = $derived.by(() => {
     const t = Math.max(0, editor.time), tp = doc.tempo;
     return {
-      time: `${Math.floor(t / 60)}:${(t % 60).toFixed(2).padStart(5, "0")}`,
-      beat: tp.ok ? `${round(tp.beat(editor.time) + 1, 1)}` : "",
+      time: clockText(t, 2),
+      beat: tp.ok ? beatText(tp.beat(t), 1) : "",
     };
   });
 </script>
@@ -49,7 +49,8 @@
   .icon { min-width: 40px; padding: 4px 8px; font-size: 18px; line-height: 1; }
   .play { min-width: 64px; }
   .name { font: 600 16px/1.1 var(--display); max-width: 18ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 0 1 auto; min-width: 0; }
-  .clock { font: 500 14px/1 var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .clock { font: 500 14px/1 var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; min-width: 7ch; }
+  .clock small { display: inline-block; min-width: 6ch; }
   .clock small { font-size: 11px; color: var(--text-dim); margin-left: 4px; }
   select { padding: 6px 4px; min-height: 36px; }
   .scroll {

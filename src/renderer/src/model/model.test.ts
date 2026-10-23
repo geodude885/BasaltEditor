@@ -6,7 +6,7 @@ import {
 import { parse } from "./jsonc";
 import { density, problems } from "./problems";
 import { SAMPLE, template } from "./samples";
-import { Tempo } from "./tempo";
+import { beatText, clockText, Tempo } from "./tempo";
 import type { LoadedChart } from "./types";
 
 const load = (text: string) => { const c = parse(text) as LoadedChart; c.events ??= []; return c; };
@@ -161,5 +161,16 @@ describe("settings that are more than one field", () => {
     expect(c.music).toEqual({ file: "song.ogg", start: 0, volume: 1 });
     setMusic(c, "", 0, 1);
     expect(c.music).toBeUndefined();
+  });
+});
+
+describe("clock readouts", () => {
+  it("keep their width as they run", () => {
+    expect(clockText(0, 2)).toBe("0:00.00");
+    expect(clockText(5.1, 2)).toBe("0:05.10");
+    expect(clockText(65, 3)).toBe("1:05.000");
+    expect(clockText(59.9996, 3)).toBe("1:00.000");
+    expect(beatText(4, 1)).toBe("5.0");
+    expect(beatText(4.25, 2)).toBe("5.25");
   });
 });
