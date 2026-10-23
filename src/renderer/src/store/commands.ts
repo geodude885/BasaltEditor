@@ -139,6 +139,10 @@ export function menus(): Menu[] {
           { id: "zoom-out", label: "Zoom out", keys: "[", run: () => zoom(1 / 1.4) },
           { id: "fit", label: "Fit the chart", run: fit },
         ],
+        [
+          { id: "look-preview", label: "Look preview", keys: "K", run: () => editor.toggleLookPreview(), checked: () => editor.lookPreview,
+            help: "Show or hide the BossBattles Stage look on a painted arena, as it plays" },
+        ],
       ],
     },
     {

@@ -16,6 +16,7 @@ export type Song = { name: string; url: string; buffer: AudioBuffer | null; peak
 const VOLUME_KEY = "basalt-volume";
 const COLLAPSED_ROWS_KEY = "basalt-collapsed-timeline-rows";
 const EXTRA_TIMELINE_HEIGHT_KEY = "basalt-extra-timeline-height";
+const LOOK_PREVIEW_KEY = "basalt-look-preview";
 
 function savedVolume(): number {
   try { const v = parseFloat(localStorage.getItem(VOLUME_KEY) ?? ""); if (v >= 0 && v <= 1) return v; } catch { /* half */ }
@@ -30,6 +31,10 @@ function savedCollapsedRows(): TimelineRow[] {
 function savedExtraTimelineHeight(): number {
   try { const pixels = parseFloat(localStorage.getItem(EXTRA_TIMELINE_HEIGHT_KEY) ?? ""); if (pixels >= 0) return Math.min(pixels, MOST_EXTRA_TIMELINE_HEIGHT_PIXELS); } catch { /* none */ }
   return 0;
+}
+
+function savedLookPreview(): boolean {
+  try { return localStorage.getItem(LOOK_PREVIEW_KEY) === "1"; } catch { return false; }
 }
 
 class EditorState {
@@ -57,6 +62,8 @@ class EditorState {
   click = $state(false);
   /** How loud the editor plays - the song (times the chart's own volume) and the click. Remembered here, not saved in the chart. */
   volume = $state(savedVolume());
+  /** The look preview window: the Stage look on a painted arena. Remembered here, not saved in the chart. */
+  lookPreview = $state(savedLookPreview());
 
   tab = $state<Tab>("chart");
   tapTimes = $state.raw<number[]>([]);
@@ -89,6 +96,11 @@ class EditorState {
 
   rememberVolume(): void {
     try { localStorage.setItem(VOLUME_KEY, String(this.volume)); } catch { /* not remembered */ }
+  }
+
+  toggleLookPreview(): void {
+    this.lookPreview = !this.lookPreview;
+    try { localStorage.setItem(LOOK_PREVIEW_KEY, this.lookPreview ? "1" : "0"); } catch { /* not remembered */ }
   }
 
   rememberTimelineLayout(): void {

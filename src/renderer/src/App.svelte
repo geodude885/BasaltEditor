@@ -5,6 +5,7 @@
   import TopBar from "./components/TopBar.svelte";
   import Transport from "./components/Transport.svelte";
   import HighwayScreen from "./components/HighwayScreen.svelte";
+  import LookPreview from "./components/LookPreview.svelte";
   import MobileApp from "./components/mobile/MobileApp.svelte";
   import Library from "./components/library/Library.svelte";
   import { library } from "./store/library.svelte";
@@ -74,6 +75,7 @@
 </div>
 {/if}
 
+{#if editor.lookPreview}<LookPreview />{/if}
 {#if library.visible}<Library />{/if}
 
 <div class="drop" class:show={dropping}>Drop chart files</div>

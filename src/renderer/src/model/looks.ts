@@ -52,6 +52,11 @@ export function stageCueWarnings(cue: LookCue): string[] {
   return warnings;
 }
 
+export function lookCueTimeLabel(cue: LookCue): string {
+  if (cue.beat != null) return `beat ${cue.beat}`;
+  return cue.t != null ? `${cue.t} s` : "no time";
+}
+
 export type TimedLookCue = { index: number; time: number; pack: string; set: [string, number][]; off: boolean; fade: number };
 
 export function timedLookCues(chart: LoadedChart, tempo: Tempo): TimedLookCue[] {
@@ -122,6 +127,16 @@ export function stageLookAt(cues: TimedLookCue[], time: number): StageLook {
   return { on: look?.on ?? false, settings: stageSettingsFrom(look?.values) };
 }
 
+export type StageCueNow = { cue: TimedLookCue; progress: number } | null;
+
+// The Stage cue the look is following at a time, and how far through its fade it is.
+export function stageCueAt(cues: TimedLookCue[], time: number): StageCueNow {
+  const stageCues = cues.filter(c => c.pack.toLowerCase() === STAGE_PACK.name.toLowerCase() && c.time <= time);
+  const cue = stageCues.at(-1);
+  if (!cue) return null;
+  return { cue, progress: cue.fade <= 0 ? 1 : clamp((time - cue.time) / cue.fade, 0, 1) };
+}
+
 // What a cue starts from: every earlier cue, at the cue's own time.
 export function stageLookBeforeCue(cues: TimedLookCue[], cueIndex: number): StageLook {
   const position = cues.findIndex(c => c.index === cueIndex);
@@ -134,14 +149,14 @@ export function stageLookBeforeCue(cues: TimedLookCue[], cueIndex: number): Stag
 export type Rgb = [number, number, number];
 
 // Rodrigues' rotation about the grey axis, by -key hue, so the key hue lands on red (the shader's ToKeySpace).
-function toKeySpace([r, g, b]: Rgb, keyHueDegrees: number): Rgb {
+export function toKeySpace([r, g, b]: Rgb, keyHueDegrees: number): Rgb {
   const angle = -keyHueDegrees * Math.PI / 180, cos = Math.cos(angle), sin = Math.sin(angle), k = 1 / Math.sqrt(3);
   const towardsGrey = k * k * (r + g + b) * (1 - cos);
   return [r * cos + k * (b - g) * sin + towardsGrey, g * cos + k * (r - b) * sin + towardsGrey, b * cos + k * (g - r) * sin + towardsGrey];
 }
 
-const keyness = (keyed: Rgb, strictness: number) => clamp((keyed[0] - Math.max(keyed[1], keyed[2])) * strictness, 0, 1);
-const mix = (a: Rgb, b: Rgb, amount: number): Rgb => [a[0] + (b[0] - a[0]) * amount, a[1] + (b[1] - a[1]) * amount, a[2] + (b[2] - a[2]) * amount];
+export const keyness = (keyed: Rgb, strictness: number) => clamp((keyed[0] - Math.max(keyed[1], keyed[2])) * strictness, 0, 1);
+export const mix = (a: Rgb, b: Rgb, amount: number): Rgb => [a[0] + (b[0] - a[0]) * amount, a[1] + (b[1] - a[1]) * amount, a[2] + (b[2] - a[2]) * amount];
 
 export const stageColour = (s: StageSettings, prefix: string): Rgb => [s[`_${prefix}R`], s[`_${prefix}G`], s[`_${prefix}B`]];
 
@@ -193,7 +208,7 @@ export function stagePreview(look: StageLook): StagePreview {
   };
 }
 
-const linearToSrgb = (v: number) => { const c = clamp(v, 0, 1); return c <= 0.0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055; };
+export const linearToSrgb = (v: number) => { const c = clamp(v, 0, 1); return c <= 0.0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055; };
 const srgbToLinear = (v: number) => v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
 
 export function linearToCss(colour: Rgb): string {

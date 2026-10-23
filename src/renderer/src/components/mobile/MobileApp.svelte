@@ -9,6 +9,7 @@
   import LaneView from "../../views/lane/LaneView.svelte";
   import Timeline from "../../views/timeline/Timeline.svelte";
   import Inspector from "../Inspector.svelte";
+  import LookPreview from "../LookPreview.svelte";
   import HighwayScreen from "../HighwayScreen.svelte";
   import MenuSheet from "./MenuSheet.svelte";
   import MobileBar from "./MobileBar.svelte";
@@ -42,6 +43,7 @@
     <MobileDrawer part="drawer" />
   </main>
   <div class="tools"><SelectionBar /></div>
+  {#if editor.lookPreview}<LookPreview />{/if}
   {#if mobile.menu}<MenuSheet />{/if}
 </div>
 

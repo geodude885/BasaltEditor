@@ -1,6 +1,6 @@
 <script lang="ts">
   import {
-    colourChannels, cssToLinear, cueSetsParameter, isCueForPack, linearToCss,
+    colourChannels, cssToLinear, cueSetsParameter, isCueForPack, linearToCss, lookCueTimeLabel,
     setStageCueColour, setStageCueSetting, settingsWrittenIn, STAGE_PACK, stageCueValue, stageCueWarnings, stageLookAfterCue,
     stageLookBeforeCue, stageParameterGroups, stagePreview, type PackParameter, type Rgb, type StageLook,
   } from "../../model/looks";
@@ -11,6 +11,7 @@
   import { doc } from "../../store/document.svelte";
   import { editor } from "../../store/editor.svelte";
   import { seek } from "../../store/playback";
+  import { commandButton } from "../../store/commands";
   import { checked, num, text } from "../fields";
 
   const groups = stageParameterGroups();
@@ -35,11 +36,6 @@
     return count ? `sets ${count}` : "turns on";
   }
 
-  function cueTimeLabel(c: LookCue): string {
-    if (c.beat != null) return `beat ${c.beat}`;
-    return c.t != null ? `${c.t} s` : "no time";
-  }
-
   function setMode(mode: string): void {
     editSelectedCue(c => {
       if (mode === "off") { delete c.set; delete c.on; c.off = true; }
@@ -58,6 +54,7 @@
 
 <div class="row">
   <button class="primary" title="A BossBattles Stage cue at the playhead (or double-click the timeline's looks row)" onclick={addStageCueAtPlayhead}>+ Look at the playhead</button>
+  <button {...commandButton("look-preview")}>Preview</button>
 </div>
 
 {#if visuals.length}
@@ -65,7 +62,7 @@
     {#each visuals as c, i (i)}
       <button role="option" aria-selected={i === index} class:stage={isCueForPack(c, STAGE_PACK)}
         onclick={() => { selectLookCue(i); const time = evTime(c, doc.tempo); if (Number.isFinite(time)) seek(time); }}>
-        <b>{cueTimeLabel(c)}</b><span>{c.pack}</span><span>{cueSummary(c)}{c.fade ? ` · ${c.fade} s fade` : ""}</span>
+        <b>{lookCueTimeLabel(c)}</b><span>{c.pack}</span><span>{cueSummary(c)}{c.fade ? ` · ${c.fade} s fade` : ""}</span>
       </button>
     {/each}
   </div>
@@ -79,7 +76,7 @@
 {#if cue}
   <div class="cue">
     <div class="row">
-      <h3>Look at {cueTimeLabel(cue)}</h3>
+      <h3>Look at {lookCueTimeLabel(cue)}</h3>
       <span class="note">{cue.pack}</span>
       <button onclick={() => removeLookCue(index)}>Delete</button>
     </div>

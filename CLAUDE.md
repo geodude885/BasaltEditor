@@ -53,7 +53,8 @@ src/main/       Electron main: window, dialogs, file access (folders the user op
 src/preload/    exposes src/shared/api.ts to the page as window.editor
 src/shared/     the API between them - types and IPC channel names
 src/renderer/src/
-  model/        chart types, JSONC, tempo, validation (problems), edits, looks - pure TypeScript
+  model/        chart types, JSONC, tempo, validation (problems), edits, looks and the look preview's
+                painted arena (stageFrame) - pure TypeScript
   io/           zip, sorting opened files into a chart and its song, cover and clips, what a package
                 holds, chart summaries for "Your charts"
   audio/        waveform peaks, MP3 inside a WAV
