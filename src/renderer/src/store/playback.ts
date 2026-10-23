@@ -1,6 +1,7 @@
 // Playing the chart: the song through an <audio> element (it keeps pitch at slow speeds), a clock that
 // runs without a song too, and a click on every beat. Chart time = song time - music.start.
 import { buildPeaks } from "../audio/peaks";
+import { mp3InsideWav } from "../audio/riff";
 import { songType } from "../io/files";
 import { endOf } from "../model/chart";
 import { doc } from "./document.svelte";
@@ -139,14 +140,17 @@ export async function loadSong(name: string, bytes: Uint8Array): Promise<boolean
   const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: songType(name) }));
   editor.song = { name, url, buffer: null, peaks: null };
   songAudio().src = url;
-  try {
-    const decoder = ensureAudio() ?? new OfflineAudioContext(1, 1, 44100);
-    const buffer = await decoder.decodeAudioData(bytes.slice().buffer);
-    if (editor.song?.url === url) editor.song = { ...editor.song, buffer, peaks: buildPeaks(buffer.getChannelData(0), buffer.sampleRate) };
-    return true;
-  } catch {
-    return false;
+  const decoder = ensureAudio() ?? new OfflineAudioContext(1, 1, 44100);
+  // An MP3 inside a WAV wrapper is decoded from the MP3 inside, which more decoders understand.
+  const inside = mp3InsideWav(bytes);
+  for (const attempt of inside ? [inside, bytes] : [bytes]) {
+    try {
+      const buffer = await decoder.decodeAudioData(attempt.slice().buffer);
+      if (editor.song?.url === url) editor.song = { ...editor.song, buffer, peaks: buildPeaks(buffer.getChannelData(0), buffer.sampleRate) };
+      return true;
+    } catch { /* try the next, if any */ }
   }
+  return false;
 }
 
 export function unloadSong(): void {
