@@ -8,7 +8,7 @@ import {
 } from "./actions";
 import { doc } from "./document.svelte";
 import { editor } from "./editor.svelte";
-import { copyChart, openFiles, openFolder, save, saveChartAs, savePackage } from "./files";
+import { copyChart, openFiles, openFolder, openRecent, save, saveChartAs, savePackage } from "./files";
 import { layout } from "./layout.svelte";
 import { library } from "./library.svelte";
 import { mobile } from "./mobile.svelte";
@@ -37,6 +37,8 @@ export type Command = {
   /** It reads Shift itself, so its keys match with or without. */
   anyShift?: boolean;
 };
+
+const RECENT_SHOWN = 5;
 
 export type MenuId = "file" | "edit" | "view" | "playback";
 export type Menu = { id: MenuId; label: string; groups: Command[][] };
@@ -75,6 +77,11 @@ export function menus(): Menu[] {
           { id: "open", label: "Open files…", keys: "Ctrl O", run: openFiles, whileTyping: true },
           { id: "open-folder", label: "Open folder…", run: openFolder, shown: () => platform.canOpenFolders },
         ],
+        // The desktop app's recent chart folders, by folder name.
+        editor.recentFolders.slice(0, RECENT_SHOWN).map((folder, i): Command => ({
+          id: `recent-${i}`, label: `Open recent: ${folder.split(/[\\/]/).filter(Boolean).pop()}`, run: () => openRecent(folder),
+          enabled: () => folder !== editor.folder,
+        })),
         [
           { id: "save", label: editor.folder ? "Save" : "Save as…", keys: "Ctrl S", run: save, whileTyping: true,
             help: "Save into the open chart folder (else save chart.json as…)" },

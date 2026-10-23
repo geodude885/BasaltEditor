@@ -72,6 +72,8 @@ class EditorState {
   cover = $state<string | null>(null);
   /** The chart folder on disk, when one was opened - Save writes chart.json back into it. */
   folder = $state<string | null>(null);
+  /** Chart folders opened lately, newest first - the desktop app's File > Open recent. */
+  recentFolders = $state.raw<string[]>([]);
   /** Which of your charts (store/library.svelte.ts) this is, once it is kept there. */
   libraryId = $state<string | null>(null);
   /** This chart should join your charts as soon as it can - it was just opened or started. */

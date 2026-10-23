@@ -8,12 +8,21 @@ import { webLibrary } from "./platform/library-web";
 import { canOpenFolders, inBrowser, webApi } from "./platform/web";
 import { platform } from "./store/commands";
 import { library } from "./store/library.svelte";
+import { desktopLibrary } from "./platform/library-desktop";
+import { refreshRecent } from "./store/files";
+import type { EditorApi } from "../../shared/api";
 
 // The desktop app's preload provides window.editor; in a plain browser, the web version stands in.
 window.editor ??= webApi;
 platform.canOpenFolders = !inBrowser() || canOpenFolders();
-// Your charts live in the browser's storage on the web; the desktop app has its Charts folder.
-if (inBrowser() && "indexedDB" in window) library.start(webLibrary);
+// Your charts live in the browser's storage on the web; in the desktop app, in the game's Charts folder.
+if (inBrowser()) { if ("indexedDB" in window) library.start(webLibrary); }
+else void startDesktopLibrary(window.editor);
+
+async function startDesktopLibrary(api: EditorApi): Promise<void> {
+  void refreshRecent();
+  if (api.chartsFolder && await api.chartsFolder()) library.start(desktopLibrary(api as Required<EditorApi>));
+}
 
 appearance.start();
 layout.start();

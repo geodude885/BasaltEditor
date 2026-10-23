@@ -1,4 +1,5 @@
 // Opening and saving: through the desktop app's dialogs, by drag and drop, and the clipboard.
+import type { OpenedFolder } from "../../../shared/api";
 import { clipSpans, findCover, findSong, isCover, isSong, packageName, readEntries, type FileEntry } from "../io/files";
 import { setMusic } from "../model/edits";
 import { writeZip } from "../io/zip";
@@ -27,6 +28,7 @@ function clearFiles(): void {
 export async function openEntries(entries: FileEntry[], folder: string | null = null): Promise<void> {
   try {
     const opened = await readEntries(entries);
+    if (opened.chart && !await mayReplaceChart()) return;
     if (opened.chart) {
       loadChart(opened.chart.text, opened.chart.name);
       clearFiles();
@@ -34,6 +36,7 @@ export async function openEntries(entries: FileEntry[], folder: string | null = 
       joinLibrary();
     }
     editor.files = new Map([...editor.files, ...opened.files]);
+    if (folder) void refreshRecent();
     // A song or cover opened on its own (not with a chart) becomes the chart's, replacing the one before.
     const song = opened.chart ? undefined : await adopt([...opened.files.keys()]);
     await useFiles();
@@ -124,12 +127,45 @@ export async function openFiles(): Promise<void> {
 export async function openFolder(): Promise<void> {
   try {
     const opened = await api().openFolder();
-    if (!opened) return;
-    if (!opened.files.some(f => f.path.toLowerCase() === "chart.json")) { toast("That folder has no chart.json"); return; }
-    await openEntries(opened.files, opened.folder);
+    if (opened) await openOpenedFolder(opened);
   } catch (e) {
     toast(`Could not open that folder: ${(e as Error).message}`);
   }
+}
+
+/** Opens a chart folder opened lately, without asking where (the desktop app). */
+export async function openRecent(folder: string): Promise<void> {
+  try {
+    const opened = await api().readFolder?.(folder);
+    if (opened) await openOpenedFolder(opened);
+  } catch (e) {
+    toast(`Could not open that folder: ${(e as Error).message}`);
+    void refreshRecent();
+  }
+}
+
+async function openOpenedFolder(opened: OpenedFolder): Promise<void> {
+  if (!opened.files.some(f => f.path.toLowerCase() === "chart.json")) { toast("That folder has no chart.json"); return; }
+  await openEntries(opened.files, opened.folder);
+}
+
+/** The chart folders opened lately, for File > Open recent. Nothing in a browser. */
+export async function refreshRecent(): Promise<void> {
+  try { editor.recentFolders = await api().recentFolders?.() ?? []; } catch { /* keep the list as it was */ }
+}
+
+/**
+ * Before another chart replaces the open one: in the desktop app, unsaved changes are saved, thrown
+ * away or kept by asking. False to leave the open chart alone. On the web the library keeps them.
+ */
+export async function mayReplaceChart(): Promise<boolean> {
+  const ask = api().askUnsaved;
+  if (!doc.dirty || !ask) return true;
+  const choice = await ask(doc.chart.name || "Untitled");
+  if (choice === "discard") return true;
+  if (choice === "cancel") return false;
+  await save();
+  return !doc.dirty;
 }
 
 /** Files dropped on the window. */
@@ -137,7 +173,8 @@ export async function openDropped(files: File[]): Promise<void> {
   await openEntries(await Promise.all(files.map(async f => ({ path: f.name, bytes: new Uint8Array(await f.arrayBuffer()) }))));
 }
 
-export function newChart(): void {
+export async function newChart(): Promise<void> {
+  if (!await mayReplaceChart()) return;
   loadChart(template("My Chart"), "chart.json");
   clearFiles();
   editor.folder = null;
@@ -150,12 +187,13 @@ function joinLibrary(): void {
   editor.libraryAdd = true;
 }
 
-/** Opens a chart kept in your charts, with its files. The library says which entry it is. */
-export async function openStored(text: string, name: string, files: Map<string, Uint8Array>): Promise<void> {
+/** Opens a chart kept in your charts, with its files - and its folder, on the desktop. The library says which entry it is. */
+export async function openStored(text: string, name: string, files: Map<string, Uint8Array>, folder: string | null = null): Promise<void> {
   loadChart(text, name);
   clearFiles();
-  editor.folder = null;
+  editor.folder = folder;
   editor.files = new Map(files);
+  if (folder) void refreshRecent();
   await useFiles();
 }
 

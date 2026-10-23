@@ -1,10 +1,9 @@
 <script lang="ts">
   // Your charts, as cards: cover, name, who made it, how many projectiles, the song, when it last
-  // changed. Tap one to open it; each can be duplicated or deleted. New and Import start or bring in
-  // another. Works in both layouts, over everything else.
+  // changed. Tap one to open it; each can be duplicated or deleted (on the desktop, moved to the bin).
+  // New and Import start or bring in another. Works in both layouts, over everything else.
   import Icon from "../Icon.svelte";
   import { startNewChart } from "../../store/commands";
-  import { editor } from "../../store/editor.svelte";
   import { openFiles } from "../../store/files";
   import { library, type ChartSummary } from "../../store/library.svelte";
 
@@ -38,18 +37,23 @@
     <button class="close" aria-label="Close" onclick={() => { library.visible = false; }}><Icon name="close" /></button>
   </header>
   <p class="note">
-    Kept in this browser, with their songs and covers, and saved as you go. Browsers can clear what
-    sites keep, so use Package to save a copy of anything you'd miss.
+    {#if library.autosaves}
+      Kept in this browser, with their songs and covers, and saved as you go. Browsers can clear what
+      sites keep, so use Package to save a copy of anything you'd miss.
+    {:else}
+      The chart folders in the game's Charts folder. Open one to edit it in place, and Save (Ctrl S) to
+      write it back - the game reloads it within a second.
+    {/if}
   </p>
   {#if !library.entries.length}
     <div class="empty">
-      <p>Charts you open or start show up here.</p>
+      <p>{library.autosaves ? "Charts you open or start show up here." : "No chart folders in the game's Charts folder yet."}</p>
       <button class="primary" onclick={startNewChart}>Start a chart</button>
     </div>
   {:else}
     <ul class="cards">
       {#each library.entries as e (e.id)}
-        <li class="card" class:current={e.id === editor.libraryId}>
+        <li class="card" class:current={library.isCurrent(e.id)}>
           <button class="open" onclick={() => library.open(e.id)} aria-label="Open {e.name}">
             {#if covers.get(e.id)}<img src={covers.get(e.id)} alt="" />{:else}<div class="nocover" aria-hidden="true">{e.name.slice(0, 1)}</div>{/if}
             <span class="text">
@@ -59,10 +63,10 @@
             </span>
           </button>
           <div class="actions">
-            {#if e.id === editor.libraryId}<span class="badge">Open now</span>{/if}
+            {#if library.isCurrent(e.id)}<span class="badge">Open now</span>{/if}
             <button onclick={() => library.duplicate(e.id)}>Duplicate</button>
             {#if confirming === e.id}
-              <button class="danger" onclick={() => { confirming = null; void library.remove(e.id); }}>Delete it</button>
+              <button class="danger" onclick={() => { confirming = null; void library.remove(e.id); }}>{library.autosaves ? "Delete it" : "Move to the bin"}</button>
               <button onclick={() => { confirming = null; }}>Keep</button>
             {:else}
               <button onclick={() => { confirming = e.id; }}>Delete…</button>

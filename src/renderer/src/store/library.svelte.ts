@@ -1,54 +1,39 @@
-// Your charts: every chart worked on, kept with its song, cover and clips so you can switch between
-// them without picking files again. Where they are kept is a LibrarySource - the browser's storage
-// on the web (platform/library-web.ts); the desktop app could list its Charts folder through the
-// same interface (docs/plans/web-merge.md). Changes save themselves a moment after they are
-// made.
-import { findCover } from "../io/files";
+// Your charts: every chart worked on, with its song, cover and clips, to switch between without
+// picking files again. Where they are kept is a LibrarySource: the browser's storage on the web
+// (platform/library-web.ts), where changes save themselves a moment after they are made - or, in the
+// desktop app, the game's Charts folder (platform/library-desktop.ts), where saving stays Ctrl S.
+import { summaryOf, type ChartSummary } from "../io/summary";
 import * as Jsonc from "../model/jsonc";
+import { toast } from "./actions";
 import { doc } from "./document.svelte";
 import { editor } from "./editor.svelte";
-import { openStored } from "./files";
-import { toast } from "./actions";
+import { mayReplaceChart, openStored } from "./files";
 
-export type ChartSummary = {
-  id: string;
-  name: string;
-  author?: string;
-  difficulty?: string;
-  projectiles: number;
-  song?: string;
-  cover?: Uint8Array;
-  created: number;
-  updated: number;
-};
+export type { ChartSummary };
 
-export type StoredChart = { summary: ChartSummary; text: string; files: Map<string, Uint8Array> };
+/** A chart as a source keeps it; `folder` is where it lives on disk, when it does. */
+export type StoredChart = { summary: ChartSummary; text: string; files: Map<string, Uint8Array>; folder?: string };
 
 /** Where charts are kept. Saving sends only the files that changed, and the paths of those gone. */
 export interface LibrarySource {
+  /** Keeps every change as it is made (the default). False where saving stays explicit. */
+  autosaves?: boolean;
   list(): Promise<ChartSummary[]>;
   load(id: string): Promise<StoredChart | null>;
   save(summary: ChartSummary, text: string, changed: [string, Uint8Array][], removed: string[]): Promise<void>;
   remove(id: string): Promise<void>;
+  /** Copies a chart its own way; without it, the library loads and saves a copy. */
+  duplicate?(id: string): Promise<void>;
 }
 
 const CURRENT_KEY = "basalt-library-current";
 const SAVE_AFTER_MS = 800;
 
-function summarise(id: string, created: number): ChartSummary {
-  const c = doc.chart, coverKey = findCover(editor.files, c.cover);
-  return {
-    id, created, updated: Date.now(),
-    name: c.name || "Untitled", author: c.author || undefined, difficulty: c.difficulty || undefined,
-    projectiles: c.events.filter(e => e.projectile).length,
-    song: c.music?.file || undefined,
-    cover: coverKey ? editor.files.get(coverKey) : undefined,
-  };
-}
-
 class Library {
-  /** Whether there is a library here (the web, for now). */
+  /** Whether there is a library here: the web, or the desktop app with the game installed. */
   available = $state(false);
+  /** Charts save themselves as they change (the web), rather than with Ctrl S (the desktop). */
+  autosaves = $state(true);
   /** The library screen is open. */
   visible = $state(false);
   entries = $state.raw<ChartSummary[]>([]);
@@ -58,10 +43,12 @@ class Library {
   #created = Date.now();
   #timer = 0;
 
-  /** Starts keeping charts in a source, and picks up the chart that was open last time. main.ts calls it. */
+  /** Starts keeping charts in a source - and, where it saves as you go, picks up last time's chart. main.ts calls it. */
   start(source: LibrarySource): void {
     this.#source = source;
     this.available = true;
+    this.autosaves = source.autosaves ?? true;
+    if (!this.autosaves) return;
     $effect.root(() => {
       $effect(() => {
         void doc.text; void editor.files; void editor.libraryAdd;
@@ -77,6 +64,11 @@ class Library {
     void this.refresh();
   }
 
+  /** Whether an entry is the chart open now. */
+  isCurrent(id: string): boolean {
+    return id === editor.libraryId || id === editor.folder;
+  }
+
   async refresh(): Promise<void> {
     if (!this.#source) return;
     try { this.entries = (await this.#source.list()).sort((a, b) => b.updated - a.updated); }
@@ -84,29 +76,49 @@ class Library {
   }
 
   async open(id: string): Promise<void> {
-    if (id === editor.libraryId) { this.visible = false; return; }
+    if (this.isCurrent(id)) { this.visible = false; return; }
+    if (!await mayReplaceChart()) return;
     await this.#sync();
-    const stored = await this.#source?.load(id);
-    if (!stored) { toast("That chart is gone"); await this.refresh(); return; }
-    await openStored(stored.text, stored.summary.name, stored.files);
-    this.#become(stored);
-    this.visible = false;
-    toast(`Opened ${stored.summary.name}`);
+    try {
+      const stored = await this.#source?.load(id);
+      if (!stored) { toast("That chart is gone"); await this.refresh(); return; }
+      await openStored(stored.text, stored.summary.name, stored.files, stored.folder ?? null);
+      this.#become(stored);
+      this.visible = false;
+      toast(`Opened ${stored.summary.name}`);
+    } catch (e) {
+      toast(`Could not open that chart: ${(e as Error).message}`);
+    }
   }
 
   async duplicate(id: string): Promise<void> {
-    const stored = await this.#source?.load(id);
-    if (!stored || !this.#source) return;
-    const name = `${stored.summary.name} (copy)`, now = Date.now();
-    let text = stored.text;
-    try { text = Jsonc.set(text, "name", name); } catch { /* keep the text as it was */ }
-    await this.#source.save({ ...stored.summary, id: crypto.randomUUID(), name, created: now, updated: now }, text, [...stored.files], []);
+    const source = this.#source;
+    if (!source) return;
+    try {
+      if (source.duplicate) await source.duplicate(id);
+      else {
+        const stored = await source.load(id);
+        if (!stored) return;
+        const name = `${stored.summary.name} (copy)`, now = Date.now();
+        let text = stored.text;
+        try { text = Jsonc.set(text, "name", name); } catch { /* keep the text as it was */ }
+        await source.save({ ...stored.summary, id: crypto.randomUUID(), name, created: now, updated: now }, text, [...stored.files], []);
+      }
+    } catch (e) {
+      toast(`Could not copy that chart: ${(e as Error).message}`);
+    }
     await this.refresh();
   }
 
   async remove(id: string): Promise<void> {
-    await this.#source?.remove(id);
-    if (id === editor.libraryId) { editor.libraryId = null; this.#remember(null); }
+    try { await this.#source?.remove(id); }
+    catch (e) { toast(`Could not delete that chart: ${(e as Error).message}`); return; }
+    if (this.isCurrent(id)) {
+      editor.libraryId = null;
+      // Its folder is gone: Save asks where to save again.
+      if (editor.folder === id) editor.folder = null;
+      this.#remember(null);
+    }
     await this.refresh();
   }
 
@@ -115,7 +127,7 @@ class Library {
     editor.libraryAdd = false;
     this.#created = stored.summary.created;
     this.#saved = new Map(stored.files);
-    this.#remember(stored.summary.id);
+    if (this.autosaves) this.#remember(stored.summary.id);
   }
 
   /** Last time's chart: its text from the draft (which may be newer), its files from the library. */
@@ -129,10 +141,10 @@ class Library {
     this.#become(stored);
   }
 
-  /** Saves the open chart: a new entry if it isn't in the library yet but should be. */
+  /** Saves the open chart, where the source saves as you go: a new entry if it isn't in the library yet but should be. */
   async #sync(): Promise<void> {
     const source = this.#source;
-    if (!source) return;
+    if (!source || !this.autosaves) return;
     let id = editor.libraryId;
     if (!id) {
       // Opened or started charts join straight away; the example only once it's been changed.
@@ -149,7 +161,7 @@ class Library {
     const changed = [...files].filter(([path, bytes]) => this.#saved.get(path) !== bytes);
     const removed = [...this.#saved.keys()].filter(path => !files.has(path));
     try {
-      await source.save(summarise(id, this.#created), doc.text, changed, removed);
+      await source.save(summaryOf(id, doc.chart, files, this.#created, Date.now()), doc.text, changed, removed);
       for (const [path, bytes] of changed) this.#saved.set(path, bytes);
       for (const path of removed) this.#saved.delete(path);
       if (this.visible) await this.refresh();

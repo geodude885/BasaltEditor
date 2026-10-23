@@ -39,7 +39,7 @@
 {#if editor.confirmNew}
   <div class="confirm">
     Start a new chart? Unsaved changes to this one stay only in the editor's draft.
-    <button class="primary" onclick={() => { editor.confirmNew = false; newChart(); }}>Start new</button>
+    <button class="primary" onclick={() => { editor.confirmNew = false; void newChart(); }}>Start new</button>
     <button onclick={() => { editor.confirmNew = false; }}>Keep editing</button>
   </div>
 {/if}
