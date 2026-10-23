@@ -10,7 +10,7 @@ import { platform } from "./store/commands";
 import { library } from "./store/library.svelte";
 import { desktopLibrary } from "./platform/library-desktop";
 import { refreshRecent } from "./store/files";
-import type { EditorApi } from "../../shared/api";
+import { isDesktop, type EditorApi } from "../../shared/api";
 
 // The desktop app's preload provides window.editor; in a plain browser, the web version stands in.
 window.editor ??= webApi;
@@ -21,7 +21,7 @@ else void startDesktopLibrary(window.editor);
 
 async function startDesktopLibrary(api: EditorApi): Promise<void> {
   void refreshRecent();
-  if (api.chartsFolder && await api.chartsFolder()) library.start(desktopLibrary(api as Required<EditorApi>));
+  if (isDesktop(api) && await api.chartsFolder()) library.start(desktopLibrary(api));
 }
 
 appearance.start();

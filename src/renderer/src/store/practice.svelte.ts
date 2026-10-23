@@ -6,7 +6,6 @@ import { selectProjectilesBetween } from "./actions";
 import { doc } from "./document.svelte";
 import { editor } from "./editor.svelte";
 import { play, seek } from "./playback";
-import { recording } from "./recording.svelte";
 
 class PracticeState {
   /** The A-B loop playing goes round, in chart time, or null. */
@@ -22,9 +21,6 @@ class PracticeState {
 }
 
 export const practice = new PracticeState();
-
-// Replace mode clears the loop, when there is one, rather than just first tap to last.
-recording.replaceSpan = () => practice.loop;
 
 /** Plays or pauses, remembering where playing started - a bar early with pre-roll on. */
 export function playOrPause(): void {

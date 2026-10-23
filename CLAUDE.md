@@ -61,7 +61,7 @@ src/renderer/src/
                 and keyboard, practice, recording, library, layout
   views/lane/   lane canvas: geometry, draw, interaction (what a press hits), the component
   views/timeline/  timeline canvas: rows and markers, draw, interaction, the component
-  views/highway/   note-highway editor: columns, tiles, draw, the component
+  views/highway/   note-highway editor: columns, tiles, draw, interaction, the component
   components/   top bar and menu bar, transport, inspector, highway screen, the tab panels
   components/mobile/   the phone layout: shell, bar, menu sheet, drawer, selection bar
   components/library/  "Your charts"
@@ -79,7 +79,8 @@ src/renderer/src/
 - **Commands and their keys come from `store/commands.ts`**, one table of File / Edit / View /
   Playback menus. The desktop's `MenuBar` and the phone's menu sheet draw it, the Help tab lists it,
   and `store/keyboard.ts` matches key presses against each command's `keys` text ("Ctrl S", "Delete /
-  Backspace"). Add a command there rather than wiring a button or a key to an action by hand.
+  Backspace"). Add a command there rather than wiring a button or a key to an action by hand; a
+  button outside the menus spreads `commandButton(id)` and keeps its own (shorter) text.
 - **"Your charts"** (`store/library.svelte.ts`) reads a `LibrarySource`: the browser's storage on the
   web (`platform/library-web.ts`, saving as you go), the game's Charts folder in the desktop app
   (`platform/library-desktop.ts`, saving with Ctrl S). The main process only reads, copies or bins

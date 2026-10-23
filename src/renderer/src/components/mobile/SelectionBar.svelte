@@ -1,42 +1,40 @@
 <script lang="ts">
-  // The phone layout's edit buttons - the shortcuts a keyboard would give. What they offer follows the
-  // selection: adding with nothing selected, editing what is.
+  // The phone layout's edit buttons - the shortcuts a keyboard would give, as commands from
+  // store/commands.ts. What they offer follows the selection: adding with nothing selected, editing what is.
   import { PROJECTILE_COLUMNS } from "../../model/columns";
-  import {
-    addMove, addPhase, addProjectileInColumn, addStageCueAtPlayhead, copySelected, mirrorSelected, paste, removeSelected, selectAll, selectBar, selectToEnd,
-  } from "../../store/actions";
+  import { addProjectileInColumn } from "../../store/actions";
+  import { commandButton } from "../../store/commands";
   import { editor } from "../../store/editor.svelte";
-  import { practice, selectLoop } from "../../store/practice.svelte";
+  import { practice } from "../../store/practice.svelte";
 
   const count = $derived(editor.selection.size);
 </script>
 
 <div class="tools">
-  <button class:on={editor.selectMode} aria-pressed={editor.selectMode} title="Drag to draw a selection box"
-    onclick={() => { editor.selectMode = !editor.selectMode; }}>Select</button>
-  <button class:on={editor.multiSelect} aria-pressed={editor.multiSelect} title="Taps add to the selection"
-    onclick={() => { editor.multiSelect = !editor.multiSelect; }}>Multi</button>
+  <button {...commandButton("select-mode")}>Select</button>
+  <button {...commandButton("multi-select")}>Multi</button>
   {#if editor.selectMode}
     <!-- Whole sections at once: the projectiles in the bar at the playhead, the loop, the rest, or all. -->
     <span class="group" role="group" aria-label="Select projectiles">
-      <button onclick={selectBar}>Bar</button>
-      {#if practice.loop}<button onclick={selectLoop}>Loop</button>{/if}
-      <button onclick={selectToEnd}>To end</button>
-      <button onclick={selectAll}>All</button>
+      <button {...commandButton("select-bar")}>Bar</button>
+      {#if practice.loop}<button {...commandButton("select-loop")}>Loop</button>{/if}
+      <button {...commandButton("select-to-end")}>To end</button>
+      <button {...commandButton("select-all")}>All</button>
     </span>
   {/if}
   {#if count}
     <span class="count">{count} selected</span>
-    <button onclick={copySelected}>Copy</button>
-    <button onclick={mirrorSelected}>Mirror</button>
-    <button class="danger" onclick={removeSelected}>Delete</button>
-    <button onclick={() => { editor.selection.clear(); }}>Done</button>
+    <button {...commandButton("copy")}>Copy</button>
+    <button {...commandButton("mirror")}>Mirror</button>
+    <button class="danger" {...commandButton("delete")}>Delete</button>
+    <button {...commandButton("select-none")}>Done</button>
   {:else}
+    <!-- In the middle column, as a tap on the highway's middle would add it. -->
     <button onclick={() => addProjectileInColumn(editor.time, Math.floor(PROJECTILE_COLUMNS / 2))}>+ Projectile</button>
-    <button onclick={addMove}>+ Move</button>
-    <button onclick={addStageCueAtPlayhead}>+ Look</button>
-    <button onclick={addPhase}>+ Phase</button>
-    <button onclick={paste}>Paste</button>
+    <button {...commandButton("add-move")}>+ Move</button>
+    <button {...commandButton("add-look")}>+ Look</button>
+    <button {...commandButton("add-phase")}>+ Phase</button>
+    <button {...commandButton("paste")}>Paste</button>
   {/if}
 </div>
 

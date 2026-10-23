@@ -43,7 +43,9 @@ export async function openEntries(entries: FileEntry[], folder: string | null = 
     const song = opened.chart ? undefined : await adopt([...opened.files.keys()]);
     await useFiles();
     const extra = opened.files.size ? ` with ${opened.files.size} file(s)` : "";
-    toast(opened.chart ? `Opened ${doc.chart.name || opened.chart.name}${extra}` : song ? `Song: ${song}` : `Added ${opened.files.size} file(s)`);
+    // A song opened on its own has said so already (useSong).
+    if (opened.chart) toast(`Opened ${doc.chart.name || opened.chart.name}${extra}`);
+    else if (!song) toast(`Added ${opened.files.size} file(s)`);
   } catch (e) {
     toast(`Could not open that: ${(e as Error).message}`);
   }
@@ -71,13 +73,12 @@ async function useFiles(): Promise<void> {
   const songKey = findSong(editor.files, named) ?? (named ? findSong(editor.files) : undefined);
   if (named && songKey && !findSong(editor.files, named)) toast(`The chart names ${named}, which isn't open - playing ${songKey}. Choose a song in Chart to change it.`);
   if (songKey && editor.song?.name !== songKey) {
-    if (!await loadSong(songKey, editor.files.get(songKey)!)) toast(`${songKey} could not be decoded for the waveform - it still plays if it can`);
+    if (!await loadSong(songKey, editor.files.get(songKey)!)) toastUndecodable(songKey);
     if (!named) doc.change(["music"], () => { doc.chart.music = { file: songKey, start: 0, volume: 1 }; });
   }
   const coverKey = findCover(editor.files, doc.chart.cover);
   if (coverKey) {
-    if (editor.cover) URL.revokeObjectURL(editor.cover);
-    editor.cover = URL.createObjectURL(new Blob([editor.files.get(coverKey)! as BlobPart]));
+    showCover(editor.files.get(coverKey)!);
     if (!doc.chart.cover) doc.change(["cover"], () => { doc.chart.cover = coverKey; });
   }
   editor.clips = clipSpans(editor.files);
@@ -99,8 +100,16 @@ export async function useSong(name: string): Promise<void> {
   if (!bytes) return;
   nameSong(name);
   // Load it even if a song of the same name was open: this may be a different file.
-  if (!await loadSong(name, bytes)) toast(`${name} could not be decoded for the waveform - it still plays if it can`);
+  if (!await loadSong(name, bytes)) toastUndecodable(name);
   else toast(`Song: ${name}`);
+}
+
+const toastUndecodable = (name: string): void => toast(`${name} could not be decoded for the waveform - it still plays if it can`);
+
+/** Shows a cover image, letting go of the one before. */
+function showCover(bytes: Uint8Array): void {
+  if (editor.cover) URL.revokeObjectURL(editor.cover);
+  editor.cover = URL.createObjectURL(new Blob([bytes as BlobPart]));
 }
 
 /** Takes the song out of the chart. */
@@ -117,8 +126,7 @@ export async function chooseCover(): Promise<void> {
   if (!isCover(name)) { toast("That isn't a cover - choose a PNG or JPEG image"); return; }
   editor.files = new Map([...editor.files, [name, file.bytes]]);
   doc.change(["cover"], () => { doc.chart.cover = name; });
-  if (editor.cover) URL.revokeObjectURL(editor.cover);
-  editor.cover = URL.createObjectURL(new Blob([file.bytes as BlobPart]));
+  showCover(file.bytes);
 }
 
 export async function openFiles(): Promise<void> {

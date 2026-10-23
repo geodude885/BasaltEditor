@@ -62,6 +62,14 @@ export function whatATouchTapAdds(layout: TimelineLayout, y: number): TouchTap {
   return { kind: "seek-and-clear-selection" };
 }
 
+/**
+ * What a tap on empty space does, given the selection: with something selected (and not adding to
+ * it), a tap that would add something just lets go of the selection first.
+ */
+export function touchTapWith(tap: TouchTap, hasSelection: boolean, adding: boolean): TouchTap | { kind: "let-go" } {
+  return hasSelection && !adding && tap.kind !== "seek-and-clear-selection" ? { kind: "let-go" } : tap;
+}
+
 export function markersInBox(markers: Marker[], box: Box): number[] {
   const b = normalise(box);
   return markers.filter(m => m.x >= b.x0 && m.x <= b.x1 && m.y >= b.y0 && m.y <= b.y1).map(m => m.i);

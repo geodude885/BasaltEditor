@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from "electron";
-import { Channels, type EditorApi } from "../shared/api";
+import { Channels, type DesktopApi } from "../shared/api";
 
-const api: EditorApi = {
+const api: DesktopApi = {
   openFiles: kind => ipcRenderer.invoke(Channels.openFiles, kind),
   openFolder: () => ipcRenderer.invoke(Channels.openFolder),
   saveChart: (folder, text) => ipcRenderer.invoke(Channels.saveChart, folder, text),

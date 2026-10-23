@@ -2,21 +2,18 @@
 // playhead is - later events above it, earlier ones below. Plain functions, so they can be tested.
 import { evTime, laneOf } from "../../model/chart";
 import { columnOfX, PROJECTILE_COLUMNS } from "../../model/columns";
-import type { Tempo } from "../../model/tempo";
+import { BEATS_PER_BAR, type Tempo } from "../../model/tempo";
 import type { LoadedChart } from "../../model/types";
 import { normalise, type Box } from "../theme";
 
-/**
- * One column of the highway. Projectile columns are positions across the lane; other kinds of column
- * (say, looks) can join this union - each needs a place in highwayColumns, tiles and adding.
- */
-export type HighwayColumn = { kind: "projectile"; column: number; label: string };
+/** One column of the highway: a position across the lane (model/columns.ts), left to right. */
+export type HighwayColumn = { column: number; label: string };
 
 const PROJECTILE_LABELS = ["Far left", "Left", "Middle", "Right", "Far right"];
 
 /** The columns the highway shows, left to right. */
 export function highwayColumns(): HighwayColumn[] {
-  return Array.from({ length: PROJECTILE_COLUMNS }, (_, column): HighwayColumn => ({ kind: "projectile", column, label: PROJECTILE_LABELS[column] ?? `${column + 1}` }));
+  return Array.from({ length: PROJECTILE_COLUMNS }, (_, column): HighwayColumn => ({ column, label: PROJECTILE_LABELS[column] ?? `${column + 1}` }));
 }
 
 /** The highway on screen: its size, where the hit line is, and how many pixels a second takes. */
@@ -42,7 +39,7 @@ export const columnIndexAtX = (v: HighwayView, count: number, x: number): number
 
 export type Tile = { i: number; column: number; t: number; x: number; y: number; w: number; h: number };
 
-export const TILE_HEIGHT_PIXELS = 14;
+const TILE_HEIGHT_PIXELS = 14;
 const TILE_SIDE_INSET = 0.14;
 
 /** The chart's events as tiles on the highway - only those near enough to be seen. */
@@ -53,7 +50,7 @@ export function tiles(c: LoadedChart, tp: Tempo, v: HighwayView, columns: Highwa
     if (!e.projectile) return;
     const t = evTime(e, tp);
     if (!Number.isFinite(t) || t < earliest || t > latest) return;
-    const index = columns.findIndex(col => col.kind === "projectile" && col.column === columnOfX(+e.projectile!.from?.x || 0, width));
+    const index = columns.findIndex(col => col.column === columnOfX(+e.projectile!.from?.x || 0, width));
     if (index < 0) return;
     const [cx, cw] = columnSpan(v, count, index), inset = cw * TILE_SIDE_INSET;
     out.push({ i, column: index, t, x: cx + inset, y: yOfTime(v, t) - TILE_HEIGHT_PIXELS / 2, w: cw - 2 * inset, h: TILE_HEIGHT_PIXELS });
@@ -84,7 +81,7 @@ export function beatsBetween(tp: Tempo, from: number, to: number): { t: number; 
   for (let b = Math.ceil(tp.beat(Math.max(0, from))); out.length < 2000; b++) {
     const t = tp.seconds(b);
     if (t > to) break;
-    out.push({ t, bar: b % 4 === 0 });
+    out.push({ t, bar: b % BEATS_PER_BAR === 0 });
   }
   return out;
 }

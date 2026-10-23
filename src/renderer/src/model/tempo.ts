@@ -46,6 +46,11 @@ export class Tempo {
   }
 }
 
+/** Beats in a bar: charts are in four. */
+export const BEATS_PER_BAR = 4;
+/** How long a "bar" is where a chart has no tempo, so stepping and selecting by bars still do something. */
+export const BAR_WITHOUT_TEMPO_SECONDS = 2;
+
 export const round = (v: number, d: number): number => Math.round(v * 10 ** d) / 10 ** d;
 
 /**

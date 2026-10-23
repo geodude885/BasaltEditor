@@ -1,5 +1,6 @@
-// Touch on the canvases: double taps, and two-finger pinch and pan. A mouse never reaches the parts
-// that differ, so the desktop behaves exactly as before.
+// Touch on the canvases: double taps, two-finger pinch and pan, and presses on empty space that wait
+// to become a tap, a pan or a long press. A mouse never reaches the parts that differ, so the desktop
+// behaves exactly as before.
 
 type Press = { pointerType: string; detail: number; timeStamp: number; clientX: number; clientY: number };
 
@@ -67,5 +68,41 @@ export class Pinch {
   private measure(): { mid: number; span: number } {
     const [a, b] = [...this.points.values()];
     return { mid: (a.x + b.x) / 2, span: Math.max(SMALLEST_SPAN_PIXELS, Math.hypot(a.x - b.x, a.y - b.y)) };
+  }
+}
+
+/** How far a finger on empty space moves before its press becomes a pan. */
+export const TOUCH_PAN_STARTS_AFTER_PIXELS = 8;
+/** How long a finger is held still before its press becomes a long press. */
+export const LONG_PRESS_MS = 450;
+
+/**
+ * A finger on empty space, waiting to see what its press becomes: moved far enough, a pan; held still,
+ * a long press (`onHold`, which the timeline and highway make a selection box); lifted before either,
+ * a tap. The canvases share it, so a press means the same on both.
+ */
+export class WaitingPress {
+  /** Moved far enough to be a pan - from then on, never a tap or a long press. */
+  panning = false;
+  private timer: ReturnType<typeof setTimeout>;
+
+  constructor(readonly x0: number, readonly y0: number, onHold: () => void) {
+    this.timer = setTimeout(() => {
+      if (this.panning) return;
+      globalThis.navigator?.vibrate?.(12);
+      onHold();
+    }, LONG_PRESS_MS);
+  }
+
+  /** The finger moved here: true once the press is a pan. */
+  pans(x: number, y: number): boolean {
+    if (!this.panning && Math.hypot(x - this.x0, y - this.y0) < TOUCH_PAN_STARTS_AFTER_PIXELS) return false;
+    if (!this.panning) { this.panning = true; clearTimeout(this.timer); }
+    return true;
+  }
+
+  /** The press is over, one way or another: no long press after this. */
+  end(): void {
+    clearTimeout(this.timer);
   }
 }

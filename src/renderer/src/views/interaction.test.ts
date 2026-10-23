@@ -7,7 +7,7 @@ import { laneMap } from "./lane/geometry";
 import { moveProjectilePoint, projectilesStartingInBox, whatALanePressHits } from "./lane/interaction";
 import { boxIsAClick } from "./theme";
 import { COLLAPSED_ROW_HEIGHT_PIXELS, layoutTimeline, markers, xOf, type TimelineRow } from "./timeline/geometry";
-import { markersInBox, phaseIndexAt, pressWaitsOnTouch, whatATimelinePressHits, whatATouchTapAdds } from "./timeline/interaction";
+import { markersInBox, phaseIndexAt, pressWaitsOnTouch, touchTapWith, whatATimelinePressHits, whatATouchTapAdds } from "./timeline/interaction";
 
 const sample = () => { const c = Jsonc.parse(SAMPLE) as LoadedChart; c.events ??= []; return c; };
 const tempo = new Tempo(120);
@@ -138,6 +138,14 @@ describe("touch taps on the timeline", () => {
     expect(whatATouchTapAdds(layout, top + 1)).toEqual({ kind: "add-projectile", column: 0 });
     expect(whatATouchTapAdds(layout, middleOf("shot"))).toEqual({ kind: "add-projectile", column: 2 });
     expect(whatATouchTapAdds(layout, top + height - 1)).toEqual({ kind: "add-projectile", column: 4 });
+  });
+
+  it("lets go of the selection before adding, unless adding to it", () => {
+    const add = { kind: "add-move" } as const, seek = { kind: "seek-and-clear-selection" } as const;
+    expect(touchTapWith(add, true, false)).toEqual({ kind: "let-go" });
+    expect(touchTapWith(add, true, true)).toEqual(add);
+    expect(touchTapWith(add, false, false)).toEqual(add);
+    expect(touchTapWith(seek, true, false)).toEqual(seek);
   });
 
   it("adds a look cue or a move in their rows, and otherwise seeks", () => {

@@ -1,13 +1,12 @@
 <script lang="ts">
   // The phone layout's one bar: the menu, the chart, playing, snapping, undo and the problem count.
   import Icon from "../Icon.svelte";
+  import ViewSwitch from "../ViewSwitch.svelte";
   import { beatText, clockText } from "../../model/tempo";
-  import { redo, undo } from "../../store/actions";
+  import { commandButton } from "../../store/commands";
   import { doc } from "../../store/document.svelte";
   import { editor } from "../../store/editor.svelte";
   import { mobile } from "../../store/mobile.svelte";
-  import { seek } from "../../store/playback";
-  import { playOrPause } from "../../store/practice.svelte";
   import { num } from "../fields";
 
   const count = $derived(editor.problems.length);
@@ -22,22 +21,19 @@
 
 <header class="bar">
   <button class="icon" aria-label="Menu" aria-expanded={mobile.menu} onclick={() => { mobile.menu = !mobile.menu; mobile.drawer = null; }}><Icon name="menu" /></button>
-  <button class="primary play" onclick={playOrPause}>{editor.playing ? "Pause" : "Play"}</button>
+  <button class="primary play" {...commandButton("play")}>{editor.playing ? "Pause" : "Play"}</button>
   <!-- The rest scrolls sideways when the screen is too narrow for it all (portrait). -->
   <div class="scroll">
   <div class="name">{doc.chart.name || "Untitled"}{doc.dirty ? " •" : ""}</div>
-  <button class="icon" aria-label="Back to the start" onclick={() => seek(0)}><Icon name="start" /></button>
+  <button class="icon" aria-label="Back to the start" {...commandButton("to-start")}><Icon name="start" /></button>
   <div class="clock" aria-label="Playhead">{clock.time}{#if clock.beat}<small>b{clock.beat}</small>{/if}</div>
   <select aria-label="Snap" value={String(editor.snap)} onchange={e => { editor.snap = num(e); }}>
     <option value="1">1 beat</option><option value="0.5">1/2</option><option value="0.25">1/4</option><option value="0.125">1/8</option><option value="0">no snap</option>
   </select>
-  <div class="views" role="group" aria-label="Editor">
-    <button class:on={editor.mainView === "timeline"} aria-pressed={editor.mainView === "timeline"} onclick={() => { editor.mainView = "timeline"; }}>Timeline</button>
-    <button class:on={editor.mainView === "highway"} aria-pressed={editor.mainView === "highway"} onclick={() => { editor.mainView = "highway"; }}>Highway</button>
+  <ViewSwitch />
   </div>
-  </div>
-  <button class="icon" aria-label="Undo" disabled={!doc.canUndo} onclick={undo}><Icon name="undo" /></button>
-  <button class="icon" aria-label="Redo" disabled={!doc.canRedo} onclick={redo}><Icon name="redo" /></button>
+  <button class="icon" aria-label="Undo" {...commandButton("undo")}><Icon name="undo" /></button>
+  <button class="icon" aria-label="Redo" {...commandButton("redo")}><Icon name="redo" /></button>
   <button class="chip" class:bad={count} aria-label="{count} problems" onclick={() => mobile.toggleDrawer("problems")}>{count}</button>
 </header>
 
@@ -58,10 +54,6 @@
   }
   .scroll::-webkit-scrollbar { display: none; }
   .scroll > * { flex: none; }
-  .views { display: flex; }
-  .views button { border-radius: 0; padding: 4px 8px; font: 600 13px var(--display); text-transform: uppercase; letter-spacing: .04em; }
-  .views button:first-child { border-radius: 6px 0 0 6px; }
-  .views button:last-child { border-radius: 0 6px 6px 0; border-left: 0; }
   .chip { min-width: 36px; border-radius: 999px; font: 500 13px var(--mono); color: var(--good); }
   .chip.bad { color: var(--bad); border-color: var(--bad); }
 </style>

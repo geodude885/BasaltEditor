@@ -10,6 +10,7 @@ import { addProjectileInColumn, toast } from "./actions";
 import { doc } from "./document.svelte";
 import { editor } from "./editor.svelte";
 import { playheadNow } from "./playback";
+import { practice } from "./practice.svelte";
 
 export type RecordMode = "add" | "replace";
 
@@ -33,8 +34,6 @@ class Recording {
   count = $state(0);
   /** Taken off each tap's time, to make up for the screen's and the speaker's delay - in milliseconds. */
   offsetMs = $state(savedOffset());
-  /** Set by the practice tools: the span replace mode clears, instead of the take's first to last tap. */
-  replaceSpan: (() => readonly [number, number] | null) | null = null;
   #take: Take | null = null;
 
   /** A pad tapped. Playing, it adds to the take; paused, it just adds a projectile at the playhead. */
@@ -54,6 +53,13 @@ class Recording {
     this.count = take.added.length;
   }
 
+  /** Arms recording - showing the highway, where the pads are - or disarms it, ending any take. */
+  toggle(): void {
+    this.finish();
+    this.armed = !this.armed;
+    if (this.armed) editor.mainView = "highway";
+  }
+
   /** Ends the take in progress - one undo step - and selects what it added. */
   finish(): void {
     const take = this.#take;
@@ -62,7 +68,8 @@ class Recording {
     if (!take || take.chart !== doc.chart || !take.added.length) return;
     let replaced = 0;
     if (this.mode === "replace") {
-      const [from, to] = this.replaceSpan?.() ?? [take.from, take.to];
+      // The loop, when there is one, rather than just the take's first tap to its last.
+      const [from, to] = practice.loop ?? [take.from, take.to];
       const before = doc.chart.events.length;
       doc.chart.events = afterReplacing(doc.chart.events, new Set(take.added), from, to, doc.tempo);
       replaced = before - doc.chart.events.length;

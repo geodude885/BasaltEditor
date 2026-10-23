@@ -9,7 +9,7 @@ import { MOST_EXTRA_TIMELINE_HEIGHT_PIXELS, type TimelineRow } from "../views/ti
 import { doc } from "./document.svelte";
 
 export type Tab = "chart" | "phases" | "looks" | "tempo" | "actors" | "problems" | "help";
-/** The editors the timeline's place can show, in either layout. More (say, one for looks) can join this list. */
+/** The editors the timeline's place can show, in either layout. */
 export type MainView = "timeline" | "highway";
 export type Song = { name: string; url: string; buffer: AudioBuffer | null; peaks: Peaks | null };
 

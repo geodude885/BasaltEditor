@@ -14,12 +14,10 @@
   import { practice } from "../../store/practice.svelte";
   import { seek, songStart } from "../../store/playback";
   import { boxIsAClick, prepare, theme, type Box } from "../theme";
-  import { Pinch } from "../touch";
+  import { Pinch, WaitingPress } from "../touch";
   import { drawHighway } from "./draw";
-  import {
-    columnIndexAtX, highwayColumns, HIT_LINE_FROM_TOP, LARGEST_HIGHWAY_PPS, SMALLEST_HIGHWAY_PPS, tiles, tilesAt, tilesInBox, timeOfY,
-    type HighwayView,
-  } from "./geometry";
+  import { highwayColumns, HIT_LINE_FROM_TOP, LARGEST_HIGHWAY_PPS, SMALLEST_HIGHWAY_PPS, tiles, tilesInBox, type HighwayView } from "./geometry";
+  import { scrubbedTime, shiftedColumn, tileDrag, whatAHighwayPressHits, whatAHighwayTapDoes } from "./interaction";
 
   let { loop = null }: { loop?: readonly [number, number] | null } = $props();
 
@@ -40,14 +38,14 @@
   });
 
   type Drag =
-    | { kind: "empty"; x0: number; y0: number; time0: number; tapTime: number; panning: boolean; timer: number; adding: boolean }
-    | { kind: "box"; adding: boolean; addsTo: number[]; clickAdds: boolean }
+    // `at` is the highway as the press found it, so a tap adds where the finger was, even while playing.
+    | { kind: "empty"; press: WaitingPress; at: HighwayView; time0: number; adding: boolean }
+    | { kind: "box"; adding: boolean; addsTo: number[]; clickAdds: boolean; at: HighwayView }
     | { kind: "tiles"; x0: number; y0: number; textBefore: string; moved: boolean; starts: [ChartEvent, number, number][] };
   let drag: Drag | null = null;
   const pinch = new Pinch();
 
   const DRAG_STARTS_AFTER_PIXELS = 8;
-  const LONG_PRESS_MS = 450;
 
   const pointerAt = (ev: PointerEvent | WheelEvent): [number, number] => { const r = canvas.getBoundingClientRect(); return [ev.clientX - r.left, ev.clientY - r.top]; };
   const adds = (ev: PointerEvent) => ev.shiftKey || editor.multiSelect;
@@ -57,10 +55,15 @@
     practice.highwayPps = Math.max(SMALLEST_HIGHWAY_PPS, Math.min(LARGEST_HIGHWAY_PPS, practice.highwayPps * factor));
   }
 
+  function startBox(x: number, y: number, adding: boolean, clickAdds: boolean, at: HighwayView): void {
+    drag = { kind: "box", adding, addsTo: adding ? [...editor.selection] : [], clickAdds, at };
+    box = { x0: x, y0: y, x1: x, y1: y };
+  }
+
   /** Lets go of a drag in progress, keeping tiles already moved. */
   function endDrag(): void {
     if (!drag) return;
-    if (drag.kind === "empty") clearTimeout(drag.timer);
+    if (drag.kind === "empty") drag.press.end();
     if (drag.kind === "tiles" && drag.moved) {
       const moved = drag.starts.map(([e]) => e);
       doc.commit(drag.textBefore, ["events"]);
@@ -76,35 +79,24 @@
     // Pinches run along the highway, so the gesture is fed (y, x): its "middle" and "pan" are up and down.
     if (ev.pointerType === "touch" && pinch.down(ev.pointerId, y, x)) { endDrag(); return; }
     if (pinch.busy) return;
-    const adding = adds(ev);
-    const under = tilesAt(placed, x, y);
-    if (under.length) {
-      if (!editor.selection.has(under[0])) select(under[0], adding);
+    const adding = adds(ev), at = view, press = whatAHighwayPressHits(placed, x, y, ev.pointerType, editor.selectMode);
+    if (press.kind === "tiles") {
+      if (!editor.selection.has(press.index)) select(press.index, adding);
       const events = doc.chart.events, width = laneOf(doc.chart).width;
       drag = {
         kind: "tiles", x0: x, y0: y, textBefore: doc.text, moved: false,
         starts: [...editor.selection].filter(i => events[i]?.projectile).map((i): [ChartEvent, number, number] => [events[i], evTime(events[i], doc.tempo), columnOfX(+events[i].projectile!.from?.x || 0, width)]),
       };
-      return;
+    } else if (press.kind === "box") {
+      startBox(x, y, adding, press.clickAdds, at);
+    } else {
+      // Held still: box-select from here.
+      const d: Extract<Drag, { kind: "empty" }> = {
+        kind: "empty", at, time0: editor.time, adding,
+        press: new WaitingPress(x, y, () => { if (drag === d) startBox(x, y, adding, false, at); }),
+      };
+      drag = d;
     }
-    // A mouse, or Select mode: empty space boxes straight away instead of scrubbing. A mouse click
-    // without a drag adds there, as a tap does.
-    if (editor.selectMode || ev.pointerType === "mouse") {
-      drag = { kind: "box", adding, addsTo: adding ? [...editor.selection] : [], clickAdds: ev.pointerType === "mouse" };
-      box = { x0: x, y0: y, x1: x, y1: y };
-      return;
-    }
-    const d: Extract<Drag, { kind: "empty" }> = {
-      kind: "empty", x0: x, y0: y, time0: editor.time, tapTime: timeOfY(view, y), panning: false, adding, timer: 0,
-    };
-    // Held still: box-select from here.
-    d.timer = window.setTimeout(() => {
-      if (drag !== d || d.panning) return;
-      navigator.vibrate?.(12);
-      drag = { kind: "box", adding, addsTo: adding ? [...editor.selection] : [], clickAdds: false };
-      box = { x0: x, y0: y, x1: x, y1: y };
-    }, LONG_PRESS_MS);
-    drag = d;
   }
 
   function pointermove(ev: PointerEvent): void {
@@ -119,10 +111,7 @@
     }
     if (!drag) return;
     if (drag.kind === "empty") {
-      if (!drag.panning && Math.hypot(x - drag.x0, y - drag.y0) < DRAG_STARTS_AFTER_PIXELS) return;
-      if (!drag.panning) { drag.panning = true; clearTimeout(drag.timer); }
-      // The highway follows the finger: pulling it down brings later times to the hit line.
-      seek(Math.max(0, drag.time0 + (y - drag.y0) / practice.highwayPps));
+      if (drag.press.pans(x, y)) seek(scrubbedTime(drag.time0, drag.press.y0, y, practice.highwayPps));
     } else if (drag.kind === "box") {
       if (!box) return;
       box = { ...box, x1: x, y1: y };
@@ -130,29 +119,26 @@
     } else {
       if (!drag.moved && Math.hypot(x - drag.x0, y - drag.y0) < DRAG_STARTS_AFTER_PIXELS) return;
       drag.moved = true;
-      const deltaSeconds = (drag.y0 - y) / practice.highwayPps;
-      const deltaColumns = columnIndexAtX(view, columns.length, x) - columnIndexAtX(view, columns.length, drag.x0);
-      const width = laneOf(doc.chart).width;
+      const by = tileDrag(view, columns.length, drag.x0, drag.y0, x, y), width = laneOf(doc.chart).width;
       for (const [e, t, column] of drag.starts) {
-        setEvTime(e, snapped(t + deltaSeconds), doc.tempo);
-        const to = columns[Math.min(columns.length - 1, Math.max(0, column + deltaColumns))];
-        if (e.projectile && to.kind === "projectile") moveToColumn(e.projectile, to.column, width);
+        setEvTime(e, snapped(t + by.seconds), doc.tempo);
+        if (e.projectile) moveToColumn(e.projectile, columns[shiftedColumn(column, by.columns, columns.length)].column, width);
       }
     }
   }
 
   function pointerup(ev: PointerEvent): void {
     if (ev.pointerType === "touch") pinch.up(ev.pointerId);
-    if (drag?.kind === "empty" && !drag.panning && ev.type === "pointerup") {
-      const d = drag;
+    if (drag?.kind === "empty" && !drag.press.panning && ev.type === "pointerup") {
+      const { press, adding, at } = drag;
       endDrag();
-      tap(d);
+      tap(at, press.x0, press.y0, adding);
       return;
     }
     if (drag?.kind === "box" && box && boxIsAClick(box)) {
-      const { clickAdds, adding } = drag, [x0, y0] = [box.x0, box.y0];
+      const { clickAdds, adding, at } = drag, [x0, y0] = [box.x0, box.y0];
       endDrag();
-      if (clickAdds) tap({ x0, tapTime: timeOfY(view, y0), adding });
+      if (clickAdds) tap(at, x0, y0, adding);
       else if (!adding) editor.selection.clear();
       return;
     }
@@ -160,10 +146,10 @@
   }
 
   /** A tap on empty space: let go of the selection, or add a tile there. */
-  function tap(d: { x0: number; tapTime: number; adding: boolean }): void {
-    if (editor.selection.size && !d.adding) { editor.selection.clear(); return; }
-    const column = columns[columnIndexAtX(view, columns.length, d.x0)];
-    if (column.kind === "projectile") addProjectileInColumn(Math.max(0, d.tapTime), column.column);
+  function tap(at: HighwayView, x: number, y: number, adding: boolean): void {
+    const does = whatAHighwayTapDoes(at, columns.length, x, y, editor.selection.size > 0, adding);
+    if (does.kind === "let-go") editor.selection.clear();
+    else addProjectileInColumn(does.seconds, columns[does.column].column);
   }
 
   // Not onwheel: it must not be passive, or preventDefault cannot stop the page scrolling.

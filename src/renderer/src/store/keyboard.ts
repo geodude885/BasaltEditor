@@ -34,7 +34,7 @@ export function pressMatches(chord: Chord, ev: Pick<KeyboardEvent, "key" | "ctrl
 }
 
 /** The command a key press runs, if any - one that applies just now. */
-export function commandForPress(ev: KeyboardEvent, commands: Command[] = shortcutCommands()): Command | undefined {
+function commandForPress(ev: KeyboardEvent, commands: Command[] = shortcutCommands()): Command | undefined {
   return commands.find(c => c.keys && (c.shown?.() ?? true) && (c.enabled?.() ?? true)
     && chordsOf(c.keys).some(chord => pressMatches(chord, ev, c.anyShift)));
 }

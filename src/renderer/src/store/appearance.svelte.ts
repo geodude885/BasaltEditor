@@ -6,6 +6,8 @@ export type ThemeChoice = "system" | "dark" | "light";
 export type Scheme = "dark" | "light";
 
 export const THEME_CHOICES: ThemeChoice[] = ["system", "dark", "light"];
+/** Each choice as the theme pickers name it. */
+export const THEME_NAMES: Record<ThemeChoice, string> = { system: "System theme", dark: "Basalt (dark)", light: "Ash (light)" };
 const THEME_KEY = "basalt-theme";
 
 function savedChoice(): ThemeChoice {

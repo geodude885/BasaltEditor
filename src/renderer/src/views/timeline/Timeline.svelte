@@ -18,8 +18,8 @@
   import { boxIsAClick, prepare, theme, type Box } from "../theme";
   import { drawTimeline } from "./draw";
   import { COLLAPSIBLE_ROWS, layoutTimeline, markers, tOf } from "./geometry";
-  import { DRAG_STARTS_AFTER_PIXELS, markersInBox, pressWaitsOnTouch, whatATimelinePressHits, whatATouchTapAdds, type TouchTap } from "./interaction";
-  import { Pinch, Taps, type PinchStep } from "../touch";
+  import { DRAG_STARTS_AFTER_PIXELS, markersInBox, pressWaitsOnTouch, touchTapWith, whatATimelinePressHits, whatATouchTapAdds, type TouchTap } from "./interaction";
+  import { Pinch, Taps, WaitingPress, type PinchStep } from "../touch";
 
   let canvas: HTMLCanvasElement;
   let w = $state(0);
@@ -27,7 +27,7 @@
     | { kind: "seek" }
     | { kind: "box"; adding: boolean; addsTo: number[] }
     | { kind: "move"; startSeconds: number; textBefore: string; startTimes: [ChartEvent, number][]; moved: boolean }
-    | { kind: "touch"; x0: number; y0: number; t0: number; panning: boolean; timer: number; tap: TouchTap; adding: boolean };
+    | { kind: "touch"; press: WaitingPress; t0: number; tap: TouchTap; adding: boolean };
   let drag: Drag | null = null;
   let box = $state<Box | null>(null);
 
@@ -55,16 +55,12 @@
   /** Shift, or the touch screens' multi-select button, adds to the selection. */
   const adds = (ev: PointerEvent) => ev.shiftKey || editor.multiSelect;
 
-  const TOUCH_PAN_STARTS_AFTER_PIXELS = 8;
-  const LONG_PRESS_MS = 450;
-
   /** A finger lifted without moving: do what the tap means there. */
   function touchTap(d: Extract<Drag, { kind: "touch" }>): void {
-    const t = secondsAt(d.x0);
-    // With something selected, the first tap on empty space just lets go of it.
-    if (editor.selection.size && !d.adding && d.tap.kind !== "seek-and-clear-selection") { editor.selection.clear(); return; }
-    switch (d.tap.kind) {
-      case "add-projectile": addProjectileInColumn(t, d.tap.column); return;
+    const t = secondsAt(d.press.x0), tap = touchTapWith(d.tap, editor.selection.size > 0, d.adding);
+    switch (tap.kind) {
+      case "let-go": editor.selection.clear(); return;
+      case "add-projectile": addProjectileInColumn(t, tap.column); return;
       case "add-look-cue": seek(snapped(t)); addStageCueAtPlayhead(); return;
       case "add-move": seek(snapped(t)); addMove(); return;
       case "seek-and-clear-selection":
@@ -84,7 +80,7 @@
     if (ev.pointerType === "touch" && pinch.down(ev.pointerId, x, y)) {
       // A second finger: the first one's press becomes a pinch. Keep a move already made; drop a box.
       if (drag?.kind === "move") pointerup();
-      else { if (drag?.kind === "touch") clearTimeout(drag.timer); drag = null; box = null; }
+      else { if (drag?.kind === "touch") drag.press.end(); drag = null; box = null; }
       return;
     }
     if (pinch.busy) return;
@@ -97,16 +93,15 @@
     }
     if (ev.pointerType === "touch" && pressWaitsOnTouch(press, layout, y)) {
       const adding = adds(ev);
-      const d: Extract<Drag, { kind: "touch" }> = {
-        kind: "touch", x0: x, y0: y, t0: editor.view.t0, panning: false, tap: whatATouchTapAdds(layout, y), adding, timer: 0,
-      };
       // Held still: box-select from here.
-      d.timer = window.setTimeout(() => {
-        if (drag !== d || d.panning) return;
-        navigator.vibrate?.(12);
-        drag = { kind: "box", adding, addsTo: adding ? [...editor.selection] : [] };
-        box = { x0: x, y0: y, x1: x, y1: y };
-      }, LONG_PRESS_MS);
+      const d: Extract<Drag, { kind: "touch" }> = {
+        kind: "touch", t0: editor.view.t0, tap: whatATouchTapAdds(layout, y), adding,
+        press: new WaitingPress(x, y, () => {
+          if (drag !== d) return;
+          drag = { kind: "box", adding, addsTo: adding ? [...editor.selection] : [] };
+          box = { x0: x, y0: y, x1: x, y1: y };
+        }),
+      };
       drag = d;
       return;
     }
@@ -149,9 +144,7 @@
     }
     if (!drag) return;
     if (drag.kind === "touch") {
-      if (!drag.panning && Math.hypot(x - drag.x0, y - drag.y0) < TOUCH_PAN_STARTS_AFTER_PIXELS) return;
-      if (!drag.panning) { drag.panning = true; clearTimeout(drag.timer); }
-      editor.view.t0 = Math.max(-1, drag.t0 - (x - drag.x0) / editor.view.pps);
+      if (drag.press.pans(x, y)) editor.view.t0 = Math.max(-1, drag.t0 - (x - drag.press.x0) / editor.view.pps);
     } else if (drag.kind === "box") {
       if (!box) return;
       box = { ...box, x1: x, y1: y };
@@ -169,8 +162,8 @@
   function pointerup(ev?: PointerEvent): void {
     if (ev?.pointerType === "touch") pinch.up(ev.pointerId);
     if (drag?.kind === "touch") {
-      clearTimeout(drag.timer);
-      if (!drag.panning && ev?.type === "pointerup") touchTap(drag);
+      drag.press.end();
+      if (!drag.press.panning && ev?.type === "pointerup") touchTap(drag);
     } else if (drag?.kind === "box" && box) {
       if (boxIsAClick(box)) {
         if (!drag.adding) editor.selection.clear();

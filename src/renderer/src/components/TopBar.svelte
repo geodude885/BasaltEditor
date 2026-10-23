@@ -1,16 +1,14 @@
 <script lang="ts">
   // The desktop layout's top bar: the menus, the chart, Save, Undo/Redo, the problem count and the theme.
   // What the menus do is in store/commands.ts.
-  import { redo, undo } from "../store/actions";
-  import { appearance, THEME_CHOICES, type ThemeChoice } from "../store/appearance.svelte";
+  import { appearance, THEME_CHOICES, THEME_NAMES, type ThemeChoice } from "../store/appearance.svelte";
+  import { commandButton } from "../store/commands";
   import { doc } from "../store/document.svelte";
   import { editor } from "../store/editor.svelte";
-  import { save } from "../store/files";
   import Logo from "./Logo.svelte";
   import MenuBar from "./MenuBar.svelte";
 
   const count = $derived(editor.problems.length);
-  const THEME_NAMES: Record<ThemeChoice, string> = { system: "System theme", dark: "Basalt (dark)", light: "Ash (light)" };
 </script>
 
 <header class="bar">
@@ -19,11 +17,11 @@
   <div class="chartname" title={editor.folder ?? doc.name}>{doc.chart.name || "Untitled"}{doc.dirty ? " •" : ""}</div>
   <div class="spacer"></div>
   <div class="group">
-    <button class="primary" title={editor.folder ? `Write chart.json back into ${editor.folder} (Ctrl+S)` : "Save chart.json (Ctrl+S)"} onclick={save}>
+    <button class="primary" {...commandButton("save")} title={editor.folder ? `Write chart.json back into ${editor.folder} (Ctrl S)` : "Save chart.json (Ctrl S)"}>
       {editor.folder ? "Save" : "Save as…"}
     </button>
-    <button title="Undo (Ctrl+Z)" disabled={!doc.canUndo} onclick={undo}>Undo</button>
-    <button title="Redo (Ctrl+Y)" disabled={!doc.canRedo} onclick={redo}>Redo</button>
+    <button {...commandButton("undo")}>Undo</button>
+    <button {...commandButton("redo")}>Redo</button>
     <button class="chip" class:bad={count} class:ok={!count} onclick={() => { editor.tab = "problems"; }}>
       {count ? `${count} problem${count === 1 ? "" : "s"}` : "no problems"}
     </button>

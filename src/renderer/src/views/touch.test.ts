@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { Pinch, Taps } from "./touch";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { LONG_PRESS_MS, Pinch, Taps, WaitingPress } from "./touch";
 
 const press = (pointerType: string, timeStamp: number, x = 0, detail = 0) => ({ pointerType, detail, timeStamp, clientX: x, clientY: 0 });
 
@@ -59,5 +59,34 @@ describe("Pinch", () => {
     expect(pinch.move(1, 10, 0)).toBeNull();
     pinch.up(1);
     expect(pinch.busy).toBe(false);
+  });
+});
+
+describe("WaitingPress", () => {
+  beforeEach(() => { vi.useFakeTimers(); });
+  afterEach(() => { vi.useRealTimers(); });
+
+  it("becomes a long press when held still", () => {
+    let held = 0;
+    const press = new WaitingPress(10, 10, () => held++);
+    expect(press.pans(13, 12)).toBe(false);
+    vi.advanceTimersByTime(LONG_PRESS_MS);
+    expect(held).toBe(1);
+  });
+
+  it("becomes a pan once it moves far enough, and then never a long press", () => {
+    let held = 0;
+    const press = new WaitingPress(0, 0, () => held++);
+    expect(press.pans(20, 0)).toBe(true);
+    expect(press.pans(1, 0)).toBe(true);
+    vi.advanceTimersByTime(LONG_PRESS_MS);
+    expect(held).toBe(0);
+  });
+
+  it("does nothing more once it ends", () => {
+    let held = 0;
+    new WaitingPress(0, 0, () => held++).end();
+    vi.advanceTimersByTime(LONG_PRESS_MS);
+    expect(held).toBe(0);
   });
 });

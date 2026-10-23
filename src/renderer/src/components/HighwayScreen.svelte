@@ -5,7 +5,8 @@
   import Icon from "./Icon.svelte";
   import { untrack } from "svelte";
   import { editor } from "../store/editor.svelte";
-  import { backToPlayStart, loopPoint, loopPointLabel, practice, rewindBars, rewindSeconds } from "../store/practice.svelte";
+  import { commandButton } from "../store/commands";
+  import { loopPointLabel, practice } from "../store/practice.svelte";
   import { RECORD_KEYS, recording, type RecordMode } from "../store/recording.svelte";
   import Highway from "../views/highway/Highway.svelte";
   import { highwayColumns } from "../views/highway/geometry";
@@ -22,7 +23,7 @@
   /** A column tapped, by a pad or its key: record it, and light the pad up. */
   function hit(index: number): void {
     const column = columns[index];
-    if (column.kind === "projectile") recording.hit(column.column);
+    recording.hit(column.column);
     navigator.vibrate?.(8);
     const el = pads[index];
     el?.classList.add("hit");
@@ -56,8 +57,7 @@
     {/if}
   </div>
   <div class="controls">
-    <button class="rec" class:on={recording.armed} aria-pressed={recording.armed}
-      onclick={() => { recording.finish(); recording.armed = !recording.armed; }}><Icon name="record" /> Rec</button>
+    <button class="rec" class:on={recording.armed} {...commandButton("record")}><Icon name="record" /> Rec</button>
     {#if recording.armed}
       <div class="modes" role="group" aria-label="Recording mode">
         {#each MODES as [mode, label] (mode)}
@@ -67,14 +67,12 @@
       <div class="count" aria-live="polite">{recording.count ? `${recording.count} in take` : editor.playing ? "Tap along" : "Play to record"}</div>
     {/if}
     <div class="pair">
-      <button aria-label="Back a bar" onclick={() => rewindBars(1)}>−bar</button>
-      <button aria-label="Back 5 seconds" onclick={() => rewindSeconds(5)}>−5s</button>
+      <button aria-label="Back a bar" {...commandButton("back-bar")}>−bar</button>
+      <button aria-label="Back 5 seconds" {...commandButton("back-5s")}>−5s</button>
     </div>
-    <button title="Back to where you last pressed Play" onclick={backToPlayStart}><Icon name="back" /> Last play</button>
-    <button class:on={!!practice.loop || practice.loopStart != null} onclick={loopPoint}>
-      {loopPointLabel()}
-    </button>
-    <button class:on={practice.preroll} aria-pressed={practice.preroll} onclick={() => { practice.preroll = !practice.preroll; }}>Pre-roll</button>
+    <button {...commandButton("last-play")}><Icon name="back" /> Last play</button>
+    <button class:on={practice.loopStart != null} {...commandButton("loop")}>{loopPointLabel()}</button>
+    <button {...commandButton("preroll")}>Pre-roll</button>
     <Minimap />
   </div>
 </div>

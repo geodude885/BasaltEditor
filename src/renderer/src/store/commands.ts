@@ -57,15 +57,6 @@ export function startNewChart(): void {
   if (layout.compact) { mobile.menu = false; mobile.drawer = "chart"; }
 }
 
-/**
- * Places can add their own commands to a menu (a layout adds its editors to View) without this table
- * knowing about them.
- */
-const extra: Partial<Record<MenuId, Command[][]>> = {};
-export function addToMenu(menu: MenuId, group: Command[]): void {
-  (extra[menu] ??= []).push(group);
-}
-
 /** Whether the open-folder dialog exists here; set by the platform at start-up. */
 export const platform = { canOpenFolders: true };
 
@@ -117,6 +108,8 @@ export function menus(): Menu[] {
         [
           { id: "select-mode", label: "Select mode", run: () => { editor.selectMode = !editor.selectMode; }, checked: () => editor.selectMode,
             help: "A drag on empty space draws a selection box" },
+          { id: "multi-select", label: "Multi-select", run: () => { editor.multiSelect = !editor.multiSelect; }, checked: () => editor.multiSelect,
+            help: "Taps add to the selection, as holding Shift does" },
           { id: "select-bar", label: "Select this bar", run: selectBar },
           { id: "select-loop", label: "Select the loop", run: selectLoop, shown: () => !!practice.loop },
           { id: "select-to-end", label: "Select to the end", run: selectToEnd },
@@ -128,8 +121,9 @@ export function menus(): Menu[] {
       id: "view", label: "View", groups: [
         [
           { id: "view-timeline", label: "Timeline", run: () => { editor.mainView = "timeline"; }, checked: () => editor.mainView === "timeline" },
-          { id: "view-highway", label: "Highway", keys: "H", run: () => { editor.mainView = editor.mainView === "highway" ? "timeline" : "highway"; },
-            checked: () => editor.mainView === "highway", help: "Switch between the highway and the timeline" },
+          // Its key switches back and forth; a click (no key press) just shows the highway.
+          { id: "view-highway", label: "Highway", keys: "H", run: ev => { editor.mainView = ev && editor.mainView === "highway" ? "timeline" : "highway"; },
+            checked: () => editor.mainView === "highway", help: "The lane's columns, time flowing down - and tap-along recording; the key switches back and forth" },
         ],
         [
           { id: "zoom-in", label: "Zoom in", keys: "]", run: () => zoom(1.4), help: "Zoom the timeline in (or Ctrl + scroll)" },
@@ -148,7 +142,7 @@ export function menus(): Menu[] {
           { id: "back-5s", label: "Back 5 seconds", run: () => rewindSeconds(5) },
         ],
         [
-          { id: "record", label: "Record taps", keys: "R", run: () => { recording.finish(); recording.armed = !recording.armed; if (recording.armed) editor.mainView = "highway"; },
+          { id: "record", label: "Record taps", keys: "R", run: () => recording.toggle(),
             checked: () => recording.armed, help: "Arm tap-along recording on the highway; play, then tap 1 to 5 for the columns" },
           { id: "record-replace", label: "Takes replace what's there", run: () => { recording.mode = recording.mode === "replace" ? "add" : "replace"; },
             checked: () => recording.mode === "replace", shown: () => recording.armed },
@@ -163,8 +157,29 @@ export function menus(): Menu[] {
       ],
     },
   ];
-  for (const menu of base) menu.groups.push(...(extra[menu.id] ?? []));
   return base;
+}
+
+/** One command, by its id - for a button that runs it outside the menus. */
+export function command(id: string): Command {
+  const found = [...menus().flatMap(m => m.groups.flat()), ...keysOnly()].find(c => c.id === id);
+  if (!found) throw new Error(`no command "${id}"`);
+  return found;
+}
+
+/**
+ * What a button for a command needs, to spread onto it (`<button {...commandButton("delete")}>Delete</button>`):
+ * it runs the command, greys out where the command doesn't apply, shows a setting as pressed, and
+ * says what it does and its keys. The button's text is its own, so it can be shorter than the menu's.
+ */
+export function commandButton(id: string): { onclick: () => void; disabled: boolean; "aria-pressed"?: boolean; title: string } {
+  const c = command(id);
+  return {
+    onclick: () => void c.run(),
+    disabled: c.enabled ? !c.enabled() : false,
+    "aria-pressed": c.checked?.(),
+    title: `${c.help ?? c.label}${c.keys ? ` (${c.keys})` : ""}`,
+  };
 }
 
 /** Commands with keys but no place in a menu. */

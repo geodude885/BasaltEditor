@@ -4,7 +4,7 @@ import type { Tempo } from "./tempo";
 import type { ChartEvent } from "./types";
 
 /** How far either side of a take's first and last taps "replace" still reaches, in seconds. */
-export const REPLACE_MARGIN_SECONDS = 0.05;
+const REPLACE_MARGIN_SECONDS = 0.05;
 
 /**
  * The events left after a take in replace mode: the take's own, and everything but the projectiles

@@ -44,6 +44,12 @@ export interface EditorApi {
   askUnsaved?(name: string): Promise<UnsavedChoice>;
 }
 
+/** The API as the desktop app's preload gives it: every call, the desktop's own included. */
+export type DesktopApi = Required<EditorApi>;
+
+/** Whether this is the desktop app's API, with "Your charts" over the Charts folder and recent folders. */
+export const isDesktop = (api: EditorApi): api is DesktopApi => typeof api.listCharts === "function";
+
 export const Channels = {
   openFiles: "editor:open-files",
   openFolder: "editor:open-folder",

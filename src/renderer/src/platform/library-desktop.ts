@@ -1,7 +1,7 @@
 // Your charts in the desktop app: the chart folders in the game's Charts folder, through the main
 // process. An entry's id is its folder's path. Saving stays explicit (Ctrl S writes chart.json into the
 // folder), so this source saves nothing itself; deleting moves the folder to the bin.
-import type { EditorApi } from "../../../shared/api";
+import type { DesktopApi } from "../../../shared/api";
 import { findCover } from "../io/files";
 import { chartOfText, summaryOfText } from "../io/summary";
 import * as Jsonc from "../model/jsonc";
@@ -9,7 +9,7 @@ import type { LibrarySource, StoredChart } from "../store/library.svelte";
 
 const NO_BYTES = new Uint8Array();
 
-export function desktopLibrary(api: Required<EditorApi>): LibrarySource {
+export function desktopLibrary(api: DesktopApi): LibrarySource {
   async function load(id: string): Promise<StoredChart | null> {
     const opened = await api.readFolder(id);
     const chart = opened.files.find(f => f.path.toLowerCase() === "chart.json");

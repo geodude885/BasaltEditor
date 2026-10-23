@@ -1,16 +1,15 @@
 <script lang="ts">
   // The phone layout's menu: the command table's File, Edit and Playback menus, then the playing
   // settings and the theme - what the desktop's menu bar and transport hold, behind one button.
-  import { appearance, THEME_CHOICES, type ThemeChoice } from "../../store/appearance.svelte";
+  import { appearance, THEME_CHOICES, THEME_NAMES, type ThemeChoice } from "../../store/appearance.svelte";
   import { menus, visibleGroups, type Command } from "../../store/commands";
   import { editor } from "../../store/editor.svelte";
   import { mobile } from "../../store/mobile.svelte";
   import { setRate, setVolume } from "../../store/playback";
-  import { recording } from "../../store/recording.svelte";
   import { num } from "../fields";
   import SongPicker from "../SongPicker.svelte";
+  import TapOffset from "../TapOffset.svelte";
 
-  const THEME_NAMES: Record<ThemeChoice, string> = { system: "System theme", dark: "Basalt (dark)", light: "Ash (light)" };
   // View's editors are in the top bar here; the rest of the table is drawn as it is.
   const shown = $derived(menus().filter(m => m.id !== "view"));
 
@@ -45,11 +44,8 @@
     <label><span>Volume</span>
       <input type="range" min="0" max="1" step="0.05" value={editor.volume} oninput={e => setVolume(num(e))} />
     </label>
-    <label class="wide"><span>Tap timing: {recording.offsetMs > 0 ? "−" : recording.offsetMs < 0 ? "+" : ""}{Math.abs(recording.offsetMs)} ms</span>
-      <input type="range" min="-150" max="250" step="5" value={recording.offsetMs} oninput={e => recording.setOffset(num(e))}
-        aria-describedby="offset-note" />
-    </label>
-    <p class="note" id="offset-note">If your taps land late, move this right; early, move it left.</p>
+    <div class="wide"><TapOffset /></div>
+    <p class="note">If your taps land late, move Tap timing right; early, move it left.</p>
   </div>
   <h3>Look</h3>
   <div class="settings">
@@ -70,7 +66,7 @@
   .actions, .settings { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
   button, select { min-height: 40px; }
   label { flex: 1 1 120px; }
-  label.wide { flex-basis: 100%; }
+  .wide { flex-basis: 100%; display: grid; }
   .note { margin: 0; font-size: 12px; }
   a { align-self: center; }
 </style>

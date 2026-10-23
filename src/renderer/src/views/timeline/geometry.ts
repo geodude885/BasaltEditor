@@ -51,7 +51,7 @@ const PROJECTILE_LINES = PROJECTILE_COLUMNS;
 const PROJECTILE_ROW_INSET_PIXELS = 7;
 
 /** How far down the timeline a column's line is drawn, in an expanded projectile row. */
-export function yOfColumn(layout: TimelineLayout, column: number): number {
+function yOfColumn(layout: TimelineLayout, column: number): number {
   const [top, height] = layout.rows.shot, last = PROJECTILE_LINES - 1;
   return layout.collapsed.has("shot") ? top + height / 2
     : top + PROJECTILE_ROW_INSET_PIXELS + column * ((height - 2 * PROJECTILE_ROW_INSET_PIXELS) / last);

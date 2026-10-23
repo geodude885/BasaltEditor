@@ -8,6 +8,11 @@
   import { library, type ChartSummary } from "../../store/library.svelte";
 
   let confirming = $state<string | null>(null);
+  let closeButton: HTMLButtonElement;
+
+  // A dialog over everything: it takes the focus, and Escape closes it.
+  $effect(() => { closeButton.focus(); });
+  const keydown = (ev: KeyboardEvent) => { if (ev.key === "Escape") library.visible = false; };
 
   // Covers as images, made once per list and let go when it changes.
   const covers = $derived(new Map(library.entries.filter(e => e.cover).map(e => [e.id, URL.createObjectURL(new Blob([e.cover as BlobPart]))])));
@@ -28,13 +33,15 @@
 
 </script>
 
-<div class="library" role="dialog" aria-label="Your charts">
+<svelte:window onkeydown={keydown} />
+
+<div class="library" role="dialog" aria-modal="true" aria-label="Your charts">
   <header>
     <h2>Your charts</h2>
     <div class="spacer"></div>
     <button onclick={startNewChart}>New</button>
     <button title="Open a .bbchart package or chart files" onclick={() => { library.visible = false; void openFiles(); }}>Import…</button>
-    <button class="close" aria-label="Close" onclick={() => { library.visible = false; }}><Icon name="close" /></button>
+    <button class="close" aria-label="Close" bind:this={closeButton} onclick={() => { library.visible = false; }}><Icon name="close" /></button>
   </header>
   <p class="note">
     {#if library.autosaves}
