@@ -49,6 +49,15 @@ const sameName = (key: string, name: string) =>
 export const isSong = (path: string): boolean => /\.(wav|ogg|mp3)$/i.test(path);
 export const isCover = (path: string): boolean => /\.(png|jpe?g)$/i.test(path);
 
+/**
+ * A song's media type, for the player. Without one, a browser guesses from the first bytes - and
+ * Safari doesn't recognise an MP3 that starts straight with audio rather than an ID3 tag.
+ */
+export function songType(path: string): string {
+  const ext = path.toLowerCase().split(".").pop();
+  return ext === "ogg" ? "audio/ogg" : ext === "wav" ? "audio/wav" : "audio/mpeg";
+}
+
 /** The song the chart names - or any song, if it names none yet. */
 export const findSong = (files: Map<string, Uint8Array>, named?: string): string | undefined =>
   [...files.keys()].find(k => named ? sameName(k, named) : isSong(k));

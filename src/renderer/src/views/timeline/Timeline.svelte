@@ -12,7 +12,8 @@
   import { doc } from "../../store/document.svelte";
   import { appearance } from "../../store/appearance.svelte";
   import { editor } from "../../store/editor.svelte";
-  import { seek, songStart } from "../../store/playback";
+  import { keepPlayheadInView, seek, songStart } from "../../store/playback";
+  import { untrack } from "svelte";
   import { boxIsAClick, prepare, theme, type Box } from "../theme";
   import { drawTimeline } from "./draw";
   import { COLLAPSIBLE_ROWS, layoutTimeline, markers, tOf } from "./geometry";
@@ -33,6 +34,8 @@
   const placed = $derived(markers(doc.chart, doc.tempo, editor.view, layout));
 
   $effect(() => { editor.timelineWidth = w; });
+  // Showing again (say, after the highway moved the playhead): start where the playhead is.
+  $effect(() => { if (w) untrack(keepPlayheadInView); });
 
   $effect(() => {
     if (!w) return;

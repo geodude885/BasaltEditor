@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import { deflateRawSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
-import { clipSpans, findSong, isCover, isSong, readEntries, relative } from "./files";
+import { clipSpans, findSong, isCover, isSong, songType, readEntries, relative } from "./files";
 import { crc32, readZip, writeZip } from "./zip";
 
 const bytes = (s: string) => new TextEncoder().encode(s);
@@ -49,6 +49,12 @@ describe("opening files", () => {
   it("keeps paths relative to the chart", () => {
     expect(relative("Mine/clips/a.json", "Mine/chart.json")).toBe("clips/a.json");
     expect(relative("Mine/cover.png", "Mine/chart.json")).toBe("cover.png");
+  });
+
+  it("names a song's media type, so the player needn't guess", () => {
+    expect(songType("Music/Bound 2.MP3")).toBe("audio/mpeg");
+    expect(songType("a.ogg")).toBe("audio/ogg");
+    expect(songType("a.wav")).toBe("audio/wav");
   });
 
   it("tells songs and covers from other files", () => {
