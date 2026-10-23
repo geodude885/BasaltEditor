@@ -84,7 +84,7 @@
 
 <style>
   .app {
-    height: 100%; display: grid; grid-template-rows: auto 1fr;
+    height: 100%; display: grid; grid-template-rows: auto minmax(0, 1fr);
     padding: env(safe-area-inset-top) max(16px, env(safe-area-inset-right)) env(safe-area-inset-bottom) max(16px, env(safe-area-inset-left));
   }
   .work { display: grid; grid-template-columns: minmax(260px, 340px) minmax(0, 1fr); gap: 16px; padding-block: 12px; min-height: 0; }
@@ -101,5 +101,6 @@
     font: 700 28px var(--display); text-transform: uppercase; z-index: 4; pointer-events: none;
   }
   .drop.show { display: grid; }
-  @media (max-width: 860px) { .work { grid-template-columns: minmax(0, 1fr); } }
+  /* Narrow: the panes stack, and the page scrolls instead of each pane. */
+  @media (max-width: 860px) { .app { height: auto; } .work { grid-template-columns: minmax(0, 1fr); } }
 </style>

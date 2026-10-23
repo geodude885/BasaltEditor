@@ -28,6 +28,13 @@ function createWindow(): void {
     },
   });
   window.once("ready-to-show", () => window.show());
+  // The page draws its own menu bar. Electron's default menu would come back on Alt, so it goes - except
+  // on macOS, where the app menu lives outside the window and gives text boxes Cmd C / V.
+  if (process.platform !== "darwin") window.removeMenu();
+  // Developer tools on F12, which the default menu used to give.
+  window.webContents.on("before-input-event", (_, input) => {
+    if (input.type === "keyDown" && input.key === "F12") window.webContents.toggleDevTools();
+  });
   // Links open in the browser, never in the app.
   window.webContents.setWindowOpenHandler(({ url }) => {
     if (/^https:\/\//.test(url)) void shell.openExternal(url);
