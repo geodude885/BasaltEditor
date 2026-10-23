@@ -1,5 +1,8 @@
 // A chart's files: chart.json beside its song, cover and clips/*.json - opened loose, from a folder,
 // or from a package (.bbchart, or .zip as the hosted editor saved them).
+import { mp3InsideWav } from "../audio/riff";
+import * as Jsonc from "../model/jsonc";
+import type { Chart } from "../model/types";
 import { readZip } from "./zip";
 
 export type FileEntry = { path: string; bytes: Uint8Array };
@@ -85,3 +88,32 @@ export function clipSpans(files: Map<string, Uint8Array>): Map<string, ClipSpan>
 
 /** A package's file name for a chart. */
 export const packageName = (chartName: string | undefined): string => `${(chartName || "chart").replace(/[^\w-]+/g, "-")}.bbchart`;
+
+/**
+ * What a package holds: chart.json, the chart's own song and cover, and its recorded clips - not
+ * backups, other songs or anything else opened beside them. A song that is MP3 audio in a WAV wrapper
+ * goes in as the plain MP3 inside, which the game can read, and the packaged chart.json names that.
+ */
+export function packageContents(text: string, chart: Pick<Chart, "music" | "cover">, files: Map<string, Uint8Array>): { entries: FileEntry[]; unwrapped?: string } {
+  const entries: FileEntry[] = [];
+  let chartText = text, unwrapped: string | undefined;
+  const song = findSong(files, chart.music?.file), cover = findCover(files, chart.cover);
+  if (song) {
+    const bytes = files.get(song)!, inside = mp3InsideWav(bytes);
+    if (inside) {
+      unwrapped = song.replace(/\.[^./]*$/, "") + ".mp3";
+      entries.push({ path: unwrapped, bytes: inside });
+      chartText = Jsonc.set(chartText, "music", { ...chart.music, file: unwrapped });
+    } else entries.push({ path: song, bytes });
+  }
+  if (cover) entries.push({ path: cover, bytes: files.get(cover)! });
+  for (const [path, bytes] of files) if (/^clips\//i.test(path)) entries.push({ path, bytes });
+  return { entries: [{ path: "chart.json", bytes: new TextEncoder().encode(chartText) }, ...entries], unwrapped };
+}
+
+/** Problems with the files beside the chart, for the Problems tab: a song the game can't read. */
+export function fileProblems(files: Map<string, Uint8Array>, chart: Pick<Chart, "music">): string[] {
+  const song = chart.music?.file ? findSong(files, chart.music.file) : undefined;
+  if (song && mp3InsideWav(files.get(song)!)) return [`${song} is MP3 audio inside a WAV file, which the game can't read - Package saves it as a plain MP3, or convert it`];
+  return [];
+}

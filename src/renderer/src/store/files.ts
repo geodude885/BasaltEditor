@@ -1,6 +1,6 @@
 // Opening and saving: through the desktop app's dialogs, by drag and drop, and the clipboard.
 import type { OpenedFolder } from "../../../shared/api";
-import { clipSpans, findCover, findSong, isCover, isSong, packageName, readEntries, type FileEntry } from "../io/files";
+import { clipSpans, findCover, findSong, isCover, isSong, packageContents, packageName, readEntries, type FileEntry } from "../io/files";
 import { setMusic } from "../model/edits";
 import { writeZip } from "../io/zip";
 import { template } from "../model/samples";
@@ -226,11 +226,10 @@ export async function saveChartAs(): Promise<void> {
 
 /** A package (.bbchart) with the song, cover and clips - it goes into the game's Charts folder as it is. */
 export async function savePackage(): Promise<void> {
-  // Only the chart's own song and cover go in, not others opened along the way.
-  const song = findSong(editor.files, doc.chart.music?.file), cover = findCover(editor.files, doc.chart.cover);
-  const files = [...editor.files].filter(([path]) => (!isSong(path) || path === song) && (!isCover(path) || path === cover));
-  const zip = writeZip([["chart.json", new TextEncoder().encode(doc.text)], ...files]);
+  const { entries, unwrapped } = packageContents(doc.text, doc.chart, editor.files);
+  const zip = writeZip(entries.map(e => [e.path, e.bytes]));
   await saveFile(packageName(doc.chart.name), zip, false);
+  if (unwrapped) toast(`The song went in as ${unwrapped}: it was MP3 audio inside a WAV file, which the game can't read`);
 }
 
 async function saveFile(name: string, bytes: Uint8Array, isChart: boolean): Promise<void> {

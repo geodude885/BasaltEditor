@@ -2,7 +2,7 @@
 // opened beside the chart.
 import { SvelteSet } from "svelte/reactivity";
 import type { Peaks } from "../audio/peaks";
-import type { ClipSpan } from "../io/files";
+import { fileProblems, type ClipSpan } from "../io/files";
 import { timedLookCues } from "../model/looks";
 import { problems } from "../model/problems";
 import { MOST_EXTRA_TIMELINE_HEIGHT_PIXELS, type TimelineRow } from "../views/timeline/geometry";
@@ -79,7 +79,7 @@ class EditorState {
   /** This chart should join your charts as soon as it can - it was just opened or started. */
   libraryAdd = $state(false);
 
-  readonly problems = $derived(problems(doc.chart, doc.tempo));
+  readonly problems = $derived([...problems(doc.chart, doc.tempo), ...fileProblems(this.files, doc.chart)]);
   readonly lookCues = $derived(timedLookCues(doc.chart, doc.tempo));
 
   setSelection(indices: Iterable<number>): void {
