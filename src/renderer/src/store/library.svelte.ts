@@ -1,7 +1,7 @@
 // Your charts: every chart worked on, kept with its song, cover and clips so you can switch between
 // them without picking files again. Where they are kept is a LibrarySource - the browser's storage
 // on the web (platform/library-web.ts); the desktop app could list its Charts folder through the
-// same interface (docs/plans/desktop-file-menu.md). Changes save themselves a moment after they are
+// same interface (docs/plans/web-merge.md). Changes save themselves a moment after they are
 // made.
 import { findCover } from "../io/files";
 import * as Jsonc from "../model/jsonc";

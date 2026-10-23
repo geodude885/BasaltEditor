@@ -72,7 +72,7 @@ src/renderer/src/
   them differently and adds the highway and tap-along recording (`store/recording.svelte.ts`). Touch
   gestures live in `views/touch.ts`; a mouse never reaches the code that differs.
 - **Menus come from `store/commands.ts`**, one table of File / Edit / View commands. Draw menus from
-  it rather than wiring buttons to actions by hand; `docs/plans/desktop-file-menu.md` covers a desktop
+  it rather than wiring buttons to actions by hand; `docs/plans/web-merge.md` covers a desktop
   menu bar and chart browser built on it and on `store/library.svelte.ts`'s `LibrarySource`.
 - **The web build** (`npm run build:web`, `vite.config.web.ts`) is the same renderer with
   `platform/web.ts` standing in for the preload; `web.yml` checks, tests and publishes it to GitHub
