@@ -32,8 +32,8 @@
     <option value="1">1 beat</option><option value="0.5">1/2</option><option value="0.25">1/4</option><option value="0.125">1/8</option><option value="0">no snap</option>
   </select>
   <div class="views" role="group" aria-label="Editor">
-    <button class:on={mobile.view === "timeline"} aria-pressed={mobile.view === "timeline"} onclick={() => { mobile.view = "timeline"; }}>Timeline</button>
-    <button class:on={mobile.view === "highway"} aria-pressed={mobile.view === "highway"} onclick={() => { mobile.view = "highway"; }}>Highway</button>
+    <button class:on={editor.mainView === "timeline"} aria-pressed={editor.mainView === "timeline"} onclick={() => { editor.mainView = "timeline"; }}>Timeline</button>
+    <button class:on={editor.mainView === "highway"} aria-pressed={editor.mainView === "highway"} onclick={() => { editor.mainView = "highway"; }}>Highway</button>
   </div>
   </div>
   <button class="icon" aria-label="Undo" disabled={!doc.canUndo} onclick={undo}><Icon name="undo" /></button>

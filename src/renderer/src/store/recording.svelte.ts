@@ -17,6 +17,9 @@ type Take = { chart: LoadedChart; before: string; from: number; to: number; adde
 
 const OFFSET_KEY = "basalt-tap-offset";
 
+/** On a keyboard, the keys that tap the highway's columns, left to right. */
+export const RECORD_KEYS = ["1", "2", "3", "4", "5"];
+
 function savedOffset(): number {
   try { const ms = parseFloat(localStorage.getItem(OFFSET_KEY) ?? ""); if (Number.isFinite(ms)) return ms; } catch { /* none */ }
   return 0;

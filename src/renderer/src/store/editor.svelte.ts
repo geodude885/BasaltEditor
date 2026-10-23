@@ -9,6 +9,8 @@ import { MOST_EXTRA_TIMELINE_HEIGHT_PIXELS, type TimelineRow } from "../views/ti
 import { doc } from "./document.svelte";
 
 export type Tab = "chart" | "phases" | "looks" | "tempo" | "actors" | "problems" | "help";
+/** The editors the timeline's place can show, in either layout. More (say, one for looks) can join this list. */
+export type MainView = "timeline" | "highway";
 export type Song = { name: string; url: string; buffer: AudioBuffer | null; peaks: Peaks | null };
 
 const VOLUME_KEY = "basalt-volume";
@@ -42,6 +44,8 @@ class EditorState {
 
   time = $state(0);
   playing = $state(false);
+  /** Which editor is showing: the timeline, or the highway. */
+  mainView = $state<MainView>("timeline");
   /** The timeline's view: its left edge in seconds, and pixels a second. */
   view = $state({ t0: -1, pps: 60 });
   timelineWidth = $state(800);

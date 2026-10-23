@@ -9,7 +9,7 @@
   import LaneView from "../../views/lane/LaneView.svelte";
   import Timeline from "../../views/timeline/Timeline.svelte";
   import Inspector from "../Inspector.svelte";
-  import HighwayScreen from "./HighwayScreen.svelte";
+  import HighwayScreen from "../HighwayScreen.svelte";
   import MenuSheet from "./MenuSheet.svelte";
   import MobileBar from "./MobileBar.svelte";
   import MobileDrawer from "./MobileDrawer.svelte";
@@ -29,7 +29,7 @@
   <div class="rail"><MobileDrawer part="rail" /></div>
   <main class="main">
     <div class="lanebox"><LaneView /></div>
-    {#if mobile.view === "highway"}
+    {#if editor.mainView === "highway"}
       <div class="highwaybox"><HighwayScreen /></div>
     {:else}
       <div class="timebox"><Timeline /></div>

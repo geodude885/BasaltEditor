@@ -1,8 +1,9 @@
 <script lang="ts">
   // The highway editor: columns across the lane, time flowing down to the hit line at the playhead.
-  // Drag empty space up and down to scrub, tap it to add a projectile there, hold to box-select. Tap
-  // a tile to select it; drag it up or down to retime it and sideways to change its column. Two
-  // fingers stretch or squash time.
+  // With a finger, drag empty space up and down to scrub, tap it to add a projectile there, hold to
+  // box-select; two fingers stretch or squash time. With a mouse, as on the timeline: drag empty space
+  // to box-select, click it to add, scroll to scrub (Ctrl: stretch). Either way, press a tile to
+  // select it; drag it up or down to retime it and sideways to change its column.
   import { evTime, laneOf, setEvTime } from "../../model/chart";
   import { columnOfX, moveToColumn } from "../../model/columns";
   import type { ChartEvent } from "../../model/types";
@@ -40,7 +41,7 @@
 
   type Drag =
     | { kind: "empty"; x0: number; y0: number; time0: number; tapTime: number; panning: boolean; timer: number; adding: boolean }
-    | { kind: "box"; adding: boolean; addsTo: number[] }
+    | { kind: "box"; adding: boolean; addsTo: number[]; clickAdds: boolean }
     | { kind: "tiles"; x0: number; y0: number; textBefore: string; moved: boolean; starts: [ChartEvent, number, number][] };
   let drag: Drag | null = null;
   const pinch = new Pinch();
@@ -86,9 +87,10 @@
       };
       return;
     }
-    // Select mode: empty space boxes straight away instead of scrubbing.
-    if (editor.selectMode) {
-      drag = { kind: "box", adding, addsTo: adding ? [...editor.selection] : [] };
+    // A mouse, or Select mode: empty space boxes straight away instead of scrubbing. A mouse click
+    // without a drag adds there, as a tap does.
+    if (editor.selectMode || ev.pointerType === "mouse") {
+      drag = { kind: "box", adding, addsTo: adding ? [...editor.selection] : [], clickAdds: ev.pointerType === "mouse" };
       box = { x0: x, y0: y, x1: x, y1: y };
       return;
     }
@@ -99,7 +101,7 @@
     d.timer = window.setTimeout(() => {
       if (drag !== d || d.panning) return;
       navigator.vibrate?.(12);
-      drag = { kind: "box", adding, addsTo: adding ? [...editor.selection] : [] };
+      drag = { kind: "box", adding, addsTo: adding ? [...editor.selection] : [], clickAdds: false };
       box = { x0: x, y0: y, x1: x, y1: y };
     }, LONG_PRESS_MS);
     drag = d;
@@ -147,12 +149,18 @@
       tap(d);
       return;
     }
-    if (drag?.kind === "box" && box && boxIsAClick(box) && !drag.adding) editor.selection.clear();
+    if (drag?.kind === "box" && box && boxIsAClick(box)) {
+      const { clickAdds, adding } = drag, [x0, y0] = [box.x0, box.y0];
+      endDrag();
+      if (clickAdds) tap({ x0, tapTime: timeOfY(view, y0), adding });
+      else if (!adding) editor.selection.clear();
+      return;
+    }
     endDrag();
   }
 
   /** A tap on empty space: let go of the selection, or add a tile there. */
-  function tap(d: Extract<Drag, { kind: "empty" }>): void {
+  function tap(d: { x0: number; tapTime: number; adding: boolean }): void {
     if (editor.selection.size && !d.adding) { editor.selection.clear(); return; }
     const column = columns[columnIndexAtX(view, columns.length, d.x0)];
     if (column.kind === "projectile") addProjectileInColumn(Math.max(0, d.tapTime), column.column);

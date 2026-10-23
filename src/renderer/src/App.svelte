@@ -4,6 +4,7 @@
   import Panels from "./components/Panels.svelte";
   import TopBar from "./components/TopBar.svelte";
   import Transport from "./components/Transport.svelte";
+  import HighwayScreen from "./components/HighwayScreen.svelte";
   import MobileApp from "./components/mobile/MobileApp.svelte";
   import Library from "./components/library/Library.svelte";
   import { library } from "./store/library.svelte";
@@ -64,9 +65,9 @@
       <LaneView />
       <Inspector />
     </section>
-    <section class="pane timepane" aria-label="Timeline">
+    <section class="pane timepane" class:highway={editor.mainView === "highway"} aria-label={editor.mainView === "highway" ? "Highway" : "Timeline"}>
       <Transport />
-      <Timeline />
+      {#if editor.mainView === "highway"}<div class="highwaybox"><HighwayScreen /></div>{:else}<Timeline />{/if}
       <Panels />
     </section>
   </main>
@@ -92,6 +93,8 @@
   .pane h2 { margin: 0; font: 700 15px/1 var(--display); text-transform: uppercase; letter-spacing: .08em; color: var(--text-dim); padding: 10px 12px 6px; }
   .lanepane { overflow: auto; }
   .timepane { display: grid; grid-template-rows: auto auto minmax(0, 1fr); }
+  /* The highway takes most of the pane's height; the tabs keep what's left, and scroll. */
+  .highwaybox { height: clamp(320px, 58vh, 720px); min-height: 0; border-bottom: 1px solid var(--line); }
   .toast {
     position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); background: var(--raised); border: 1px solid var(--accent);
     padding: 8px 14px; border-radius: 8px; font-size: 13px; z-index: 30; max-width: calc(100% - 32px);

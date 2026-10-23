@@ -1,13 +1,13 @@
 <script lang="ts">
   // The whole chart in a strip, the start at the bottom like the highway: a tick for each projectile,
   // the loop shaded, the playhead as a line. Touch or drag it to jump.
-  import { endOf, evTime } from "../../model/chart";
-  import { appearance } from "../../store/appearance.svelte";
-  import { doc } from "../../store/document.svelte";
-  import { editor } from "../../store/editor.svelte";
-  import { practice } from "../../store/practice.svelte";
-  import { seek, songLength } from "../../store/playback";
-  import { alpha, prepare, theme } from "../../views/theme";
+  import { endOf, evTime } from "../model/chart";
+  import { appearance } from "../store/appearance.svelte";
+  import { doc } from "../store/document.svelte";
+  import { editor } from "../store/editor.svelte";
+  import { practice } from "../store/practice.svelte";
+  import { seek, songLength } from "../store/playback";
+  import { alpha, prepare, theme } from "../views/theme";
 
   let canvas: HTMLCanvasElement;
   let w = $state(0), h = $state(0);

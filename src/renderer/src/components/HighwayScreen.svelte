@@ -1,13 +1,14 @@
 <script lang="ts">
-  // The highway with its recording pads under it, one per column, and its controls beside it. Arm
-  // recording and play: each pad tap drops a projectile in that column, snapped. Pausing ends the take.
-  import Icon from "../Icon.svelte";
+  // The highway with its recording pads under it, one per column, and its practice controls beside it,
+  // in either layout. Arm recording and play: each pad tap - or key 1 to 5 - drops a projectile in that
+  // column, snapped. Pausing ends the take.
+  import Icon from "./Icon.svelte";
   import { untrack } from "svelte";
-  import { editor } from "../../store/editor.svelte";
-  import { backToPlayStart, loopPoint, loopPointLabel, practice, rewindBars, rewindSeconds } from "../../store/practice.svelte";
-  import { recording, type RecordMode } from "../../store/recording.svelte";
-  import Highway from "../../views/highway/Highway.svelte";
-  import { highwayColumns } from "../../views/highway/geometry";
+  import { editor } from "../store/editor.svelte";
+  import { backToPlayStart, loopPoint, loopPointLabel, practice, rewindBars, rewindSeconds } from "../store/practice.svelte";
+  import { RECORD_KEYS, recording, type RecordMode } from "../store/recording.svelte";
+  import Highway from "../views/highway/Highway.svelte";
+  import { highwayColumns } from "../views/highway/geometry";
   import Minimap from "./Minimap.svelte";
 
   const columns = highwayColumns();
@@ -16,18 +17,31 @@
   $effect(() => { if (!editor.playing) untrack(() => recording.finish()); });
   $effect(() => () => recording.finish());
 
-  function pad(ev: PointerEvent, index: number): void {
-    ev.preventDefault();
+  const pads: HTMLButtonElement[] = [];
+
+  /** A column tapped, by a pad or its key: record it, and light the pad up. */
+  function hit(index: number): void {
     const column = columns[index];
     if (column.kind === "projectile") recording.hit(column.column);
     navigator.vibrate?.(8);
-    const el = ev.currentTarget as HTMLElement;
-    el.classList.add("hit");
-    setTimeout(() => el.classList.remove("hit"), 110);
+    const el = pads[index];
+    el?.classList.add("hit");
+    setTimeout(() => el?.classList.remove("hit"), 110);
+  }
+
+  function key(ev: KeyboardEvent): void {
+    if (!recording.armed || ev.repeat || ev.ctrlKey || ev.metaKey || ev.altKey) return;
+    if ((ev.target as Element).closest?.("input, select, textarea")) return;
+    const index = RECORD_KEYS.indexOf(ev.key);
+    if (index < 0 || index >= columns.length) return;
+    ev.preventDefault();
+    hit(index);
   }
 
   const MODES: [RecordMode, string][] = [["add", "Add"], ["replace", "Replace"]];
 </script>
+
+<svelte:window onkeydown={key} />
 
 <div class="screen">
   <div class="road">
@@ -35,7 +49,8 @@
     {#if recording.armed}
       <div class="pads" style:grid-template-columns="repeat({columns.length}, minmax(0, 1fr))">
         {#each columns as column, index (index)}
-          <button class="pad" aria-label="Tap {column.label}" onpointerdown={ev => pad(ev, index)}></button>
+          <button class="pad" aria-label="Tap {column.label}" aria-keyshortcuts={RECORD_KEYS[index]} bind:this={pads[index]}
+            onpointerdown={ev => { ev.preventDefault(); hit(index); }}><kbd>{RECORD_KEYS[index]}</kbd></button>
         {/each}
       </div>
     {/if}
@@ -74,6 +89,9 @@
     background: color-mix(in srgb, var(--accent) 14%, var(--raised)); touch-action: none;
   }
   .pad:global(.hit) { background: var(--accent); }
+  .pad kbd { font: 12px var(--mono); color: var(--text-dim); }
+  /* Touch screens have no keys to show. */
+  @media (pointer: coarse) { .pad kbd { display: none; } }
   .controls {
     display: flex; flex-direction: column; gap: 6px; padding: 6px; border-left: 1px solid var(--line); background: var(--panel);
     overflow-y: auto; overscroll-behavior: contain;
