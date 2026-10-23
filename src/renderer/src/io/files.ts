@@ -97,9 +97,7 @@ export const packageName = (chartName: string | undefined): string => `${(chartN
 export function packageContents(text: string, chart: Pick<Chart, "music" | "cover">, files: Map<string, Uint8Array>): { entries: FileEntry[]; unwrapped?: string } {
   const entries: FileEntry[] = [];
   let chartText = text, unwrapped: string | undefined;
-  // Only what chart.json names: a song or image it doesn't name, the game never uses.
-  const song = chart.music?.file ? findSong(files, chart.music.file) : undefined;
-  const cover = chart.cover ? findCover(files, chart.cover) : undefined;
+  const { song, cover } = namedFiles(chart, files);
   if (song) {
     const bytes = files.get(song)!, inside = mp3InsideWav(bytes);
     if (inside) {
@@ -111,6 +109,25 @@ export function packageContents(text: string, chart: Pick<Chart, "music" | "cove
   if (cover) entries.push({ path: cover, bytes: files.get(cover)! });
   for (const [path, bytes] of files) if (/^clips\//i.test(path)) entries.push({ path, bytes });
   return { entries: [{ path: "chart.json", bytes: new TextEncoder().encode(chartText) }, ...entries], unwrapped };
+}
+
+/**
+ * The song and cover chart.json names, among the files open beside it. Only those: a song or image it
+ * doesn't name, the game never uses.
+ */
+function namedFiles(chart: Pick<Chart, "music" | "cover">, files: Map<string, Uint8Array>): { song?: string; cover?: string } {
+  return {
+    song: chart.music?.file ? findSong(files, chart.music.file) : undefined,
+    cover: chart.cover ? findCover(files, chart.cover) : undefined,
+  };
+}
+
+/** The chart's own files besides chart.json - its song and cover as they are, and its clips - for saving it into a folder. */
+export function ownFiles(chart: Pick<Chart, "music" | "cover">, files: Map<string, Uint8Array>): FileEntry[] {
+  const { song, cover } = namedFiles(chart, files), out: FileEntry[] = [];
+  for (const path of [song, cover]) if (path) out.push({ path, bytes: files.get(path)! });
+  for (const [path, bytes] of files) if (/^clips\//i.test(path)) out.push({ path, bytes });
+  return out;
 }
 
 /** Problems with the files beside the chart, for the Problems tab: a song the game can't read. */

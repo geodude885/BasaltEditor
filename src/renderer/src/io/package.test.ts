@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import * as Jsonc from "../model/jsonc";
-import { fileProblems, packageContents } from "./files";
+import { fileProblems, ownFiles, packageContents } from "./files";
 
 /** MP3 audio in a WAV wrapper: RIFF, a "fmt " chunk saying MPEG layer 3, then the MP3 as "data". */
 function wrapped(mp3: Uint8Array): Uint8Array {
@@ -44,6 +44,17 @@ describe("what a package holds", () => {
   it("leaves out a song and cover the chart doesn't name", () => {
     const files = new Map([["song.mp3", bytes(1)], ["cover.png", bytes(3)]]);
     expect(packageContents("{}", {}, files).entries.map(e => e.path)).toEqual(["chart.json"]);
+  });
+});
+
+describe("what saving into a folder writes besides chart.json", () => {
+  it("is the chart's own song and cover as they are, and its clips", () => {
+    const wav = wrapped(bytes(1));
+    const files = new Map([["song.mp3", wav], ["other.ogg", bytes(2)], ["cover.png", bytes(3)], ["clips/a-take-1.json", bytes(5)], ["chart.json.bak", bytes(6)]]);
+    const own = ownFiles(chart, files);
+    expect(own.map(f => f.path)).toEqual(["song.mp3", "cover.png", "clips/a-take-1.json"]);
+    expect(own[0].bytes).toBe(wav);
+    expect(ownFiles({}, files).map(f => f.path)).toEqual(["clips/a-take-1.json"]);
   });
 });
 

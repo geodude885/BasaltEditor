@@ -123,6 +123,13 @@
   <label><span>Chart starts at song s</span><input type="number" step="0.01" value={m?.start ?? 0} onchange={e => doc.change(["music"], () => setMusic(c, m?.file ?? "", num(e), m?.volume ?? 1))} /></label>
   <label><span>Volume</span><input type="number" step="0.05" min="0" max="1" value={m?.volume ?? 1} onchange={e => doc.change(["music"], () => setMusic(c, m?.file ?? "", m?.start ?? 0, num(e)))} /></label>
 </div>
+<div class="note">
+  {#if (m?.start ?? 0) < 0}
+    Silence first: the song starts {round(-(m?.start ?? 0), 2)} s into the chart.
+  {:else}
+    Skip an intro, or line beat 1 up with the first downbeat. A negative start adds silence before the song.
+  {/if}
+</div>
 <div class="grid2">
   <div class="cover">
     <label><span>Cover image</span><input value={c.cover ?? ""} placeholder="cover.png" onchange={e => set("cover", text(e).trim() || undefined)} /></label>

@@ -34,7 +34,9 @@
 </div>
 <div class="note">
   To edit a chart from the game: open it from <b>Your charts</b>, or <b>Open folder</b> and pick its folder in the game's
-  <code>UserData/Basalt/Charts</code>, then <b>Save</b> - the game reloads it within a second. A <b>.bbchart</b> package opens too,
+  <code>UserData/Basalt/Charts</code>, then <b>Save</b> - the game reloads it within a second. In the desktop app, <b>New</b> starts
+  a chart in a folder of its own there, named after it, and <b>Save</b> gives a chart opened from anywhere else one; in a browser,
+  Your charts keeps every chart as you go. A <b>.bbchart</b> package opens too,
   and <b>Package</b> makes one with the song, cover and clips to share. Only the parts you change are rewritten: comments and
   recorded clips elsewhere stay as they were (comments among the events go when you edit an event).
 </div>

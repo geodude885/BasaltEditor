@@ -8,7 +8,7 @@ import {
 } from "./actions";
 import { doc } from "./document.svelte";
 import { editor } from "./editor.svelte";
-import { copyChart, newChart, openFiles, openFolder, openRecent, save, saveChartAs, savePackage } from "./files";
+import { copyChart, newChart, openFiles, openFolder, openRecent, save, saveChartAs, savePackage, saveTarget } from "./files";
 import { layout } from "./layout.svelte";
 import { library } from "./library.svelte";
 import { mobile } from "./mobile.svelte";
@@ -39,6 +39,14 @@ export type Command = {
 };
 
 const RECENT_SHOWN = 5;
+
+/** What Save does, for its tip and the Help tab, by where it saves (store/files.ts, saveTarget). */
+const SAVE_HELP: Record<ReturnType<typeof saveTarget>, string> = {
+  folder: "Save into the chart's folder - the game reloads it within a second",
+  "new-folder": "Save as a new chart folder in the game's Charts folder, among Your charts",
+  library: "Save in Your charts, in this browser",
+  file: "Save chart.json somewhere you pick",
+};
 
 export type MenuId = "file" | "edit" | "view" | "playback";
 export type Menu = { id: MenuId; label: string; groups: Command[][] };
@@ -78,9 +86,10 @@ export function menus(): Menu[] {
           enabled: () => folder !== editor.folder,
         })),
         [
-          { id: "save", label: editor.folder ? "Save" : "Save as…", keys: "Ctrl S", run: save, whileTyping: true,
-            help: "Save into the open chart folder (else save chart.json as…)" },
-          { id: "save-as", label: "Save as…", keys: "Ctrl Shift S", run: saveChartAs, shown: () => !!editor.folder, whileTyping: true },
+          { id: "save", label: saveTarget() === "file" ? "Save chart.json as…" : "Save", keys: "Ctrl S", run: save, whileTyping: true,
+            help: SAVE_HELP[saveTarget()] },
+          { id: "save-as", label: "Save chart.json as…", keys: "Ctrl Shift S", run: saveChartAs, shown: () => saveTarget() !== "file", whileTyping: true,
+            help: "Save a copy of chart.json somewhere you pick" },
           { id: "package", label: "Package (.bbchart)…", run: savePackage },
           { id: "copy-chart", label: "Copy chart.json", run: copyChart },
         ],

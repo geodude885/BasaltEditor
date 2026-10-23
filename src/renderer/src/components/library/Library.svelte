@@ -48,7 +48,8 @@
       Kept in this browser, with their songs and covers, and saved as you go. Browsers can clear what
       sites keep, so use Package to save a copy of anything you'd miss.
     {:else}
-      The chart folders in the game's Charts folder. Open one to edit it in place, and Save (Ctrl S) to
+      The chart folders in the game's Charts folder - New starts one here, and a chart you open from
+      elsewhere joins when you Save it. Open one to edit it in place, and Save (Ctrl S) to
       write it back - the game reloads it within a second.
     {/if}
   </p>

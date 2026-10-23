@@ -1,6 +1,6 @@
 // Opening and saving: through the desktop app's dialogs, by drag and drop, and the clipboard.
-import type { OpenedFolder } from "../../../shared/api";
-import { clipSpans, findCover, findSong, isCover, isSong, packageContents, packageName, readEntries, type FileEntry } from "../io/files";
+import { isDesktop, type OpenedFolder } from "../../../shared/api";
+import { clipSpans, findCover, findSong, isCover, isSong, ownFiles, packageContents, packageName, readEntries, type FileEntry } from "../io/files";
 import { setMusic } from "../model/edits";
 import { writeZip } from "../io/zip";
 import { template } from "../model/samples";
@@ -12,6 +12,20 @@ import { library } from "./library.svelte";
 import { loadSong, unloadSong } from "./playback";
 
 const api = () => window.editor;
+
+/** The chart folder's files as they are on disk, by path - so Save writes only a song or cover that is new or changed. */
+let onDisk = new Map<string, Uint8Array>();
+
+/**
+ * Where Save puts the open chart: into its folder; into a new folder in the game's Charts folder, so it
+ * is one of Your charts (the desktop app, with the game installed); into Your charts in the browser;
+ * or, with none of those, into a chart.json file it asks for.
+ */
+export function saveTarget(): "folder" | "new-folder" | "library" | "file" {
+  if (editor.folder) return "folder";
+  if (library.available && isDesktop(api())) return "new-folder";
+  return library.available && library.autosaves ? "library" : "file";
+}
 
 /** The desktop app's frame and dialogs in the page's theme. Nothing to do in a browser. */
 export function followTheme(choice: "system" | "dark" | "light"): void {
@@ -35,6 +49,7 @@ export async function openEntries(entries: FileEntry[], folder: string | null = 
       loadChart(opened.chart.text, opened.chart.name);
       clearFiles();
       editor.folder = folder;
+      onDisk = folder ? new Map(opened.files) : new Map();
       joinLibrary();
     }
     editor.files = new Map([...editor.files, ...opened.files]);
@@ -185,12 +200,15 @@ export async function openDropped(files: File[]): Promise<void> {
   await openEntries(await Promise.all(files.map(async f => ({ path: f.name, bytes: new Uint8Array(await f.arrayBuffer()) }))));
 }
 
+/** Starts a chart from the template - in the desktop app, straight into a new folder among Your charts. */
 export async function newChart(): Promise<void> {
   if (!await mayReplaceChart()) return;
   loadChart(template("My Chart"), "chart.json");
   clearFiles();
   editor.folder = null;
+  onDisk = new Map();
   joinLibrary();
+  if (saveTarget() === "new-folder") await saveToCharts("Started");
 }
 
 /** A chart just opened or started: a new entry in your charts, where there is a library. */
@@ -205,6 +223,7 @@ export async function openStored(text: string, name: string, files: Map<string, 
   clearFiles();
   editor.folder = folder;
   editor.files = new Map(files);
+  onDisk = folder ? new Map(files) : new Map();
   if (folder) void refreshRecent();
   await useFiles();
 }
@@ -220,15 +239,49 @@ function savedNote(what: string): string {
   return `${what} - but it has ${n} problem${n === 1 ? "" : "s"}, so the game will not load it until they are fixed`;
 }
 
-/** Saves into the open folder, or asks where to save chart.json. */
+/**
+ * Saves the chart where saveTarget says. Into a folder: chart.json, and the song or cover if it is new
+ * there. In the browser, Your charts keeps it already; Save just makes sure, now.
+ */
 export async function save(): Promise<void> {
-  if (!editor.folder) { await saveChartAs(); return; }
-  try {
-    await api().saveChart(editor.folder, doc.text);
+  const target = saveTarget(), folder = editor.folder;
+  if (target === "new-folder") { await saveToCharts("Saved"); return; }
+  if (target === "file") { await saveChartAs(); return; }
+  if (target === "library") {
+    editor.libraryAdd = true;
+    await library.flush();
     doc.markSaved();
-    toast(savedNote("Saved chart.json - the game reloads it within a second"));
+    toast(savedNote("Saved in Your charts, in this browser - Package keeps a copy outside it"));
+    return;
+  }
+  if (!folder) return;
+  try {
+    await api().saveChart(folder, doc.text);
+    const changed = ownFiles(doc.chart, editor.files).filter(f => onDisk.get(f.path) !== f.bytes);
+    if (changed.length && api().saveFiles) {
+      await api().saveFiles!(folder, changed);
+      for (const f of changed) onDisk.set(f.path, f.bytes);
+    }
+    doc.markSaved();
+    toast(savedNote("Saved - the game reloads it within a second"));
   } catch (e) {
     toast(`Could not save: ${(e as Error).message}`);
+  }
+}
+
+/** Gives a chart with no folder one in the game's Charts folder, named after it, with its song, cover and clips. */
+async function saveToCharts(what: string): Promise<void> {
+  const own = ownFiles(doc.chart, editor.files), name = doc.chart.name || "My Chart";
+  try {
+    const folder = await api().createChartFolder!(name, [{ path: "chart.json", bytes: new TextEncoder().encode(doc.text) }, ...own]);
+    editor.folder = folder;
+    onDisk = new Map(own.map(f => [f.path, f.bytes]));
+    doc.markSaved();
+    void refreshRecent();
+    if (library.visible) void library.refresh();
+    toast(savedNote(`${what} in Your charts, as ${folder.split(/[\\/]/).pop()} in the game's Charts folder`));
+  } catch (e) {
+    toast(`Could not save into the game's Charts folder: ${(e as Error).message}`);
   }
 }
 

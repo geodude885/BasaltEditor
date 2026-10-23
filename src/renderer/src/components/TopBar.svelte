@@ -3,6 +3,7 @@
   // What the menus do is in store/commands.ts.
   import { appearance, THEME_CHOICES, THEME_NAMES, type ThemeChoice } from "../store/appearance.svelte";
   import { commandButton } from "../store/commands";
+  import { saveTarget } from "../store/files";
   import { doc } from "../store/document.svelte";
   import { editor } from "../store/editor.svelte";
   import Logo from "./Logo.svelte";
@@ -17,9 +18,7 @@
   <div class="chartname" title={editor.folder ?? doc.name}>{doc.chart.name || "Untitled"}{doc.dirty ? " •" : ""}</div>
   <div class="spacer"></div>
   <div class="group">
-    <button class="primary" {...commandButton("save")} title={editor.folder ? `Write chart.json back into ${editor.folder} (Ctrl S)` : "Save chart.json (Ctrl S)"}>
-      {editor.folder ? "Save" : "Save as…"}
-    </button>
+    <button class="primary" {...commandButton("save")}>{saveTarget() === "file" ? "Save as…" : "Save"}</button>
     <button {...commandButton("undo")}>Undo</button>
     <button {...commandButton("redo")}>Redo</button>
     <button class="chip" class:bad={count} class:ok={!count} onclick={() => { editor.tab = "problems"; }}>

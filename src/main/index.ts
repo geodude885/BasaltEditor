@@ -1,6 +1,6 @@
 import { app, BrowserWindow, dialog, ipcMain, nativeTheme, shell } from "electron";
 import { cpSync, existsSync, readFileSync } from "node:fs";
-import { cp, readdir, readFile, realpath, stat, writeFile } from "node:fs/promises";
+import { cp, mkdir, readdir, readFile, realpath, stat, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import updater from "electron-updater";
@@ -230,9 +230,57 @@ ipcMain.handle(Channels.askUnsaved, async (event, name: string): Promise<Unsaved
 });
 
 ipcMain.handle(Channels.saveChart, async (_event, folder: string, text: string): Promise<void> => {
+  await writeFile(join(openedFolder(folder), "chart.json"), text, "utf8");
+});
+
+/** The folder, resolved, if this session opened it (or made it); else an error. */
+function openedFolder(folder: string): string {
   const target = resolve(folder);
   if (!openedFolders.has(target)) throw new Error("that folder was not opened in this session");
-  await writeFile(join(target, "chart.json"), text, "utf8");
+  return target;
+}
+
+/**
+ * Where a chart's file goes inside its folder, if it is a place a chart's file may go: beside
+ * chart.json, or in clips/ - never anywhere else, however the page names it.
+ */
+function chartFilePath(folder: string, path: string): string {
+  const parts = path.split(/[\\/]/);
+  const fine = (name: string) => !!name && name !== "." && name !== ".." && !/[<>:"|?*\0]/.test(name);
+  if (!parts.every(fine) || !(parts.length === 1 || (parts.length === 2 && parts[0].toLowerCase() === "clips"))) {
+    throw new Error(`${path} isn't a place for a chart's file`);
+  }
+  return join(folder, ...parts);
+}
+
+async function writeChartFiles(folder: string, files: OpenedFile[]): Promise<void> {
+  for (const file of files) {
+    const path = chartFilePath(folder, file.path);
+    await mkdir(dirname(path), { recursive: true });
+    await writeFile(path, file.bytes);
+  }
+}
+
+ipcMain.handle(Channels.saveFiles, async (_event, folder: string, files: OpenedFile[]): Promise<void> => {
+  await writeChartFiles(openedFolder(folder), files);
+});
+
+/** A folder name from a chart's name: what Windows, macOS and Linux all allow. */
+function folderName(chartName: string): string {
+  return chartName.replace(/[<>:"/\\|?*\0-\x1f]/g, "").replace(/[. ]+$/, "").trim().slice(0, 80) || "My Chart";
+}
+
+ipcMain.handle(Channels.createChartFolder, async (_event, chartName: string, files: OpenedFile[]): Promise<string> => {
+  const charts = chartsFolder();
+  if (!charts) throw new Error("the game's Charts folder isn't here");
+  const base = join(charts, folderName(chartName));
+  let folder = base;
+  for (let n = 2; existsSync(folder); n++) folder = `${base} (${n})`;
+  await mkdir(folder);
+  openedFolders.add(folder);
+  await writeChartFiles(folder, files);
+  rememberRecent(folder);
+  return folder;
 });
 
 ipcMain.handle(Channels.saveFile, async (event, suggestedName: string, bytes: Uint8Array): Promise<string | null> => {

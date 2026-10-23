@@ -36,6 +36,10 @@ export interface EditorApi {
   readFolder?(folder: string): Promise<OpenedFolder>;
   /** Copies a chart folder in the Charts folder beside itself. */
   duplicateFolder?(folder: string): Promise<DuplicatedFolder>;
+  /** Makes a chart folder in the Charts folder, named after the chart, with these files (chart.json among them); its path. */
+  createChartFolder?(chartName: string, files: OpenedFile[]): Promise<string>;
+  /** Writes a chart's files (beside chart.json, or in clips/) into a folder this session opened. */
+  saveFiles?(folder: string, files: OpenedFile[]): Promise<void>;
   /** Moves a chart folder in the Charts folder to the bin. */
   trashFolder?(folder: string): Promise<void>;
   /** The chart folders opened lately, newest first. */
@@ -61,6 +65,8 @@ export const Channels = {
   readCover: "editor:read-cover",
   readFolder: "editor:read-folder",
   duplicateFolder: "editor:duplicate-folder",
+  createChartFolder: "editor:create-chart-folder",
+  saveFiles: "editor:save-files",
   trashFolder: "editor:trash-folder",
   recentFolders: "editor:recent-folders",
   askUnsaved: "editor:ask-unsaved",
