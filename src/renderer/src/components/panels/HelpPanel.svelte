@@ -7,6 +7,8 @@
   const keys: [string, string][] = $derived([
     ...shortcutCommands().map((c): [string, string] => [c.keys!, c.help ?? c.label]),
     ["Double-click", "On the lane: a projectile from there. On a timeline row: a projectile, move or look at that beat."],
+    ["1 – 5", "With Record on, on the highway: tap that column as the song plays. Pausing ends the take - one undo step."],
+    ["Alt / F10", "Go to the menus; the arrows move round them"],
   ]);
 </script>
 
@@ -26,10 +28,15 @@
 <div class="keys">
   {#each keys as [key, what] (key)}<kbd>{key}</kbd><span>{what}</span>{/each}
 </div>
+<div class="note touch">
+  With a finger: on empty space, a tap adds there, a drag pans the timeline or scrubs the highway, and a held press draws a
+  selection box; two fingers zoom. <b>Select</b> draws boxes straight away, and <b>Multi</b> makes taps add to the selection.
+</div>
 <div class="note">
-  To edit a chart from the game: <b>Open folder</b> and pick its folder in the game's <code>UserData/Basalt/Charts</code>, then
-  <b>Save</b> - the game reloads it within a second. A <b>.bbchart</b> package opens too, and <b>Package</b> makes one with the song, cover
-  and clips to share. Only the parts you change are rewritten: comments and recorded clips stay as they were.
+  To edit a chart from the game: open it from <b>Your charts</b>, or <b>Open folder</b> and pick its folder in the game's
+  <code>UserData/Basalt/Charts</code>, then <b>Save</b> - the game reloads it within a second. A <b>.bbchart</b> package opens too,
+  and <b>Package</b> makes one with the song, cover and clips to share. Only the parts you change are rewritten: comments and
+  recorded clips elsewhere stay as they were (comments among the events go when you edit an event).
 </div>
 
 <style>
@@ -40,4 +47,6 @@
   .keys { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; font-size: 13px; }
   kbd { font: 12px var(--mono); padding: 1px 6px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); }
   textarea { font: 12px var(--mono); }
+  .touch { display: none; }
+  @media (pointer: coarse) { .touch { display: block; } }
 </style>

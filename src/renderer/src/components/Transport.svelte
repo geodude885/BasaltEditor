@@ -57,6 +57,8 @@
   </div>
   <!-- Touch screens have no keyboard: the shortcuts that edit the selection, as buttons. Hidden with a mouse. -->
   <div class="row touch">
+    <button class:on={editor.selectMode} aria-pressed={editor.selectMode} title="A drag on empty space draws a selection box"
+      onclick={() => { editor.selectMode = !editor.selectMode; }}>Select</button>
     <button class:on={editor.multiSelect} aria-pressed={editor.multiSelect} title="Taps add to the selection, like holding Shift"
       onclick={() => { editor.multiSelect = !editor.multiSelect; }}>Multi-select</button>
     <button title="Delete the selection" disabled={!editor.selection.size} onclick={removeSelected}>Delete</button>

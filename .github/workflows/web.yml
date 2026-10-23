@@ -1,11 +1,11 @@
 name: Web
-# The trial web build, kept apart from ci.yml and release.yml. It checks and tests like CI, builds the
-# website and publishes it to the gh-pages branch (Settings > Pages > Source: Deploy from a branch,
-# gh-pages, / (root)). It runs on pushes to `web` and on pull requests from it.
+# The website: the editor as a web app for phones and browsers. On every push to main it checks,
+# tests and builds the web version and publishes it to the gh-pages branch (Settings > Pages > Source:
+# Deploy from a branch, gh-pages, / (root)). Pull requests are ci.yml's business; it builds the web
+# version too.
 on:
   push:
-    branches: [web]
-  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -17,8 +17,6 @@ concurrency:
 
 jobs:
   build:
-    # Only the web branch; other pull requests are CI's business.
-    if: github.ref == 'refs/heads/web' || github.head_ref == 'web'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

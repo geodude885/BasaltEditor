@@ -49,34 +49,45 @@ Models have seen far more Svelte 4 than Svelte 5 and will mix the two. In this r
 ## Shape
 
 ```
-src/main/       Electron main: window, dialogs, file access (only folders the user opened)
+src/main/       Electron main: window, dialogs, file access (folders the user opened, the Charts folder)
 src/preload/    exposes src/shared/api.ts to the page as window.editor
 src/shared/     the API between them - types and IPC channel names
 src/renderer/src/
   model/        chart types, JSONC, tempo, validation (problems), edits, looks - pure TypeScript
-  io/           zip, and sorting opened files into a chart and its song, cover and clips
-  audio/        waveform peaks
-  store/        document (text, chart, undo), editor (UI state), actions, files, playback, keyboard
+  io/           zip, sorting opened files into a chart and its song, cover and clips, what a package
+                holds, chart summaries for "Your charts"
+  audio/        waveform peaks, MP3 inside a WAV
+  store/        document (text, chart, undo), editor (UI state), actions, files, playback, commands
+                and keyboard, practice, recording, library, layout
   views/lane/   lane canvas: geometry, draw, interaction (what a press hits), the component
   views/timeline/  timeline canvas: rows and markers, draw, interaction, the component
-  views/highway/   the phone layout's note-highway editor: columns, tiles, draw, the component
-  components/   top bar, transport, inspector, the tab panels
-  components/mobile/   the phone layout: shell, bar, menu sheet, drawer, highway screen
+  views/highway/   note-highway editor: columns, tiles, draw, the component
+  components/   top bar and menu bar, transport, inspector, highway screen, the tab panels
+  components/mobile/   the phone layout: shell, bar, menu sheet, drawer, selection bar
   components/library/  "Your charts"
-  platform/     the browser's stand-ins for the desktop app: file access, IndexedDB, the web library
+  platform/     where the platforms differ: the browser's stand-ins for the desktop app (file
+                access, IndexedDB, the web library) and the desktop's library over the Charts folder
 ```
 
 - **Two layouts, one editor.** `store/layout.svelte.ts` picks the phone layout on touch screens with a
   phone-sized short side (`?mobile=1` / `?mobile=0` force it); App.svelte shows `MobileApp` or the
-  desktop workbench. Both use the same stores, canvases and panels - the phone layout only arranges
-  them differently and adds the highway and tap-along recording (`store/recording.svelte.ts`). Touch
-  gestures live in `views/touch.ts`; a mouse never reaches the code that differs.
-- **Menus come from `store/commands.ts`**, one table of File / Edit / View commands. Draw menus from
-  it rather than wiring buttons to actions by hand; `docs/plans/web-merge.md` covers a desktop
-  menu bar and chart browser built on it and on `store/library.svelte.ts`'s `LibrarySource`.
+  desktop workbench. Both have the same features from the same stores, canvases and panels - the
+  timeline or the highway (`editor.mainView`), tap-along recording (`store/recording.svelte.ts`),
+  practice tools (`store/practice.svelte.ts`), "Your charts" - and only arrange them differently.
+  Touch gestures live in `views/touch.ts`; a mouse never reaches the code that differs. A new
+  feature goes in both.
+- **Commands and their keys come from `store/commands.ts`**, one table of File / Edit / View /
+  Playback menus. The desktop's `MenuBar` and the phone's menu sheet draw it, the Help tab lists it,
+  and `store/keyboard.ts` matches key presses against each command's `keys` text ("Ctrl S", "Delete /
+  Backspace"). Add a command there rather than wiring a button or a key to an action by hand.
+- **"Your charts"** (`store/library.svelte.ts`) reads a `LibrarySource`: the browser's storage on the
+  web (`platform/library-web.ts`, saving as you go), the game's Charts folder in the desktop app
+  (`platform/library-desktop.ts`, saving with Ctrl S). The main process only reads, copies or bins
+  folders inside the Charts folder; `BASALT_CHARTS_FOLDER` points it at another folder, to try it
+  without touching real charts.
 - **The web build** (`npm run build:web`, `vite.config.web.ts`) is the same renderer with
   `platform/web.ts` standing in for the preload; `web.yml` checks, tests and publishes it to GitHub
-  Pages from the `web` branch.
+  Pages on every push to `main`.
 
 - **The renderer never touches Node or the file system directly** - only `window.editor`, through
   `store/files.ts`. It stays a plain web app: `npm run dev:renderer` serves it in a browser, with
@@ -87,8 +98,8 @@ src/renderer/src/
   `<audio>` element on first use, not at import).
 - **A component's script is wiring.** If it grows past reading state and calling functions, the
   logic goes in a `.ts` beside it: chart edits in `model/edits.ts`, what a press on a canvas means in
-  `views/*/interaction.ts` (it returns a decision; the component applies it), shortcuts in
-  `store/keyboard.ts` (one table, which the Help tab lists).
+  `views/*/interaction.ts` (it returns a decision; the component applies it), commands and their
+  keys in `store/commands.ts`.
 - **The chart's text is the source of truth.** An edit mutates the parsed chart (deep `$state`)
   inside `doc.change(keys, mutate)`, which writes only those keys back with `Jsonc.set` - comments,
   key order and recorded clips elsewhere survive. Undo keeps whole texts, not objects. A live drag

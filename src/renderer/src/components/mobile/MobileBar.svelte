@@ -48,10 +48,9 @@
   button { min-height: 36px; }
   .icon { min-width: 40px; padding: 4px 8px; font-size: 18px; line-height: 1; }
   .play { min-width: 64px; }
-  .name { font: 600 16px/1.1 var(--display); max-width: 18ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 0 1 auto; min-width: 0; }
+  .name { font: 600 16px/1.1 var(--display); max-width: 14ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 0 1 auto; min-width: 0; }
   .clock { font: 500 14px/1 var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; min-width: 7ch; }
-  .clock small { display: inline-block; min-width: 6ch; }
-  .clock small { font-size: 11px; color: var(--text-dim); margin-left: 4px; }
+  .clock small { display: inline-block; min-width: 6ch; font-size: 11px; color: var(--text-dim); margin-left: 4px; }
   select { padding: 6px 4px; min-height: 36px; }
   .scroll {
     flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; overflow-x: auto; overscroll-behavior-x: contain;
@@ -65,5 +64,4 @@
   .views button:last-child { border-radius: 0 6px 6px 0; border-left: 0; }
   .chip { min-width: 36px; border-radius: 999px; font: 500 13px var(--mono); color: var(--good); }
   .chip.bad { color: var(--bad); border-color: var(--bad); }
-  .name { max-width: 14ch; }
 </style>
