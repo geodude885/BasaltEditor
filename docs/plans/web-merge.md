@@ -54,14 +54,30 @@ first, in order, because the rest builds on them. 4 and 5 are independent of eac
 different files (4: views and components; 5: main, preload, `shared/api.ts`, library), so they can run
 in parallel sessions.
 
-### 0. Desktop smoke test (do first)
+### 0. Desktop smoke test - done 2026-10-23, no regressions
 
-- Run `npm run dev` (Electron) and try the desktop layout end to end: open folder, edit, Ctrl S, open
-  files, package, the song picker, the batch inspector, both themes. Also try `npm run build:web` with
-  `?mobile=0` in a desktop browser.
-- Check that the PWA `<link rel="manifest">` and `apple-touch-icon` cause no console errors under
-  `file://` and the CSP in Electron.
-- Fix whatever is broken before going further.
+Ran in Electron with `npm run dev` and as a built app, against a copy of a real chart. Native dialogs
+were scripted through the main process's inspector. All of these worked: Open folder (song, waveform,
+clips, looks), P to add, Undo, Ctrl S into the folder, Package, Open files with a `.bbchart`, Change
+song (the song-only picker), box-select, and setting a field on 3 projectiles at once, the dark theme
+and playing. In the built app (`file://`), there were no console errors, CSP violations or failed loads.
+The web build's desktop layout (`?mobile=0`) and "Your charts" load cleanly.
+
+Problems found, all older than this branch:
+
+- **The desktop page scrolls as a whole** when a tab's panel is long. `#app` has no height, so
+  `.app`'s `height: 100%` resolves to auto. Give `#app` `height: 100%` and check the panes scroll on
+  their own. Small; do it in phase 3, which reworks the top of the layout.
+- **Packages take every file read beside `chart.json`**, including `chart.json.bak` and `.broken`
+  files. `savePackage` should keep only the chart's song and cover, its clips, and the files the chart
+  names. Small; fix it in phase 6.
+- **Opening another chart throws away unsaved changes without asking.** Phase 5's Save / Discard /
+  Cancel prompt covers it.
+- **Editing any event rewrites the whole `events` key**, which drops comments inside it and expands
+  its formatting. This is by design (`doc.change` writes back whole keys). Leave it; mention it in
+  Help.
+- The desktop build also ships the web's home-screen icons and manifest in `out/renderer`. They're
+  harmless; ignore them.
 
 ### 1. Shared practice state (no visible change on phones)
 
