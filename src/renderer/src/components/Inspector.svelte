@@ -89,10 +89,10 @@
           <input type="range" min="0" max="3" step="0.05" value={s.from?.y ?? 0} onchange={x => shot(s => { s.from.y = round(Math.max(0, num(x)), 2); })} />
         </label>
       {/if}
-      <label class="check">
+      <label class="check" title="Thrown along the floor, for more damage">
         <input type="checkbox" checked={isGrounded(s)}
           onchange={x => shot(s => { const on = checked(x); if (on === GROUNDED_STATE.includes(s.structure)) delete s.grounded; else s.grounded = on; })} />
-        Grounded - thrown along the floor in the game's grounded state, for more damage{GROUNDED_STATE.includes(s.structure) ? ` (a ${s.structure}'s default)` : ""}
+        Grounded{GROUNDED_STATE.includes(s.structure) ? ` (default for a ${s.structure})` : ""}
       </label>
       <div class="grid3">
         <label><span>Aim</span>

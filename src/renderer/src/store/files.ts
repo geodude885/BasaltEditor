@@ -86,7 +86,7 @@ async function useFiles(): Promise<void> {
   const named = doc.chart.music?.file;
   // The song the chart names; if it isn't among the files but another song is, that one plays meanwhile.
   const songKey = findSong(editor.files, named) ?? (named ? findSong(editor.files) : undefined);
-  if (named && songKey && !findSong(editor.files, named)) toast(`The chart names ${named}, which isn't open - playing ${songKey}. Choose a song in Chart to change it.`);
+  if (named && songKey && !findSong(editor.files, named)) toast(`${named} isn't open, so playing ${songKey}. Change the song in the Chart tab.`);
   if (songKey && editor.song?.name !== songKey) {
     if (!await loadSong(songKey, editor.files.get(songKey)!)) toastUndecodable(songKey);
     if (!named) doc.change(["music"], () => { doc.chart.music = { file: songKey, start: 0, volume: 1 }; });
@@ -104,7 +104,7 @@ export async function chooseSong(): Promise<void> {
   const [file] = await api().openFiles("song");
   if (!file) return;
   const name = file.path.split(/[\\/]/).pop()!;
-  if (!isSong(name)) { toast("That isn't a song - choose an MP3, OGG or WAV file"); return; }
+  if (!isSong(name)) { toast("Not a song. Choose an MP3, OGG or WAV file"); return; }
   editor.files = new Map([...editor.files, [name, file.bytes]]);
   await useSong(name);
 }
@@ -119,7 +119,7 @@ export async function useSong(name: string): Promise<void> {
   else toast(`Song: ${name}`);
 }
 
-const toastUndecodable = (name: string): void => toast(`${name} could not be decoded for the waveform - it still plays if it can`);
+const toastUndecodable = (name: string): void => toast(`Couldn't draw a waveform for ${name}`);
 
 /** Shows a cover image, letting go of the one before. */
 function showCover(bytes: Uint8Array): void {
@@ -138,7 +138,7 @@ export async function chooseCover(): Promise<void> {
   const [file] = await api().openFiles("cover");
   if (!file) return;
   const name = file.path.split(/[\\/]/).pop()!;
-  if (!isCover(name)) { toast("That isn't a cover - choose a PNG or JPEG image"); return; }
+  if (!isCover(name)) { toast("Not a cover. Choose a PNG or JPEG image"); return; }
   editor.files = new Map([...editor.files, [name, file.bytes]]);
   doc.change(["cover"], () => { doc.chart.cover = name; });
   showCover(file.bytes);
@@ -236,7 +236,7 @@ function savedNote(what: string): string {
   const n = editor.problems.length;
   if (!n) return what;
   editor.tab = "problems";
-  return `${what} - but it has ${n} problem${n === 1 ? "" : "s"}, so the game will not load it until they are fixed`;
+  return `${what}, but the game won't load it until its ${n} problem${n === 1 ? " is" : "s are"} fixed`;
 }
 
 /**
@@ -251,7 +251,7 @@ export async function save(): Promise<void> {
     editor.libraryAdd = true;
     if (!await library.flush()) return;
     doc.markSaved();
-    toast(savedNote("Saved in Your charts, in this browser - Package keeps a copy outside it"));
+    toast(savedNote("Saved in Your charts"));
     return;
   }
   if (!folder) return;
@@ -263,7 +263,7 @@ export async function save(): Promise<void> {
       for (const f of changed) onDisk.set(f.path, f.bytes);
     }
     doc.markSaved();
-    toast(savedNote("Saved - the game reloads it within a second"));
+    toast(savedNote("Saved"));
   } catch (e) {
     toast(`Could not save: ${(e as Error).message}`);
   }
@@ -311,7 +311,7 @@ async function saveFile(name: string, bytes: Uint8Array, isChart: boolean): Prom
 export async function copyChart(): Promise<void> {
   try {
     await navigator.clipboard.writeText(doc.text);
-    toast(savedNote("Copied chart.json - paste it over your chart's file; the game reloads it"));
+    toast(savedNote("Copied chart.json. Paste it over your chart's file"));
   } catch {
     editor.tab = "help";
     editor.showText = true;

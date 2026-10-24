@@ -38,7 +38,7 @@
   <button {...commandButton("click")}>Click</button>
   <label><span>Volume</span>
     <input type="range" min="0" max="1" step="0.05" value={editor.volume} oninput={e => setVolume(num(e))}
-      title="How loud the editor plays - the song and the click. Not saved in the chart." />
+      title="Editor volume (song and click). Not saved in the chart." />
   </label>
   {#if editor.mainView === "highway"}
     <TapOffset />

@@ -18,7 +18,7 @@
 
   const c = $derived(doc.chart);
   const lane = $derived(laneOf(c));
-  const arena = $derived(c.arena ?? { map: "here" as const });
+  const arena = $derived(c.arena ?? { map: "ring" as const, at: { x: 0, z: -6 }, facing: 0 });
   const stats = $derived(density(c, doc.tempo));
   const end = $derived(endOf(c, doc.tempo));
   const colours = $derived(coloursOf(c));
@@ -33,7 +33,7 @@
   function setLength(length: number): void {
     if (!(length > 2) || Math.abs(length - lane.length) < 0.001) return;
     doc.change([], () => resizeLane(c, length));
-    toast(`Lane ${length} m - everything along it moved with it`);
+    toast(`Lane is now ${length} m, events moved to fit`);
   }
 </script>
 
@@ -70,21 +70,19 @@
 <h3>Arena and lane</h3>
 <div class="grid3">
   <label><span>Map</span>
-    <select value={(arena.map ?? "here").toLowerCase()} onchange={e => doc.change(["arena"], () => { c.arena = { map: text(e) as (typeof MAPS)[number] }; })}>
+    <select value={(arena.map ?? "ring").toLowerCase()} onchange={e => doc.change(["arena"], () => { c.arena = { map: text(e) as (typeof MAPS)[number] }; })}>
       {#each MAPS as m (m)}<option>{m}</option>{/each}
     </select>
   </label>
   <label><span>Length m</span><input type="number" step="1" min="3" value={lane.length} onchange={e => setLength(num(e))} /></label>
   <label><span>Width m</span><input type="number" step="0.5" min="1" value={lane.width} onchange={e => doc.change(["lane"], () => { c.lane = { length: lane.length, width: num(e) }; })} /></label>
 </div>
-{#if (arena.map ?? "here") !== "here"}
-  <div class="grid3">
-    <label><span>Start x</span><input type="number" step="0.1" value={arena.at?.x ?? ""} placeholder="laid across the middle" onchange={e => doc.change(["arena"], () => setArenaSpot(c, optionalNum(e), arena.at?.z, arena.facing))} /></label>
-    <label><span>Start z</span><input type="number" step="0.1" value={arena.at?.z ?? ""} onchange={e => doc.change(["arena"], () => setArenaSpot(c, arena.at?.x, optionalNum(e), arena.facing))} /></label>
-    <label><span>Facing °</span><input type="number" step="5" value={arena.facing ?? ""} placeholder="north" onchange={e => doc.change(["arena"], () => setArenaSpot(c, arena.at?.x, arena.at?.z, optionalNum(e)))} /></label>
-  </div>
-  <div class="note">Easiest in game: Chart editing on, then SETUP on the picker - walk the lane and SAVE.</div>
-{/if}
+<div class="grid3">
+  <label><span>Start x</span><input type="number" step="0.1" value={arena.at?.x ?? ""} placeholder="0 (the map's centre)" onchange={e => doc.change(["arena"], () => setArenaSpot(c, optionalNum(e), arena.at?.z, arena.facing))} /></label>
+  <label><span>Start z</span><input type="number" step="0.1" value={arena.at?.z ?? ""} placeholder="0" onchange={e => doc.change(["arena"], () => setArenaSpot(c, arena.at?.x, optionalNum(e), arena.facing))} /></label>
+  <label><span>Facing °</span><input type="number" step="5" value={arena.facing ?? ""} placeholder="0 (north)" onchange={e => doc.change(["arena"], () => setArenaSpot(c, arena.at?.x, arena.at?.z, optionalNum(e)))} /></label>
+</div>
+<div class="note">Easiest in game: turn on Chart editing, press SETUP on the picker, walk the lane, then SAVE.</div>
 
 <h3>Your zone and rules</h3>
 <div class="grid3">
@@ -93,7 +91,7 @@
   <label><span>Clean up still structures after s</span><input type="number" step="0.5" min="0" value={c.rules?.cleanup ?? ""} placeholder="3 (0 = never)" onchange={e => doc.change(["rules"], () => setRules(c, c.rules?.spawn ?? "all", optionalNum(e)))} /></label>
   <label><span>You may spawn</span>
     <select value={(c.rules?.spawn ?? "all").toLowerCase()} onchange={e => doc.change(["rules"], () => setRules(c, text(e), c.rules?.cleanup))}>
-      <option value="all">everything</option><option value="discs">discs only</option><option value="none">nothing - moves only</option>
+      <option value="all">everything</option><option value="discs">discs only</option><option value="none">nothing (moves only)</option>
     </select>
   </label>
 </div>

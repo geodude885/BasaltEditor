@@ -76,7 +76,7 @@ class Recording {
     }
     doc.commit(take.before, ["events"]);
     editor.setSelection(take.added.map(e => doc.chart.events.indexOf(e)).filter(i => i >= 0));
-    toast(`Recorded ${take.added.length}${replaced ? `, replacing ${replaced}` : ""} - Undo takes the whole take back`);
+    toast(`Recorded ${take.added.length}${replaced ? `, replacing ${replaced}` : ""}`);
   }
 
   setOffset(ms: number): void {

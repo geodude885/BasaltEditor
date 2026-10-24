@@ -27,8 +27,8 @@
 </script>
 
 <div class="note">
-  The tempo lines the grid up with the song, so projectiles snap to the beat. Find it by tapping along, then check it with the click while
-  the song plays - slow the song down to hear small drift. If the first beat is late, raise "chart starts at song s" in the Chart tab.
+  The tempo lines the grid up with the song so projectiles snap to the beat. Tap along to find it, then check it against the click.
+  Slowing the song down helps hear drift. If the first beat is late, raise "chart starts at song s" in the Chart tab.
 </div>
 <div class="row">
   <button class="primary" onclick={tap}>Tap</button>
@@ -46,7 +46,7 @@
       <button disabled={i === 0} onclick={() => removeChange(i)}>Remove</button>
     </div>
   {:else}
-    <div class="note">No tempo yet - times are in seconds and snapping is off.</div>
+    <div class="note">No tempo yet, so times are in seconds and snapping is off.</div>
   {/each}
 </div>
 <div class="row">

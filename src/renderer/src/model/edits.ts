@@ -120,9 +120,9 @@ export function setRules(c: LoadedChart, spawn: string, cleanupSeconds: number |
   if (Object.keys(rules).length) c.rules = rules; else delete c.rules;
 }
 
-// A spot needs both x and z; with either missing the lane is laid across the arena's middle.
+// A spot needs both x and z; with either missing, the chart starts at the map's centre.
 export function setArenaSpot(c: LoadedChart, x: number | undefined, z: number | undefined, facingDegrees: number | undefined): void {
-  const arena = { ...(c.arena ?? { map: "here" as const }) };
+  const arena = { ...(c.arena ?? { map: "ring" as const }) };
   if (x != null && z != null) arena.at = { x, z }; else delete arena.at;
   if (facingDegrees != null) arena.facing = facingDegrees; else delete arena.facing;
   c.arena = arena;

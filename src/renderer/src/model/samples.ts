@@ -43,7 +43,7 @@ export const template = (name: string, author?: string): string => `{
   "author": ${JSON.stringify(author || "you")},
   "difficulty": "Easy",
   "description": "",
-  "arena": { "map": "here" },
+  "arena": { "map": "ring", "at": { "x": 0, "z": -6 }, "facing": 0 },
   "bpm": 120,
   "lane": { "length": 12, "width": 3 },
   "actors": [ { "id": "boss", "name": "Boss", "at": { "x": 0, "z": 12 }, "look": "you" } ],

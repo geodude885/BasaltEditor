@@ -6,7 +6,7 @@
   {#each editor.problems as problem, i (i)}
     <div>{problem}</div>
   {:else}
-    <div class="none">No problems - the mod will load this chart.</div>
+    <div class="none">No problems found.</div>
   {/each}
 </div>
 

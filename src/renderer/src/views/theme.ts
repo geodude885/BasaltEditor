@@ -5,6 +5,9 @@ const NAMES = {
   text: "text", textDim: "text-dim", accent: "accent", wash: "wash", telegraph: "telegraph", move: "move", clip: "clip", look: "look",
   phase: "phase", bad: "bad", timeline: "timeline", grid: "grid", gridBeat: "grid-beat", gridBar: "grid-bar", wave: "wave",
   floor: "floor", laneFloor: "lane-floor", laneEnds: "lane-ends", zone: "zone", body: "body", mono: "mono",
+  shotDisc: "shot-disc", shotBall: "shot-ball", shotPillar: "shot-pillar", shotWall: "shot-wall", shotRockCube: "shot-rock-cube",
+  shotBoulderBall: "shot-boulder-ball", shotSmallRock: "shot-small-rock", shotLargeRock: "shot-large-rock",
+  shotGrounded: "shot-grounded", shotAirborne: "shot-airborne",
 } as const;
 
 export type Theme = Record<keyof typeof NAMES, string>;

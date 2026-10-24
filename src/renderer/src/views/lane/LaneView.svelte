@@ -22,7 +22,7 @@
 
   $effect(() => {
     if (!w || !h) return;
-    drawLane(prepare(canvas, w, h), w, h, map, { chart: doc.chart, tempo: doc.tempo, time: editor.time, selection: editor.selection, box }, theme(appearance.scheme));
+    drawLane(prepare(canvas, w, h), w, h, map, { chart: doc.chart, tempo: doc.tempo, time: editor.time, selection: editor.selection, box, shotColouring: editor.shotColouring }, theme(appearance.scheme));
   });
 
   const pointerAt = (ev: PointerEvent): [number, number] => { const r = canvas.getBoundingClientRect(); return [ev.clientX - r.left, ev.clientY - r.top]; };

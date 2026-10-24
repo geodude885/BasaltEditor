@@ -7,6 +7,7 @@ import {
   selectToEnd, undo, zoom,
 } from "./actions";
 import { doc } from "./document.svelte";
+import { SHOT_COLOURINGS } from "../views/shotColours";
 import { editor } from "./editor.svelte";
 import { copyChart, newChart, openFiles, openFolder, openRecent, save, saveChartAs, savePackage, saveTarget } from "./files";
 import { layout } from "./layout.svelte";
@@ -42,7 +43,7 @@ const RECENT_SHOWN = 5;
 
 /** What Save does, for its tip and the Help tab, by where it saves (store/files.ts, saveTarget). */
 const SAVE_HELP: Record<ReturnType<typeof saveTarget>, string> = {
-  folder: "Save into the chart's folder - the game reloads it within a second",
+  folder: "Save into the chart's folder",
   "new-folder": "Save as a new chart folder in the game's Charts folder, among Your charts",
   library: "Save in Your charts, in this browser",
   file: "Save chart.json somewhere you pick",
@@ -132,16 +133,21 @@ export function menus(): Menu[] {
           { id: "view-timeline", label: "Timeline", run: () => { editor.mainView = "timeline"; }, checked: () => editor.mainView === "timeline" },
           // Its key switches back and forth; a click (no key press) just shows the highway.
           { id: "view-highway", label: "Highway", keys: "H", run: ev => { editor.mainView = ev && editor.mainView === "highway" ? "timeline" : "highway"; },
-            checked: () => editor.mainView === "highway", help: "The lane's columns, time flowing down - and tap-along recording; the key switches back and forth" },
+            checked: () => editor.mainView === "highway", help: "Switch between the timeline and the highway" },
         ],
         [
           { id: "zoom-in", label: "Zoom in", keys: "]", run: () => zoom(1.4), help: "Zoom the timeline in (or Ctrl + scroll)" },
           { id: "zoom-out", label: "Zoom out", keys: "[", run: () => zoom(1 / 1.4) },
           { id: "fit", label: "Fit the chart", run: fit },
         ],
+        // Projectile colours: one of these at a time.
+        SHOT_COLOURINGS.map(([colouring, label]): Command => ({
+          id: `shot-colours-${colouring}`, label: `Projectiles: ${label.toLowerCase()}`, run: () => editor.colourShotsBy(colouring),
+          checked: () => editor.shotColouring === colouring,
+        })),
         [
           { id: "look-preview", label: "Look preview", keys: "K", run: () => editor.toggleLookPreview(), checked: () => editor.lookPreview,
-            help: "Show or hide the BossBattles Stage look on a painted arena, as it plays" },
+            help: "Show or hide the look preview" },
         ],
       ],
     },

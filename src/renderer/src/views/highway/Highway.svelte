@@ -33,7 +33,7 @@
     if (!w || !h) return;
     drawHighway(prepare(canvas, w, h), {
       chart: doc.chart, tempo: doc.tempo, view, columns, tiles: placed, selection: editor.selection,
-      song: editor.song, songStart: songStart(), box, loop,
+      song: editor.song, songStart: songStart(), box, loop, shotColouring: editor.shotColouring,
     }, theme(appearance.scheme));
   });
 

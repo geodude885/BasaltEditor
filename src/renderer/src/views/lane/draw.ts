@@ -2,6 +2,7 @@ import { actorSpotAt, actorsOf, evTime, flightTime, isGrounded, laneOf, zoneOf }
 import { GROUNDED, PLAYER_HEAD } from "../../model/constants";
 import { round, type Tempo } from "../../model/tempo";
 import type { LoadedChart } from "../../model/types";
+import { shotPaint, stripePath, type ShotColouring } from "../shotColours";
 import { alpha, drawBox, type Box, type Theme } from "../theme";
 import { footprint, isRound, originPx, type LaneMap } from "./geometry";
 
@@ -12,6 +13,7 @@ export type LaneScene = {
   selection: ReadonlySet<number>;
   /** The box being dragged to select, or null. */
   box: Box | null;
+  shotColouring: ShotColouring;
 };
 
 export function drawLane(ctx: CanvasRenderingContext2D, w: number, h: number, map: LaneMap, scene: LaneScene, t: Theme): void {
@@ -87,8 +89,12 @@ export function drawLane(ctx: CanvasRenderingContext2D, w: number, h: number, ma
       x = fx + (tx - fx) * k; y = fy + (ty - fy) * k;
     }
     ctx.globalAlpha = alpha;
-    ctx.fillStyle = time < launch && live ? t.telegraph : (live ? t.accent : t.text);
+    // Coloured by what it is, a waiting one keeps its colour inside a telegraph ring.
+    const paint = shotPaint(s, scene.shotColouring, t), waiting = time < launch && live;
+    ctx.fillStyle = paint.colour ?? (waiting ? t.telegraph : (live ? t.accent : t.text));
     shape(ctx, s.structure, map.scale, x, y);
+    if (paint.striped) { const { hw, hh } = footprint(s.structure, map.scale, 0); stripePath(ctx, t, { x: x - hw, y: y - hh, w: hw * 2, h: hh * 2 }); }
+    if (paint.colour && waiting) { ctx.strokeStyle = t.telegraph; ctx.lineWidth = 2; shape(ctx, s.structure, map.scale, x, y, 3, true); }
     ctx.globalAlpha = 1;
     if (selected) { ctx.strokeStyle = t.text; ctx.lineWidth = 1.5; shape(ctx, s.structure, map.scale, x, y, 5, true); }
   });

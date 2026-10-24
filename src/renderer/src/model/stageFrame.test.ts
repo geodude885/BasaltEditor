@@ -31,6 +31,17 @@ describe("the look preview's frame", () => {
     expect(stageFrameBytes(scene, look(night, false), between)).toEqual(untouched);
   });
 
+  it("adds Magic's sparkle only when it is turned up, the same at the same moment", () => {
+    const scene = paintStageScene(96, 54, 0), still = { ...between, time: 3 };
+    const plain = stageFrameBytes(scene, look({}), still);
+    const magical = look({ "Glitter": 2, "Glitter density": 1, "Glitter size": 0.2, "Motes": 2, "Twinkle speed": 0 });
+    const sparkling = stageFrameBytes(scene, magical, still);
+
+    expect(sparkling).not.toEqual(plain);
+    expect([...sparkling].every((v, i) => v >= plain[i])).toBe(true);
+    expect(stageFrameBytes(scene, magical, still)).toEqual(sparkling);
+  });
+
   it("shades a flat scene's centre as the one-pixel preview does", () => {
     for (const [colour, depth] of [[[0.7, 0.05, 0.04], 5], [[0.18, 0.17, 0.15], 8], [[0.3, 0.45, 0.7], Infinity]] as [Rgb, number][]) {
       const scene = flat(colour, depth), expected = shadeCentrePixelLikeStage(colour, depth === Infinity ? null : depth, look(night).settings);

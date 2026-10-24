@@ -33,6 +33,17 @@
   --clip: #b38cff;        /* recorded clips */
   --look: #ff8fd0;        /* shader look cues */
   --phase: #4fd1a5;       /* phases */
+  /* Projectiles coloured by structure, or by grounded (View > Projectile colours) */
+  --shot-disc: #ff7a1a;
+  --shot-ball: #5aa9ff;
+  --shot-pillar: #4fd18a;
+  --shot-wall: #8f7bff;
+  --shot-rock-cube: #c9a26b;
+  --shot-boulder-ball: #ff5a6e;
+  --shot-small-rock: #3fd0d4;
+  --shot-large-rock: #f06bc0;
+  --shot-grounded: #d4a24c;
+  --shot-airborne: #6fc3ff;
   --bad: #ff5a5a;
   --good: #4fd1a5;
   /* Canvases. */
@@ -67,6 +78,16 @@
   --clip: #7a4fd6;
   --look: #c2408f;
   --phase: #0d8a63;
+  --shot-disc: #c25a00;
+  --shot-ball: #1f6fc2;
+  --shot-pillar: #12875a;
+  --shot-wall: #5b45d6;
+  --shot-rock-cube: #8a6a3a;
+  --shot-boulder-ball: #d42c4a;
+  --shot-small-rock: #0f8a8f;
+  --shot-large-rock: #b8338f;
+  --shot-grounded: #9a6a10;
+  --shot-airborne: #1f7fc8;
   --bad: #d42c2c;
   --good: #0d8a63;
   --timeline: #faf9f6;

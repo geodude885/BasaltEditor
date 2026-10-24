@@ -6,6 +6,7 @@
   import Transport from "./components/Transport.svelte";
   import HighwayScreen from "./components/HighwayScreen.svelte";
   import LookPreview from "./components/LookPreview.svelte";
+  import ShotLegend from "./components/ShotLegend.svelte";
   import MobileApp from "./components/mobile/MobileApp.svelte";
   import Library from "./components/library/Library.svelte";
   import { library } from "./store/library.svelte";
@@ -27,7 +28,7 @@
   onMount(() => {
     // Fit the timeline again once the page has its real size.
     requestAnimationFrame(() => requestAnimationFrame(fit));
-    if (!draft) toast("This is an example chart - open your own chart's files, or press New");
+    if (!draft) toast("This is an example chart. Open your own, or press New");
   });
 
   // Keep an A-B loop going round, in either layout and whichever editor is showing.
@@ -64,6 +65,7 @@
     <section class="pane lanepane" aria-label="Lane">
       <h2>Lane from above</h2>
       <LaneView />
+      <ShotLegend />
       <Inspector />
     </section>
     <section class="pane timepane" class:highway={editor.mainView === "highway"} aria-label={editor.mainView === "highway" ? "Highway" : "Timeline"}>

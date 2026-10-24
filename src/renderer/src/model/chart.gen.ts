@@ -12,17 +12,20 @@ export interface BasaltChart {
   author?: string;
   difficulty?: string;
   description?: string;
+  /**
+   * Where it is played. Without one: the Ring, at { x: 0, z: -6 } facing north.
+   */
   arena?: {
-    map?: "here" | "gym" | "ring" | "pit";
+    map?: "gym" | "ring" | "pit";
     /**
-     * Where you stand: metres from the arena's centre (Gym: world). Where am I, in the settings, prints yours.
+     * Where you stand: metres from the map's centre (the Gym: world). Default 0, 0. Lane setup in game writes yours.
      */
     at?: {
       x: number;
       z: number;
     };
     /**
-     * Compass degrees the lane runs from you: 0 = +Z, 90 = +X.
+     * Compass degrees the lane runs from you: 0 = +Z, 90 = +X. Default 0.
      */
     facing?: number;
   };

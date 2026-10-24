@@ -7,7 +7,7 @@
   const keys: [string, string][] = $derived([
     ...shortcutCommands().map((c): [string, string] => [c.keys!, c.help ?? c.label]),
     ["Double-click", "On the lane: a projectile from there. On a timeline row: a projectile, move or look at that beat."],
-    ["1 – 5", "With Record on, on the highway: tap that column as the song plays. Pausing ends the take - one undo step."],
+    ["1 – 5", "With Record on, on the highway: tap that column as the song plays. Pausing ends the take."],
     ["Alt / F10", "Go to the menus; the arrows move round them"],
   ]);
 </script>
@@ -18,7 +18,7 @@
 </div>
 
 {#if editor.showText}
-  <label><span>chart.json - select all and copy</span>
+  <label><span>chart.json (select all and copy)</span>
     <!-- svelte-ignore a11y_autofocus -->
     <textarea rows="14" readonly autofocus value={doc.text} onfocus={e => e.currentTarget.select()}></textarea>
   </label>
@@ -34,7 +34,7 @@
 </div>
 <div class="note">
   To edit a chart from the game: open it from <b>Your charts</b>, or <b>Open folder</b> and pick its folder in the game's
-  <code>UserData/Basalt/Charts</code>, then <b>Save</b> - the game reloads it within a second. In the desktop app, <b>New</b> starts
+  <code>UserData/Basalt/Charts</code>, then <b>Save</b>. The game reloads it automatically. In the desktop app, <b>New</b> starts
   a chart in a folder of its own there, named after it, and <b>Save</b> gives a chart opened from anywhere else one; in a browser,
   Your charts keeps every chart as you go. A <b>.bbchart</b> package opens too,
   and <b>Package</b> makes one with the song, cover and clips to share. Only the parts you change are rewritten: comments and

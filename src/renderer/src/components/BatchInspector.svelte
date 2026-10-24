@@ -82,10 +82,10 @@
         <input type="number" step="0.5" min="0.5" placeholder="mixed" value={shown(distance)} onchange={e => setNumber(e, (p, n) => { p.from.z = round(Math.max(0.5, n), 2); })} />
       </label>
     </div>
-    <label class="check">
+    <label class="check" title="Thrown along the floor">
       <input type="checkbox" checked={grounded === true} indeterminate={grounded === MIXED}
         onchange={e => { const on = checked(e); set(p => { if (on === GROUNDED_STATE.includes(p.structure)) delete p.grounded; else p.grounded = on; }); }} />
-      Grounded - thrown along the floor{grounded === MIXED ? " (some are)" : ""}
+      Grounded{grounded === MIXED ? " (some are)" : ""}
     </label>
   </div>
 {/if}

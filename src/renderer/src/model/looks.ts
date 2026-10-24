@@ -28,13 +28,13 @@ export const settingsWrittenIn = (cue: LookCue): [string, number][] =>
 // The same refusals as the mod's ChartLoader.ReadVisuals: a cue with any of these is not run.
 export function lookCueProblems(cue: LookCue, index: number, tempo: Tempo): string[] {
   const path = `visuals[${index}]`, problems: string[] = [];
-  if (cue.t != null && cue.beat != null) problems.push(`${path} has both t and beat - use one`);
+  if (cue.t != null && cue.beat != null) problems.push(`${path} has both t and beat, use one`);
   else if (cue.beat != null && !tempo.ok) problems.push(`${path}.beat needs the chart's bpm`);
   else if (cue.t == null && cue.beat == null) problems.push(`${path} needs a time: t (seconds) or beat`);
   else if (evTime(cue, tempo) < 0) problems.push(`${path}.t cannot be negative (got ${round(evTime(cue, tempo), 3)})`);
-  if (!cue.pack?.trim()) problems.push(`${path} needs a pack - a RumbleReShaded pack's name, e.g. "UltraShade"`);
+  if (!cue.pack?.trim()) problems.push(`${path} needs a pack name, e.g. "UltraShade"`);
   const off = cue.off ?? false, setsSomething = settingsWrittenIn(cue).length > 0;
-  if (off && setsSomething) problems.push(`${path} has both "off" and "set" - an off fades the pack back to the player's own settings`);
+  if (off && setsSomething) problems.push(`${path} has both "off" and "set", use one`);
   if (!off && !setsSomething && cue.on !== true) problems.push(`${path} needs "set" (parameter values), "on": true or "off": true`);
   if ((cue.fade ?? 0) < 0) problems.push(`${path}.fade cannot be negative (got ${cue.fade})`);
   return problems;
@@ -46,8 +46,8 @@ export function stageCueWarnings(cue: LookCue): string[] {
   const warnings: string[] = [];
   for (const [name, value] of settingsWrittenIn(cue)) {
     const parameter = findPackParameter(STAGE_PACK, name);
-    if (!parameter) warnings.push(`"${name}" is not a ${STAGE_PACK.name} setting - it does nothing`);
-    else if (value < parameter.min || value > parameter.max) warnings.push(`${parameter.label} ${value} is outside ${parameter.min} to ${parameter.max} - it is clamped`);
+    if (!parameter) warnings.push(`"${name}" is not a ${STAGE_PACK.name} setting`);
+    else if (value < parameter.min || value > parameter.max) warnings.push(`${parameter.label} ${value} is outside ${parameter.min} to ${parameter.max}, so it is clamped`);
   }
   return warnings;
 }

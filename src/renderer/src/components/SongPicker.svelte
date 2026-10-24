@@ -11,8 +11,8 @@
   const songs = $derived([...editor.files.keys()].filter(isSong));
   const playing = $derived(editor.song?.name ?? "");
   const status = $derived.by(() => {
-    if (!named) return "No song yet - choose one to hear it and see its waveform.";
-    if (!playing) return "Not open here - choose the file to hear it.";
+    if (!named) return "No song yet.";
+    if (!playing) return "Not open here. Choose the file to hear it.";
     if (findSong(editor.files, named) !== playing) return `Playing ${playing} until ${named} is open.`;
     const seconds = editor.song?.buffer?.duration;
     return seconds ? `Open · ${clockText(seconds, 0)}` : "Open · reading…";

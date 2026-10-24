@@ -165,7 +165,7 @@ export function copySelected(): void {
   if (!events.length) return;
   const t0 = Math.min(...events.map(e => evTime(e, doc.tempo)));
   clipboard = events.map(e => ({ offset: evTime(e, doc.tempo) - t0, event: JSON.parse(JSON.stringify(e)) as ChartEvent }));
-  toast(`Copied ${events.length} - Ctrl+V pastes at the playhead`);
+  toast(`Copied ${events.length}`);
 }
 
 export function paste(): void {

@@ -42,7 +42,7 @@
     if (!w) return;
     drawTimeline(prepare(canvas, w, layout.height), w, layout.height, {
       chart: doc.chart, tempo: doc.tempo, view: editor.view, time: editor.time, snap: editor.snap,
-      selection: editor.selection, selectedPhase: editor.selectedPhase, lookCues: editor.lookCues, selectedLookCue: editor.selectedLookCue,
+      selection: editor.selection, selectedPhase: editor.selectedPhase, lookCues: editor.lookCues, selectedLookCue: editor.selectedLookCue, shotColouring: editor.shotColouring,
       markers: placed, song: editor.song, songStart: songStart(), clips: editor.clips, box, layout, loop: practice.loop, loopStart: practice.loopStart,
     }, theme(appearance.scheme));
   });

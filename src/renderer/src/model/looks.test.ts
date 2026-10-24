@@ -107,11 +107,11 @@ describe("checking cues", () => {
   const tempo = new Tempo(120);
 
   it("refuses what the mod refuses", () => {
-    expect(lookCueProblems({ pack: "x", t: 1, beat: 2, on: true }, 0, tempo)).toEqual(["visuals[0] has both t and beat - use one"]);
+    expect(lookCueProblems({ pack: "x", t: 1, beat: 2, on: true }, 0, tempo)).toEqual(["visuals[0] has both t and beat, use one"]);
     expect(lookCueProblems({ pack: "x", beat: 2, on: true }, 1, new Tempo(undefined))).toEqual(["visuals[1].beat needs the chart's bpm"]);
     expect(lookCueProblems({ pack: " ", t: 0, off: true, set: { a: 1 } }, 2, tempo)).toEqual([
-      'visuals[2] needs a pack - a RumbleReShaded pack\'s name, e.g. "UltraShade"',
-      'visuals[2] has both "off" and "set" - an off fades the pack back to the player\'s own settings',
+      'visuals[2] needs a pack name, e.g. "UltraShade"',
+      'visuals[2] has both "off" and "set", use one',
     ]);
     expect(lookCueProblems({ pack: "x", t: 0, fade: -1 }, 3, tempo)).toEqual([
       'visuals[3] needs "set" (parameter values), "on": true or "off": true', "visuals[3].fade cannot be negative (got -1)",
@@ -120,7 +120,7 @@ describe("checking cues", () => {
 
   it("warns about Stage settings that do nothing or get clamped", () => {
     expect(stageCueWarnings({ pack: "BossBattles Stage", t: 0, set: { "Red glow": 1, "fog_density": 0.5, "_KeyHue": 90 } })).toEqual([
-      '"Red glow" is not a BossBattles Stage setting - it does nothing', "Fog density 0.5 is outside 0 to 0.3 - it is clamped",
+      '"Red glow" is not a BossBattles Stage setting', "Fog density 0.5 is outside 0 to 0.3, so it is clamped",
     ]);
   });
 });
@@ -129,7 +129,7 @@ describe("the Stage manifest", () => {
   it("gives each colour its R, G and B in order, in one group", () => {
     const colours = new Map<string, string[]>();
     for (const p of STAGE_PACK.parameters) if (p.colour) colours.set(p.colour, [...(colours.get(p.colour) ?? []), p.label.slice(-1) + ":" + p.group]);
-    expect(colours.size).toBe(6);
+    expect(colours.size).toBe(7);
     for (const [, channels] of colours) expect(channels.map(c => c[0])).toEqual(["R", "G", "B"]);
     for (const [, channels] of colours) expect(new Set(channels.map(c => c.slice(2))).size).toBe(1);
   });

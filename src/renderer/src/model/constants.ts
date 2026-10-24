@@ -3,7 +3,7 @@ import type { Structure } from "./types";
 
 export const STRUCTURES: Structure[] = ["Disc", "Ball", "Pillar", "Wall", "RockCube", "BoulderBall", "SmallRock", "LargeRock"];
 export const MOVES = ["Straight", "Uppercut", "Kick", "Stomp", "Explode", "Flick", "Parry", "Jump", "RockSlide", "Disc", "SpawnBall", "SpawnCube", "SpawnPillar", "SpawnWall", "HoldLeft", "HoldRight"];
-export const MAPS = ["here", "gym", "ring", "pit"] as const;
+export const MAPS = ["gym", "ring", "pit"] as const;
 export const DIFFICULTIES = ["Easy", "Normal", "Hard", "Expert"];
 /** Where "player" aims, roughly: your chest at your end. */
 export const PLAYER_HEAD = 1.35;

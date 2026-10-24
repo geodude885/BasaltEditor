@@ -5,6 +5,7 @@ import type { Peaks } from "../audio/peaks";
 import { fileProblems, type ClipSpan } from "../io/files";
 import { timedLookCues } from "../model/looks";
 import { problems } from "../model/problems";
+import { SHOT_COLOURINGS, type ShotColouring } from "../views/shotColours";
 import { MOST_EXTRA_TIMELINE_HEIGHT_PIXELS, type TimelineRow } from "../views/timeline/geometry";
 import { doc } from "./document.svelte";
 
@@ -17,6 +18,7 @@ const VOLUME_KEY = "basalt-volume";
 const COLLAPSED_ROWS_KEY = "basalt-collapsed-timeline-rows";
 const EXTRA_TIMELINE_HEIGHT_KEY = "basalt-extra-timeline-height";
 const LOOK_PREVIEW_KEY = "basalt-look-preview";
+const SHOT_COLOURING_KEY = "basalt-shot-colouring";
 
 function savedVolume(): number {
   try { const v = parseFloat(localStorage.getItem(VOLUME_KEY) ?? ""); if (v >= 0 && v <= 1) return v; } catch { /* half */ }
@@ -35,6 +37,11 @@ function savedExtraTimelineHeight(): number {
 
 function savedLookPreview(): boolean {
   try { return localStorage.getItem(LOOK_PREVIEW_KEY) === "1"; } catch { return false; }
+}
+
+function savedShotColouring(): ShotColouring {
+  try { const v = localStorage.getItem(SHOT_COLOURING_KEY); if (SHOT_COLOURINGS.some(([c]) => c === v)) return v as ShotColouring; } catch { /* plain */ }
+  return "plain";
 }
 
 class EditorState {
@@ -64,6 +71,8 @@ class EditorState {
   volume = $state(savedVolume());
   /** The look preview window: the Stage look on a painted arena. Remembered here, not saved in the chart. */
   lookPreview = $state(savedLookPreview());
+  /** What colours projectiles in the lane, timeline and highway. Remembered here, not saved in the chart. */
+  shotColouring = $state(savedShotColouring());
 
   tab = $state<Tab>("chart");
   tapTimes = $state.raw<number[]>([]);
@@ -101,6 +110,11 @@ class EditorState {
   toggleLookPreview(): void {
     this.lookPreview = !this.lookPreview;
     try { localStorage.setItem(LOOK_PREVIEW_KEY, this.lookPreview ? "1" : "0"); } catch { /* not remembered */ }
+  }
+
+  colourShotsBy(colouring: ShotColouring): void {
+    this.shotColouring = colouring;
+    try { localStorage.setItem(SHOT_COLOURING_KEY, colouring); } catch { /* not remembered */ }
   }
 
   rememberTimelineLayout(): void {

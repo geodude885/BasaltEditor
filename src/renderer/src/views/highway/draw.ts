@@ -4,6 +4,7 @@ import { peakBetween } from "../../audio/peaks";
 import type { Tempo } from "../../model/tempo";
 import type { LoadedChart } from "../../model/types";
 import type { Song } from "../../store/editor.svelte";
+import { shotPaint, stripePath, type ShotColouring } from "../shotColours";
 import { alpha, drawBox, type Box, type Theme } from "../theme";
 import { beatsBetween, columnSpan, timeOfY, yOfTime, type HighwayColumn, type HighwayView, type Tile } from "./geometry";
 
@@ -19,6 +20,7 @@ export type HighwayScene = {
   box: Box | null;
   /** A loop's start and end in chart time, shaded, or null. */
   loop: readonly [number, number] | null;
+  shotColouring: ShotColouring;
 };
 
 export function drawHighway(ctx: CanvasRenderingContext2D, s: HighwayScene, t: Theme): void {
@@ -58,9 +60,11 @@ export function drawHighway(ctx: CanvasRenderingContext2D, s: HighwayScene, t: T
       ctx.fillStyle = alpha(t.telegraph, 0.22);
       ctx.fillRect(tile.x + tile.w * 0.4, tile.y + tile.h / 2, tile.w * 0.2, Math.min(telegraph * v.pps, v.h));
     }
-    ctx.fillStyle = structure === "Disc" ? t.accent : t.clip;
+    const paint = shotPaint(e?.projectile, s.shotColouring, t);
+    ctx.fillStyle = paint.colour ?? (structure === "Disc" ? t.accent : t.clip);
     roundRect(ctx, tile.x, tile.y, tile.w, tile.h, 4);
     ctx.fill();
+    if (paint.striped) stripePath(ctx, t, { x: tile.x, y: tile.y, w: tile.w, h: tile.h });
     if (selected) {
       ctx.strokeStyle = t.text; ctx.lineWidth = 2;
       roundRect(ctx, tile.x - 2, tile.y - 2, tile.w + 4, tile.h + 4, 5);

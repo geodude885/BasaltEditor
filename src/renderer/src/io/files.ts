@@ -133,6 +133,6 @@ export function ownFiles(chart: Pick<Chart, "music" | "cover">, files: Map<strin
 /** Problems with the files beside the chart, for the Problems tab: a song the game can't read. */
 export function fileProblems(files: Map<string, Uint8Array>, chart: Pick<Chart, "music">): string[] {
   const song = chart.music?.file ? findSong(files, chart.music.file) : undefined;
-  if (song && mp3InsideWav(files.get(song)!)) return [`${song} is MP3 audio inside a WAV file, which the game can't read - Package saves it as a plain MP3, or convert it`];
+  if (song && mp3InsideWav(files.get(song)!)) return [`${song} is MP3 audio inside a WAV file, which the game can't read. Package saves it as a plain MP3.`];
   return [];
 }

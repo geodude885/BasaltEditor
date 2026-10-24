@@ -56,7 +56,7 @@
     const context = canvas.getContext("2d");
     if (!context) return;
     const shown = comparing ? { ...look, on: false } : look;
-    const fight = { beatFraction: doc.tempo.ok ? doc.tempo.beat(Math.max(0, editor.time)) % 1 : null, health, hit };
+    const fight = { beatFraction: doc.tempo.ok ? doc.tempo.beat(Math.max(0, editor.time)) % 1 : null, health, hit, time: editor.time };
     const key = stageFrameKey(shown, fight);
     if (drawn.scene === scene && drawn.key === key) return;
     const image = context.createImageData(width, height);

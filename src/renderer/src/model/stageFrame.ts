@@ -1,14 +1,18 @@
 // The look preview: a small painted arena run through BossBattles Stage's whole fragment shader, pixel
-// by pixel - the grade, fog by depth, the key's glow, the beat, the vignette and the danger edges. The
+// by pixel - the grade, fog by depth, the key's glow, the beat, Magic's sparkles in the air, the vignette and the
+// danger edges. The
 // arena stands in for the game's: sky, far hills, pillars going back into the fog, the lane, the boss,
 // and projectiles in the key colour (whatever the key hue is) beside one that is not.
-import { hueToRgb, keyness, linearToSrgb, mix, stageColour, toKeySpace, type Rgb, type StageLook } from "./looks";
+import { hueToRgb, keyness, linearToSrgb, mix, stageColour, toKeySpace, type Rgb, type StageLook, type StageSettings } from "./looks";
 
 /** A painted arena: linear colours and each pixel's depth in metres (Infinity for the sky). */
 export type StageScene = { width: number; height: number; colour: Float32Array; depth: Float32Array };
 
-/** The fight, as the mod tells the shader: where in the beat (null without a bpm), health 0 to 1, a hit fading 1 to 0. */
-export type StageFight = { beatFraction: number | null; health: number; hit: number };
+/**
+ * The fight, as the mod tells the shader: where in the beat (null without a bpm), health 0 to 1, a hit fading 1 to 0,
+ * and the time in seconds, which Magic's sparkles twinkle and drift by.
+ */
+export type StageFight = { beatFraction: number | null; health: number; hit: number; time?: number };
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 
@@ -37,11 +41,14 @@ const BALLS: Ball[] = [
 ];
 const BOSS_AT = { x: 0, z: 11, width: 1.3, height: 2.6 };
 
+// The painted arena's camera: at eye height looking along +z, a pixel's direction from its distance to the centre and horizon.
+const sceneCamera = (width: number, height: number) => ({ focal: height * 0.95, horizonY: height * HORIZON, centreX: width / 2 });
+
 /** Paints the arena, with things in the key colour painted in the key hue. Two by two samples a pixel. */
 export function paintStageScene(width: number, height: number, keyHueDegrees: number): StageScene {
   const colour = new Float32Array(width * height * 3), depth = new Float32Array(width * height);
   const key = hueToRgb(keyHueDegrees, 0.9, 0.75), other = hueToRgb((keyHueDegrees + 200) % 360, 0.75, 0.6);
-  const focal = height * 0.95, horizonY = height * HORIZON, centreX = width / 2;
+  const { focal, horizonY, centreX } = sceneCamera(width, height);
 
   const sample = (sx: number, sy: number): Hit => {
     // The nearest thing a ray through this point meets: balls, then the boss and pillars, then the ground or sky.
@@ -128,6 +135,8 @@ export function shadeStageFrame(scene: StageScene, look: StageLook, fight: Stage
   const glowing = s._Glow > 0.001 && s._GlowRadius > 0.001, blurred = glowing ? blurredGlow(scene, maps, s._GlowRadius) : null;
   const darkening = 1 - 0.75 * s._Darkness, kept = 1 + 0.3 * s._Glow, fogging = s._FogDensity > 0.0001;
   const glowScale = s._KeyKeep / 12 * s._Glow * (1 + 2 * pulse), flash = beat * s._BeatFlash;
+  const magicShows = s._Glitter > 0.001 || s._Motes > 0.001, magic: Rgb = [0, 0, 0];
+  const camera = sceneCamera(width, height), time = fight.time ?? 0;
 
   // Plain numbers rather than [r, g, b] arrays: this runs for every pixel, every frame while playing.
   const pixel = [0, 0, 0];
@@ -140,6 +149,8 @@ export function shadeStageFrame(scene: StageScene, look: StageLook, fight: Stage
 
       const glow = blurred ? blurred[i] * glowScale : 0;
 
+      if (magicShows) magicAt(x + 0.5, y + 0.5, depth[i], camera, s, beat, time, magic);
+
       const u = (x + 0.5) / width - 0.5, edge = clamp01((u * u + v * v) * s._VignetteSize);
       const vignette = edge * s._Vignette, hurt = edge * danger;
       for (let ch = 0; ch < 3; ch++) {
@@ -148,12 +159,81 @@ export function shadeStageFrame(scene: StageScene, look: StageLook, fight: Stage
         let c = Math.max(0, (drained + (scene * kept - drained) * k - 0.18) * s._Contrast + 0.18);
         c += (fogColour[ch] - c) * fog;
         c += glowColour[ch] * glow + flashColour[ch] * flash;
+        if (magicShows) c += magic[ch];
         c += (vignetteColour[ch] - c) * vignette;
         pixel[ch] = c + (dangerColour[ch] - c) * hurt;
       }
       writePixel(out, i, pixel[0], pixel[1], pixel[2]);
     }
   }
+}
+
+// ---- Magic: the shader's glitter and motes, from the painted arena's own camera and depths ---------------------
+
+const fract = (v: number) => v - Math.floor(v);
+
+// The shader's Hash3: three numbers from 0 to 1 for a cell of the world.
+function hash3(x: number, y: number, z: number): Rgb {
+  let a = fract(x * 0.1031), b = fract(y * 0.103), c = fract(z * 0.0973);
+  const d = a * (b + 33.33) + b * (a + 33.33) + c * (c + 33.33);
+  a += d; b += d; c += d;
+  return [fract((a + b) * c), fract(2 * a * b), fract((a + b) * a)];
+}
+
+function addSparkle(out: Rgb, hue: number, amount: number, s: StageSettings): void {
+  for (let ch = 0; ch < 3; ch++) {
+    const rainbow = clamp01(Math.abs(fract(hue + [0, 2 / 3, 1 / 3][ch]) * 6 - 3) - 1);
+    const colour = [s._SparkleR, s._SparkleG, s._SparkleB][ch];
+    out[ch] += (colour + (rainbow - colour) * s._Shimmer) * amount;
+  }
+}
+
+const twinkle = (pace: number, phase: number, beat: number, time: number, s: StageSettings) =>
+  (0.5 + 0.5 * Math.sin(time * s._Twinkle * 6.2831853 * (0.6 + 0.8 * pace) + phase * 40)) ** 12 * (1 + 4 * beat * s._BeatSparkle);
+
+// The shader's AirSparkles: sparkles along the view ray (ox, oy, oz) from the eye, up to the scene, into `out`.
+function airSparkles(out: Rgb, ox: number, oy: number, oz: number, sceneDistance: number, s: StageSettings, beat: number, time: number,
+  cellSize: number, stepLength: number, steps: number, density: number, radius: number, drift: number, sway: number, steady: number, seed: number,
+  amount: number): void {
+  const firstAt = cellSize * 0.3;
+  let lastCell = "";
+  for (let i = 0; i < steps; i++) {
+    const along = firstAt + i * stepLength;
+    if (along > sceneDistance) break;
+    const cx = Math.floor(ox * along / cellSize), cy = Math.floor((EYE_HEIGHT_METRES + oy * along - drift) / cellSize), cz = Math.floor(oz * along / cellSize);
+    const cell = `${cx},${cy},${cz}`;
+    if (cell === lastCell) continue;
+    lastCell = cell;
+
+    const random = hash3(cx + seed, cy + seed, cz + seed);
+    if (random[0] > density) continue;
+    const offset = hash3(cx + seed + 3.3, cy + seed + 3.3, cz + seed + 3.3);
+    const mx = (cx + 0.2 + 0.6 * offset[0]) * cellSize + sway * Math.sin(time * 0.7 + random[1] * 6.2831853);
+    const my = (cy + 0.2 + 0.6 * offset[1]) * cellSize + drift;
+    const mz = (cz + 0.2 + 0.6 * offset[2]) * cellSize + sway * Math.sin(time * 0.7 + random[2] * 6.2831853);
+
+    const distance = ox * mx + oy * (my - EYE_HEIGHT_METRES) + oz * mz;
+    if (distance < firstAt || distance > sceneDistance) continue;
+    const spread2 = Math.hypot(ox * distance - mx, EYE_HEIGHT_METRES + oy * distance - my, oz * distance - mz) ** 2 / (radius * radius + 0.0002 * distance);
+    if (spread2 > 9) continue;
+    const nearFade = clamp01((distance - firstAt) / firstAt);
+    addSparkle(out, random[2], Math.exp(-spread2) * nearFade * (steady + (1 - steady) * twinkle(random[1], random[2], beat, time, s)) * amount, s);
+  }
+}
+
+// Glitter and motes for the pixel at (px, py), into `out`: what the shader adds after the beat flash.
+function magicAt(px: number, py: number, depth: number, camera: ReturnType<typeof sceneCamera>, s: StageSettings, beat: number, time: number, out: Rgb): void {
+  out[0] = out[1] = out[2] = 0;
+  const dx = (px - camera.centreX) / camera.focal, dy = -(py - camera.horizonY) / camera.focal, length = Math.hypot(dx, dy, 1);
+  const sceneDistance = depth === Infinity ? 1000 : depth * length, ox = dx / length, oy = dy / length, oz = 1 / length;
+
+  if (s._Glitter > 0.001)
+    airSparkles(out, ox, oy, oz, sceneDistance, s, beat, time, 0.5, 0.2, 24, s._GlitterDensity, s._GlitterSize * 0.25, -time * 0.08, 0.05, 0, 17.3, s._Glitter);
+  if (s._Motes > 0.001)
+    airSparkles(out, ox, oy, oz, sceneDistance, s, beat, time, 1.2, 0.5, 16, 0.5, 0.0173, time * s._MoteRise, 0.15, 0.25, 91.7, s._Motes);
+
+  const throughFog = Math.exp(-s._FogDensity * 0.5 * Math.min(sceneDistance, 60));
+  out[0] *= throughFog; out[1] *= throughFog; out[2] *= throughFog;
 }
 
 type KeyMaps = { hue: number; strictness: number; keyness: Float32Array; glowSource: Float32Array; blurred?: { radius: number; glow: Float32Array } };
@@ -226,5 +306,6 @@ export function stageFrameKey(look: StageLook, fight: StageFight): string {
   const beatShows = s._BeatFlash > 0 || (s._BeatPulse > 0 && s._Glow > 0.001 && s._GlowRadius > 0.001);
   const beat = beatShows && fight.beatFraction != null ? Math.exp(-fight.beatFraction * s._PulseSharpness) : 0;
   const danger = clamp01(fight.hit * s._HitFlash * 1.5 + clamp01(1 - fight.health) * s._LowHealth);
-  return `${Object.values(s).join(",")}|${beat}|${danger}`;
+  const magicMoves = s._Glitter > 0.001 || s._Motes > 0.001;
+  return `${Object.values(s).join(",")}|${beat}|${danger}|${magicMoves ? fight.time ?? 0 : ""}`;
 }

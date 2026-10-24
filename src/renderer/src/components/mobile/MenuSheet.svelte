@@ -1,16 +1,19 @@
 <script lang="ts">
   // The phone layout's menu: the command table's File, Edit and Playback menus, then the playing
-  // settings and the theme - what the desktop's menu bar and transport hold, behind one button.
+  // settings and the look of the editor - the theme, projectile colours and the look preview - what the
+  // desktop's menu bar and transport hold, behind one button.
   import { appearance, THEME_CHOICES, THEME_NAMES, type ThemeChoice } from "../../store/appearance.svelte";
-  import { menus, visibleGroups, type Command } from "../../store/commands";
+  import { commandButton, menus, visibleGroups, type Command } from "../../store/commands";
   import { editor } from "../../store/editor.svelte";
   import { mobile } from "../../store/mobile.svelte";
   import { setRate, setVolume } from "../../store/playback";
   import { num } from "../fields";
+  import { SHOT_COLOURINGS, type ShotColouring } from "../../views/shotColours";
+  import ShotLegend from "../ShotLegend.svelte";
   import SongPicker from "../SongPicker.svelte";
   import TapOffset from "../TapOffset.svelte";
 
-  // View's editors are in the top bar here; the rest of the table is drawn as it is.
+  // View's editors are in the top bar here, and its settings under Look; the rest of the table is drawn as it is.
   const shown = $derived(menus().filter(m => m.id !== "view"));
 
   /** Runs a command and shuts the menu. */
@@ -53,6 +56,13 @@
       {#each THEME_CHOICES as choice (choice)}<option value={choice}>{THEME_NAMES[choice]}</option>{/each}
     </select>
     <a href="?mobile=0">Desktop layout</a>
+    <label class="wide"><span>Projectile colours</span>
+      <select value={editor.shotColouring} onchange={e => editor.colourShotsBy(e.currentTarget.value as ShotColouring)}>
+        {#each SHOT_COLOURINGS as [colouring, label] (colouring)}<option value={colouring}>{label}</option>{/each}
+      </select>
+    </label>
+    <div class="wide"><ShotLegend /></div>
+    <button {...commandButton("look-preview")}>Look preview</button>
   </div>
 </div>
 

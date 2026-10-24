@@ -5,6 +5,7 @@ import type { Tempo } from "../../model/tempo";
 import type { LoadedChart } from "../../model/types";
 import type { ClipSpan } from "../../io/files";
 import type { Song } from "../../store/editor.svelte";
+import { shotPaint, stripePath, type ShotColouring } from "../shotColours";
 import { alpha, drawBox, type Box, type Theme } from "../theme";
 import { tOf, xOf, type Marker, type TimelineLayout, type View } from "./geometry";
 
@@ -29,6 +30,7 @@ export type TimelineScene = {
   loop: readonly [number, number] | null;
   /** A loop's first point while the second isn't set yet, or null. */
   loopStart: number | null;
+  shotColouring: ShotColouring;
 };
 
 export function drawTimeline(ctx: CanvasRenderingContext2D, w: number, h: number, s: TimelineScene, t: Theme): void {
@@ -90,9 +92,12 @@ export function drawTimeline(ctx: CanvasRenderingContext2D, w: number, h: number
       const r = collapsed.has("shot") ? 4 : 7;
       const spawn = evTime(e, tp) - (e.projectile.telegraph ?? 0.5);
       ctx.fillStyle = alpha(t.telegraph, 0.33); ctx.fillRect(x(spawn), y - 2, mx - x(spawn), 4);
-      ctx.fillStyle = sel ? t.text : t.accent;
-      ctx.beginPath(); ctx.moveTo(mx, y - r); ctx.lineTo(mx + r - 1, y); ctx.lineTo(mx, y + r); ctx.lineTo(mx - r + 1, y); ctx.fill();
-      if (sel) { ctx.strokeStyle = t.accent; ctx.lineWidth = 2; ctx.stroke(); }
+      // Coloured by what it is, a selected one keeps its colour and is ringed instead.
+      const paint = shotPaint(e.projectile, s.shotColouring, t);
+      ctx.fillStyle = paint.colour ?? (sel ? t.text : t.accent);
+      ctx.beginPath(); ctx.moveTo(mx, y - r); ctx.lineTo(mx + r - 1, y); ctx.lineTo(mx, y + r); ctx.lineTo(mx - r + 1, y); ctx.closePath(); ctx.fill();
+      if (paint.striped) stripePath(ctx, t, { x: mx - r, y: y - r, w: r * 2, h: r * 2 });
+      if (sel) { ctx.strokeStyle = paint.colour ? t.text : t.accent; ctx.lineWidth = 2; ctx.stroke(); }
     } else {
       const r = collapsed.has("move") ? 4 : 6;
       ctx.fillStyle = sel ? t.text : (e.at ? t.phase : t.move);
@@ -148,7 +153,7 @@ function drawWave(ctx: CanvasRenderingContext2D, w: number, s: TimelineScene, t:
     if (s.layout.collapsed.has("wave")) return;
     ctx.fillStyle = t.textDim; ctx.textAlign = "left"; ctx.font = `12px ${t.body}`;
     const file = s.chart.music?.file;
-    ctx.fillText(file ? `Open ${file} to see and hear it` : "No song - add one in the Chart tab, then open the file", 8, mid + 4);
+    ctx.fillText(file ? `Open ${file} to see and hear it` : "No song. Add one in the Chart tab", 8, mid + 4);
     ctx.font = `10px ${t.mono}`;
     return;
   }

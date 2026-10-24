@@ -79,11 +79,11 @@
 </div>
 <div class="note">
   A chart made in game dresses its boss as its maker, stones and all, so everyone fights the boss you made. "Whoever plays" dresses it as each
-  player instead. A look made in game is a long code - copy one between charts with Paste a look.
+  player instead. Paste a look copies a look made in game from another chart.
 </div>
 <div class="row"><button onclick={() => doc.change(["actors"], () => addActor(doc.chart))}>Add an actor</button></div>
 {#if doc.chart.tracks?.length}
   <div class="note">
-    This chart has recorded clips ({doc.chart.tracks.map(t => t.actor ?? firstActorId(doc.chart)).join(", ")}). They are kept as they are - record and re-record them in game.
+    This chart has recorded clips ({doc.chart.tracks.map(t => t.actor ?? firstActorId(doc.chart)).join(", ")}). Record or re-record them in game.
   </div>
 {/if}
