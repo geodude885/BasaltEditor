@@ -6,13 +6,14 @@
     isCueForPack, lookCueTimeLabel, STAGE_PACK, stageCueAt, stageLookAfterCue, stageLookAt, stageLookBeforeCue, type StageLook,
   } from "../model/looks";
   import { round } from "../model/tempo";
-  import { paintStageScene, shadeStageFrame, stageFrameKey, type StageScene } from "../model/stageFrame";
+  import { stageFrameKey } from "../model/stageFrame";
   import { selectLookCue } from "../store/actions";
   import { doc } from "../store/document.svelte";
   import { editor } from "../store/editor.svelte";
   import { layout } from "../store/layout.svelte";
   import { mobile } from "../store/mobile.svelte";
   import { seek } from "../store/playback";
+  import { StagePreviewShader } from "../views/stagePreview";
 
   const HIT_SECONDS = 0.6;
   const SIZES = { small: [256, 144], large: [432, 243] } as const;
@@ -47,22 +48,26 @@
 
   // The arena is painted again only when the key hue moves a whole degree, or the size changes.
   const keyHue = $derived(Math.round(look.settings._KeyHue));
-  const scene = $derived<StageScene>(paintStageScene(width, height, keyHue));
 
-  // Shades a frame only when it would differ from the one showing: paused, or playing through a look
-  // that does not move with the beat, it draws nothing.
-  let drawn = { scene: null as StageScene | null, key: "" };
+  // Frames are shaded on workers; the editor never waits for one, and the preview drops frames it can't keep up with.
+  let shader: StagePreviewShader | null = null;
   $effect(() => {
     const context = canvas.getContext("2d");
     if (!context) return;
+    shader = new StagePreviewShader(image => context.putImageData(image, 0, 0));
+    return () => { shader?.dispose(); shader = null; };
+  });
+
+  // Asks for a frame only when it would differ from the last one asked for: paused, or playing through a look
+  // that does not move with the beat, it asks for nothing.
+  let asked = "";
+  $effect(() => {
     const shown = comparing ? { ...look, on: false } : look;
     const fight = { beatFraction: doc.tempo.ok ? doc.tempo.beat(Math.max(0, editor.time)) % 1 : null, health, hit, time: editor.time };
-    const key = stageFrameKey(shown, fight);
-    if (drawn.scene === scene && drawn.key === key) return;
-    const image = context.createImageData(width, height);
-    shadeStageFrame(scene, shown, fight, image.data);
-    context.putImageData(image, 0, 0);
-    drawn = { scene, key };
+    const key = `${width}x${height}@${keyHue}|${stageFrameKey(shown, fight)}`;
+    if (!shader || key === asked) return;
+    shader.shade({ width, height, keyHue, look: shown, fight });
+    asked = key;
   });
 
   // A hit fades out over HIT_SECONDS, frame by frame; another hit starts it again rather than a second fade.
