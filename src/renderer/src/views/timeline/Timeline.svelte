@@ -8,6 +8,7 @@
   import type { ChartEvent } from "../../model/types";
   import {
     addMove, addProjectile, addProjectileInColumn, addStageCueAtPlayhead, pickCycled, select, selectLookCue, selectPhase, setExtraTimelineHeight, toggleTimelineRow, zoom,
+    undoByTouch,
   } from "../../store/actions";
   import { doc } from "../../store/document.svelte";
   import { appearance } from "../../store/appearance.svelte";
@@ -19,14 +20,15 @@
   import { drawTimeline } from "./draw";
   import { COLLAPSIBLE_ROWS, layoutTimeline, markers, tOf } from "./geometry";
   import { DRAG_STARTS_AFTER_PIXELS, markersInBox, pressWaitsOnTouch, touchTapWith, whatATimelinePressHits, whatATouchTapAdds, type TouchTap } from "./interaction";
-  import { Pinch, Taps, WaitingPress, type PinchStep } from "../touch";
+  import { Pinch, Taps, TwoFingerTap, WaitingPress, type PinchStep } from "../touch";
 
   let canvas: HTMLCanvasElement;
   let w = $state(0);
   type Drag =
     | { kind: "seek" }
     | { kind: "box"; adding: boolean; addsTo: number[] }
-    | { kind: "move"; startSeconds: number; textBefore: string; startTimes: [ChartEvent, number][]; moved: boolean }
+    // `hold`: a finger resting on the markers opens quick actions for them.
+    | { kind: "move"; startSeconds: number; textBefore: string; startTimes: [ChartEvent, number][]; moved: boolean; hold?: WaitingPress }
     | { kind: "touch"; press: WaitingPress; t0: number; tap: TouchTap; adding: boolean };
   let drag: Drag | null = null;
   let box = $state<Box | null>(null);
@@ -51,7 +53,7 @@
   const snapped = (seconds: number) => doc.tempo.snap(seconds, editor.snap);
   const pointerAt = (ev: PointerEvent | WheelEvent): [number, number] => { const r = canvas.getBoundingClientRect(); return [ev.clientX - r.left, ev.clientY - r.top]; };
 
-  const taps = new Taps(), pinch = new Pinch();
+  const taps = new Taps(), pinch = new Pinch(), twoTap = new TwoFingerTap();
   /** Shift, or the touch screens' multi-select button, adds to the selection. */
   const adds = (ev: PointerEvent) => ev.shiftKey || editor.multiSelect;
 
@@ -77,6 +79,7 @@
   function pointerdown(ev: PointerEvent): void {
     const [x, y] = pointerAt(ev);
     canvas.setPointerCapture(ev.pointerId);
+    if (ev.pointerType === "touch") twoTap.down(ev.pointerId, x, y, ev.timeStamp);
     if (ev.pointerType === "touch" && pinch.down(ev.pointerId, x, y)) {
       // A second finger: the first one's press becomes a pinch. Keep a move already made; drop a box.
       if (drag?.kind === "move") pointerup();
@@ -114,11 +117,13 @@
       case "select-events": {
         const hit = pickCycled(press.underPointer, "timeline", x, y);
         if (!editor.selection.has(hit)) select(hit, adds(ev));
-        const events = doc.chart.events;
-        drag = {
+        const events = doc.chart.events, at = { x: ev.clientX, y: ev.clientY };
+        const d: Extract<Drag, { kind: "move" }> = {
           kind: "move", startSeconds: secondsAt(x), textBefore: doc.text, moved: false,
           startTimes: [...editor.selection].map(i => [events[i], evTime(events[i], doc.tempo)]),
         };
+        if (ev.pointerType === "touch") d.hold = new WaitingPress(x, y, () => { if (drag === d && !d.moved) { drag = null; editor.quickActions = at; } });
+        drag = d;
         return;
       }
       case "box-select":
@@ -139,6 +144,7 @@
   function pointermove(ev: PointerEvent): void {
     const [x, y] = pointerAt(ev);
     if (ev.pointerType === "touch") {
+      twoTap.move(ev.pointerId, x, y);
       const step = pinch.move(ev.pointerId, x, y);
       if (step) { pinchStep(step); return; }
     }
@@ -152,6 +158,7 @@
     } else if (drag.kind === "seek") {
       seek(Math.max(0, secondsAt(x)));
     } else {
+      drag.hold?.pans(x, y);
       const deltaSeconds = secondsAt(x) - drag.startSeconds;
       if (!drag.moved && Math.abs(deltaSeconds * editor.view.pps) < DRAG_STARTS_AFTER_PIXELS) return;
       drag.moved = true;
@@ -161,6 +168,9 @@
 
   function pointerup(ev?: PointerEvent): void {
     if (ev?.pointerType === "touch") pinch.up(ev.pointerId);
+    // Two fingers tapped together: undo, once the rest of this lift is done.
+    const twoTapped = ev?.pointerType === "touch" && twoTap.up(ev.pointerId, ev.timeStamp, ev.type === "pointercancel");
+    if (drag?.kind === "move") drag.hold?.end();
     if (drag?.kind === "touch") {
       drag.press.end();
       if (!drag.press.panning && ev?.type === "pointerup") touchTap(drag);
@@ -177,6 +187,7 @@
     }
     drag = null;
     box = null;
+    if (twoTapped) undoByTouch();
   }
 
   // Not onwheel: it must not be passive, or preventDefault cannot stop the page scrolling.

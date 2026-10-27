@@ -1,4 +1,5 @@
 <script lang="ts">
+  import QuickActions from "./components/QuickActions.svelte";
   import { dismissable } from "./components/gestures";
   import { rise, type Side } from "./components/motion";
   import { onMount } from "svelte";
@@ -86,6 +87,8 @@
 {#if library.visible}<Library />{/if}
 
 <div class="drop" class:show={dropping}>Drop chart files</div>
+{#if editor.quickActions}<QuickActions />{/if}
+
 <!-- A new toast rises in as the one before sinks away, in the same spot. Global, so it still moves
      when the whole block goes (the toast timing out). -->
 <div class="toasts" class:top={layout.compact} aria-live="polite">

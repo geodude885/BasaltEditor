@@ -185,6 +185,14 @@ export function paste(): void {
 // ---- History and the chart as a whole -----------------------------------------------------------
 
 export function undo(): void { if (doc.undo()) editor.selection.clear(); }
+
+/** Two fingers tapped the editor: undo, and say so - a gesture has no button to see go. */
+export function undoByTouch(): void {
+  const could = doc.canUndo;
+  undo();
+  toast(could ? "Undone" : "Nothing to undo");
+  globalThis.navigator?.vibrate?.(10);
+}
 export function redo(): void { if (doc.redo()) editor.selection.clear(); }
 
 /** Opens a chart's text, fitting the timeline to it. */
