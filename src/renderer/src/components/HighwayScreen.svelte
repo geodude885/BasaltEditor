@@ -2,6 +2,7 @@
   // The highway with its recording pads under it, one per column, and its practice controls beside it,
   // in either layout. Arm recording and play: each pad tap - or key 1 to 5 - drops a projectile in that
   // column, snapped. Pausing ends the take.
+  import { grow } from "./motion";
   import Icon from "./Icon.svelte";
   import { untrack } from "svelte";
   import { editor } from "../store/editor.svelte";
@@ -48,7 +49,7 @@
   <div class="road">
     <div class="canvasbox"><Highway loop={practice.loop} /></div>
     {#if recording.armed}
-      <div class="pads" style:grid-template-columns="repeat({columns.length}, minmax(0, 1fr))">
+      <div class="pads" in:grow out:grow style:grid-template-columns="repeat({columns.length}, minmax(0, 1fr))">
         {#each columns as column, index (index)}
           <button class="pad" aria-label="Tap {column.label}" aria-keyshortcuts={RECORD_KEYS[index]} bind:this={pads[index]}
             onpointerdown={ev => { ev.preventDefault(); hit(index); }}><kbd>{RECORD_KEYS[index]}</kbd></button>
@@ -84,9 +85,9 @@
   .pads { display: grid; gap: 4px; padding: 4px; height: 64px; flex: none; background: var(--panel); border-top: 1px solid var(--line); }
   .pad {
     border-radius: 8px; border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent); padding: 0;
-    background: color-mix(in srgb, var(--accent) 14%, var(--raised)); touch-action: none;
+    background: color-mix(in srgb, var(--accent) 14%, var(--raised)); touch-action: none; transition: background-color 160ms ease-out;
   }
-  .pad:global(.hit) { background: var(--accent); }
+  .pad:global(.hit) { background: var(--accent); transition: none; }
   .pad kbd { font: 12px var(--mono); color: var(--text-dim); }
   /* Touch screens have no keys to show. */
   @media (pointer: coarse) { .pad kbd { display: none; } }

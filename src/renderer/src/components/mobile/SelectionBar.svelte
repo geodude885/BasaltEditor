@@ -1,6 +1,7 @@
 <script lang="ts">
   // The phone layout's edit buttons - the shortcuts a keyboard would give, as commands from
   // store/commands.ts. What they offer follows the selection: adding with nothing selected, editing what is.
+  import { grow } from "../motion";
   import { PROJECTILE_COLUMNS } from "../../model/columns";
   import { addProjectileInColumn } from "../../store/actions";
   import { commandButton } from "../../store/commands";
@@ -15,7 +16,7 @@
   <button {...commandButton("multi-select")}>Multi</button>
   {#if editor.selectMode}
     <!-- Whole sections at once: the projectiles in the bar at the playhead, the loop, the rest, or all. -->
-    <span class="group" role="group" aria-label="Select projectiles">
+    <span class="group" role="group" aria-label="Select projectiles" in:grow={{ axis: "x" }} out:grow={{ axis: "x" }}>
       <button {...commandButton("select-bar")}>Bar</button>
       {#if practice.loop}<button {...commandButton("select-loop")}>Loop</button>{/if}
       <button {...commandButton("select-to-end")}>To end</button>

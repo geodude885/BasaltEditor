@@ -2,6 +2,7 @@
   // The desktop layout's menu bar: File, Edit, View and Playback, drawn from the command table. Click
   // a menu (or press Alt or F10, then the arrows) to open it; while one is open, pointing at another
   // opens that instead. Enter or a click runs a command; Escape or a click elsewhere closes.
+  import { drop } from "./motion";
   import { tick } from "svelte";
   import Icon from "./Icon.svelte";
   import { menus, visibleGroups, type Command, type MenuId } from "../store/commands";
@@ -97,7 +98,7 @@
         onclick={() => show(open === menu.id ? null : menu.id)}
         onpointerenter={() => { if (open && open !== menu.id) void show(menu.id); }}>{menu.label}</button>
       {#if open === menu.id}
-        <div class="drop" role="menu" aria-label={menu.label}>
+        <div class="drop" role="menu" aria-label={menu.label} in:drop>
           {#each visibleGroups(menu) as group, g (g)}
             {#if g}<div class="sep" role="separator"></div>{/if}
             {#each group as command (command.id)}

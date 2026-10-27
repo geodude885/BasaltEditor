@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { rise } from "./components/motion";
   import { onMount } from "svelte";
   import Inspector from "./components/Inspector.svelte";
   import Panels from "./components/Panels.svelte";
@@ -82,11 +83,15 @@
 {#if library.visible}<Library />{/if}
 
 <div class="drop" class:show={dropping}>Drop chart files</div>
-{#if editor.toast}
-  {#key editor.toast.id}
-    <div class="toast" role="status">{editor.toast.text}</div>
-  {/key}
-{/if}
+<!-- A new toast rises in as the one before sinks away, in the same spot. Global, so it still moves
+     when the whole block goes (the toast timing out). -->
+<div class="toasts" aria-live="polite">
+  {#if editor.toast}
+    {#key editor.toast.id}
+      <div class="toast" role="status" in:rise|global out:rise|global>{editor.toast.text}</div>
+    {/key}
+  {/if}
+</div>
 
 <style>
   .app {
@@ -100,15 +105,21 @@
   .timepane { display: grid; grid-template-rows: auto auto minmax(0, 1fr); }
   /* The highway takes most of the pane's height; the tabs keep what's left, and scroll. */
   .highwaybox { height: clamp(320px, 58vh, 720px); min-height: 0; border-bottom: 1px solid var(--line); }
+  .toasts {
+    position: fixed; left: 16px; right: 16px; bottom: max(18px, env(safe-area-inset-bottom)); z-index: 30; pointer-events: none;
+    display: grid; justify-items: center;
+  }
+  /* Both in one cell, so one leaving and the next arriving overlap rather than stack. */
   .toast {
-    position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); background: var(--raised); border: 1px solid var(--accent);
-    padding: 8px 14px; border-radius: 8px; font-size: 13px; z-index: 30; max-width: calc(100% - 32px);
+    grid-area: 1 / 1; background: var(--raised); border: 1px solid var(--accent);
+    padding: 8px 14px; border-radius: 8px; font-size: 13px; max-width: 100%; box-shadow: 0 6px 18px var(--shadow);
   }
   .drop {
-    position: fixed; inset: 0; background: color-mix(in srgb, var(--accent) 13%, transparent); border: 3px dashed var(--accent); display: none; place-items: center;
+    position: fixed; inset: 0; background: color-mix(in srgb, var(--accent) 13%, transparent); border: 3px dashed var(--accent); display: grid; place-items: center;
     font: 700 28px var(--display); text-transform: uppercase; z-index: 4; pointer-events: none;
+    opacity: 0; visibility: hidden; transition: opacity 120ms, visibility 0s 120ms;
   }
-  .drop.show { display: grid; }
+  .drop.show { opacity: 1; visibility: visible; transition: opacity 120ms; }
   /* Narrow: the panes stack, and the page scrolls instead of each pane. */
   @media (max-width: 860px) { .app { height: auto; } .work { grid-template-columns: minmax(0, 1fr); } }
 </style>

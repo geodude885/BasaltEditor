@@ -2,6 +2,7 @@
   // Your charts, as cards: cover, name, who made it, how many projectiles, the song, when it last
   // changed. Tap one to open it; each can be duplicated or deleted (on the desktop, moved to the bin).
   // New and Import start or bring in another. Works in both layouts, over everything else.
+  import { rise } from "../motion";
   import Icon from "../Icon.svelte";
   import { startNewChart } from "../../store/commands";
   import { openFiles } from "../../store/files";
@@ -35,7 +36,7 @@
 
 <svelte:window onkeydown={keydown} />
 
-<div class="library" role="dialog" aria-modal="true" aria-label="Your charts">
+<div class="library" role="dialog" aria-modal="true" aria-label="Your charts" in:rise={{ distance: 24 }} out:rise={{ distance: 24 }}>
   <header>
     <h2>Your charts</h2>
     <div class="spacer"></div>
