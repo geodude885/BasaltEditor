@@ -2,6 +2,10 @@
 // away to close (it follows the finger, then closes or springs back), `use:edgeSwipe` opens the menu
 // from the left edge. The deciding is in views/swipe.ts. Touch only: a mouse keeps its buttons.
 //
+// The browser decides which drags it keeps for scrolling by `touch-action`, combined only up to the
+// nearest scrolling element - so a panel's scrolling content needs `touch-action: pan-y` itself (or
+// `none` for a handle), or sideways drags on it are taken as scrolls and never arrive here.
+//
 // A panel closed by a drag carries on from where the finger let go: the drag leaves where it got to
 // on the element (data-flung-*), and motion.ts's leaving transitions start from there.
 import { DismissDrag, EdgeSwipe, type Axis, type Toward } from "../views/swipe";

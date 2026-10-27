@@ -50,7 +50,7 @@
 {/if}
 
 <style>
-  .rail { display: flex; flex-direction: column; gap: 2px; padding: 4px; overflow: auto; background: var(--panel); border-right: 1px solid var(--line); }
+  .rail { display: flex; flex-direction: column; gap: 2px; padding: 4px; overflow: auto; background: var(--panel); border-right: 1px solid var(--line); touch-action: pan-y; }
   .rail button {
     border: 0; background: none; color: var(--text-dim); padding: 0 2px; min-height: 40px; flex: 1 0 40px;
     font: 600 12px var(--display); letter-spacing: .04em; text-transform: uppercase; white-space: normal;
@@ -63,7 +63,7 @@
   }
   header { display: flex; align-items: center; justify-content: space-between; padding: 4px 6px 4px 12px; border-bottom: 1px solid var(--line); touch-action: none; }
   header button { min-width: 40px; min-height: 40px; }
-  .panel { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 12px; display: grid; gap: 12px; align-content: start; }
+  .panel { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 12px; display: grid; gap: 12px; align-content: start; touch-action: pan-y; }
 
   /* Portrait: the rail runs along the bottom, and the drawer rises from it. */
   :global(.shell.portrait) .rail { flex-direction: row; border-right: 0; border-top: 1px solid var(--line); }
