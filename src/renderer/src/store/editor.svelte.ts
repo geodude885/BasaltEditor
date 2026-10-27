@@ -51,6 +51,8 @@ class EditorState {
   multiSelect = $state(false);
   /** Select mode: a drag on empty space draws a selection box at once, instead of panning or scrubbing. */
   selectMode = $state(false);
+  /** Quick actions for the selection, from a long press on it: where the finger was, or null when shut. */
+  quickActions = $state<{ x: number; y: number } | null>(null);
   selectedPhase = $state(-1);
   selectedLookCue = $state(-1);
 

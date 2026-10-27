@@ -106,3 +106,38 @@ export class WaitingPress {
     clearTimeout(this.timer);
   }
 }
+
+/** How quickly a two-finger tap's fingers must both land and lift, in milliseconds. */
+const TWO_FINGER_TAP_MS = 300;
+/** How far either finger may move and still be tapping. */
+const TWO_FINGER_TAP_PIXELS = 12;
+
+/**
+ * Two fingers tapping together - undo, as in drawing apps. Exactly two fingers, both down and up
+ * quickly, neither moving: a pinch moves, and resting fingers take too long.
+ */
+export class TwoFingerTap {
+  private fingers = new Map<number, { x: number; y: number }>();
+  private began = 0;
+  private count = 0;
+  private spoiled = false;
+
+  down(id: number, x: number, y: number, at: number): void {
+    if (!this.fingers.size) { this.began = at; this.count = 0; this.spoiled = false; }
+    this.fingers.set(id, { x, y });
+    if (++this.count > 2) this.spoiled = true;
+  }
+
+  move(id: number, x: number, y: number): void {
+    const f = this.fingers.get(id);
+    if (f && Math.hypot(x - f.x, y - f.y) > TWO_FINGER_TAP_PIXELS) this.spoiled = true;
+  }
+
+  /** A finger lifted (or the browser took it). True when that ends a two-finger tap. */
+  up(id: number, at: number, cancelled = false): boolean {
+    if (!this.fingers.delete(id)) return false;
+    if (cancelled) this.spoiled = true;
+    if (this.fingers.size) return false;
+    return !this.spoiled && this.count === 2 && at - this.began <= TWO_FINGER_TAP_MS;
+  }
+}

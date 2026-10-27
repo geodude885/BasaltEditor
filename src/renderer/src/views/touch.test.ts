@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { LONG_PRESS_MS, Pinch, Taps, WaitingPress } from "./touch";
+import { LONG_PRESS_MS, Pinch, Taps, TwoFingerTap, WaitingPress } from "./touch";
 
 const press = (pointerType: string, timeStamp: number, x = 0, detail = 0) => ({ pointerType, detail, timeStamp, clientX: x, clientY: 0 });
 
@@ -88,5 +88,48 @@ describe("WaitingPress", () => {
     new WaitingPress(0, 0, () => held++).end();
     vi.advanceTimersByTime(LONG_PRESS_MS);
     expect(held).toBe(0);
+  });
+});
+
+describe("TwoFingerTap", () => {
+  it("is two fingers down and up quickly, without moving", () => {
+    const tap = new TwoFingerTap();
+    tap.down(1, 100, 100, 0);
+    tap.down(2, 200, 100, 30);
+    tap.move(1, 104, 102);
+    expect(tap.up(1, 150)).toBe(false);
+    expect(tap.up(2, 170)).toBe(true);
+  });
+
+  it("isn't a pinch, a slow rest, one finger or three", () => {
+    const pinch = new TwoFingerTap();
+    pinch.down(1, 100, 100, 0); pinch.down(2, 200, 100, 10);
+    pinch.move(2, 260, 100);
+    pinch.up(1, 100);
+    expect(pinch.up(2, 120)).toBe(false);
+
+    const slow = new TwoFingerTap();
+    slow.down(1, 0, 0, 0); slow.down(2, 50, 0, 10);
+    slow.up(1, 500);
+    expect(slow.up(2, 520)).toBe(false);
+
+    const one = new TwoFingerTap();
+    one.down(1, 0, 0, 0);
+    expect(one.up(1, 80)).toBe(false);
+
+    const three = new TwoFingerTap();
+    three.down(1, 0, 0, 0); three.down(2, 50, 0, 5); three.down(3, 90, 0, 10);
+    three.up(1, 100); three.up(2, 110);
+    expect(three.up(3, 120)).toBe(false);
+  });
+
+  it("starts afresh for the next tap, and a cancelled finger spoils it", () => {
+    const tap = new TwoFingerTap();
+    tap.down(1, 0, 0, 0); tap.down(2, 50, 0, 10);
+    tap.up(1, 100, true);
+    expect(tap.up(2, 120)).toBe(false);
+    tap.down(3, 0, 0, 1000); tap.down(4, 50, 0, 1010);
+    tap.up(3, 1100);
+    expect(tap.up(4, 1120)).toBe(true);
   });
 });
