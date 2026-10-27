@@ -30,6 +30,24 @@ function timing({ direction }: Way, inMs: number = MOTION.in, outMs: number = MO
   return { leaving, duration: leaving ? outMs : inMs, easing: leaving ? cubicIn : cubicOut, block: leaving ? "pointer-events: none;" : "" };
 }
 
+/**
+ * Leaving after being dragged away (components/gestures.ts leaves where the finger let go on the
+ * element): carry on from there, off the way it was going, instead of jumping back to the start.
+ * Null for anything not dragged.
+ */
+function flung(node: Element, way: Way, fade: boolean): TransitionConfig | null {
+  const el = node as HTMLElement, axis = el.dataset.flungAxis;
+  if (way.direction !== "out" || (axis !== "x" && axis !== "y")) return null;
+  const from = parseFloat(el.dataset.flungPx ?? "0") || 0, size = axis === "x" ? el.offsetWidth : el.offsetHeight;
+  const to = (Math.sign(from) || 1) * Math.max(size, Math.abs(from)), A = axis.toUpperCase();
+  // Reduced motion: it stays where the finger left it and fades.
+  if (reducedMotion()) return { duration: MOTION.reduced, css: t => `transform: translate${A}(${from}px); opacity: ${t}; pointer-events: none;` };
+  return {
+    duration: MOTION.out, easing: cubicOut,
+    css: (t, u) => `transform: translate${A}(${from + (to - from) * u}px); ${fade ? `opacity: ${t};` : ""} pointer-events: none;`,
+  };
+}
+
 /** Just a fade - for reduced motion, and for things that only appear (a scrim). */
 export function veil(_node: Element, _params: object = {}, way: Way = { direction: "both" }): TransitionConfig {
   const { duration, easing, block } = timing(way);
@@ -38,6 +56,8 @@ export function veil(_node: Element, _params: object = {}, way: Way = { directio
 
 /** A panel sliding in from one side by its own size, and back out the same way: drawers and sheets. */
 export function panel(node: Element, { from = "left" }: { from?: Side } = {}, way: Way = { direction: "both" }): TransitionConfig {
+  const thrown = flung(node, way, false);
+  if (thrown) return thrown;
   if (reducedMotion()) return veil(node, {}, way);
   const { duration, easing, block } = timing(way);
   const axis = from === "left" || from === "right" ? "X" : "Y", sign = from === "left" || from === "top" ? -1 : 1;
@@ -49,6 +69,8 @@ export function panel(node: Element, { from = "left" }: { from?: Side } = {}, wa
  * library. `from` is where it comes from, `distance` how far in pixels.
  */
 export function rise(node: Element, { from = "bottom", distance = 12 }: { from?: Side; distance?: number } = {}, way: Way = { direction: "both" }): TransitionConfig {
+  const thrown = flung(node, way, true);
+  if (thrown) return thrown;
   if (reducedMotion()) return veil(node, {}, way);
   const { duration, easing, block } = timing(way);
   const axis = from === "left" || from === "right" ? "X" : "Y", sign = from === "left" || from === "top" ? -1 : 1;

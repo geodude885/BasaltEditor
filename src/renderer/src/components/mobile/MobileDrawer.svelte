@@ -1,5 +1,6 @@
 <script lang="ts">
   // The phone layout's settings: a rail of tabs, and the open tab's panel in a drawer over the editor.
+  import { dismissable } from "../gestures";
   import { layout } from "../../store/layout.svelte";
   import { panel, type Side } from "../motion";
   import Icon from "../Icon.svelte";
@@ -19,6 +20,7 @@
     ["chart", "Chart"], ["phases", "Phases"], ["looks", "Looks"], ["tempo", "Tempo"], ["actors", "Actors"], ["problems", "Issues"], ["help", "Help"],
   ];
   const side = $derived<Side>(layout.landscape ? "left" : "bottom");
+  const close = () => { mobile.drawer = null; };
   const title = $derived(TABS.find(([id]) => id === mobile.drawer)?.[1] ?? "");
 </script>
 
@@ -29,7 +31,11 @@
     {/each}
   </nav>
 {:else if mobile.drawer}
-  <section class="drawer" aria-label={title} in:panel={{ from: side }} out:panel={{ from: side }}>
+  <!-- Drag it back the way it came to close it: sideways in landscape, down by its header in portrait. -->
+  <section class="drawer" aria-label={title} in:panel={{ from: side }} out:panel={{ from: side }}
+    use:dismissable={side === "left"
+      ? { axis: "x", toward: -1, onClose: close }
+      : { axis: "y", toward: 1, handle: "header", onClose: close }}>
     <header><h3>{title}</h3><button aria-label="Close" onclick={() => { mobile.drawer = null; }}><Icon name="close" /></button></header>
     <div class="panel">
       {#if mobile.drawer === "chart"}<ChartPanel />
@@ -53,8 +59,9 @@
   .drawer {
     position: absolute; z-index: 4; top: 0; left: 0; bottom: 0; width: min(440px, 75%); display: flex; flex-direction: column;
     background: var(--panel); border-right: 1px solid var(--line);
+    touch-action: pan-y;
   }
-  header { display: flex; align-items: center; justify-content: space-between; padding: 4px 6px 4px 12px; border-bottom: 1px solid var(--line); }
+  header { display: flex; align-items: center; justify-content: space-between; padding: 4px 6px 4px 12px; border-bottom: 1px solid var(--line); touch-action: none; }
   header button { min-width: 40px; min-height: 40px; }
   .panel { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 12px; display: grid; gap: 12px; align-content: start; }
 

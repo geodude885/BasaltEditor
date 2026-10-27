@@ -2,6 +2,7 @@
   // Your charts, as cards: cover, name, who made it, how many projectiles, the song, when it last
   // changed. Tap one to open it; each can be duplicated or deleted (on the desktop, moved to the bin).
   // New and Import start or bring in another. Works in both layouts, over everything else.
+  import { dismissable } from "../gestures";
   import { rise } from "../motion";
   import Icon from "../Icon.svelte";
   import { startNewChart } from "../../store/commands";
@@ -36,7 +37,8 @@
 
 <svelte:window onkeydown={keydown} />
 
-<div class="library" role="dialog" aria-modal="true" aria-label="Your charts" in:rise={{ distance: 24 }} out:rise={{ distance: 24 }}>
+<div class="library" role="dialog" aria-modal="true" aria-label="Your charts" in:rise={{ distance: 24 }} out:rise={{ distance: 24 }}
+  use:dismissable={{ axis: "y", toward: 1, handle: "header", onClose: () => { library.visible = false; } }}>
   <header>
     <h2>Your charts</h2>
     <div class="spacer"></div>
@@ -91,7 +93,8 @@
     position: fixed; inset: 0; z-index: 20; display: flex; flex-direction: column; gap: 8px; background: var(--bg); overflow: auto;
     overscroll-behavior: contain; padding: max(12px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
   }
-  header { display: flex; align-items: center; gap: 8px; }
+  /* Pull it down by its header to close it. */
+  header { display: flex; align-items: center; gap: 8px; touch-action: none; }
   h2 { margin: 0; font: 700 22px/1 var(--display); text-transform: uppercase; letter-spacing: .06em; }
   .spacer { flex: 1; }
   button { min-height: 38px; }

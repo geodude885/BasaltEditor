@@ -2,6 +2,7 @@
   // The phone layout's menu: the command table's File, Edit and Playback menus, then the playing
   // settings and the look of the editor - the theme, projectile colours and the look preview - what the
   // desktop's menu bar and transport hold, behind one button.
+  import { dismissable } from "../gestures";
   import { panel, veil } from "../motion";
   import { appearance, THEME_CHOICES, THEME_NAMES, type ThemeChoice } from "../../store/appearance.svelte";
   import { commandButton, menus, visibleGroups, type Command } from "../../store/commands";
@@ -25,7 +26,8 @@
 </script>
 
 <button class="scrim" in:veil out:veil aria-label="Close the menu" onclick={() => { mobile.menu = false; }}></button>
-<div class="sheet" role="dialog" aria-label="Menu" in:panel={{ from: "left" }} out:panel={{ from: "left" }}>
+<div class="sheet" role="dialog" aria-label="Menu" in:panel={{ from: "left" }} out:panel={{ from: "left" }}
+  use:dismissable={{ axis: "x", toward: -1, onClose: () => { mobile.menu = false; } }}>
   {#each shown as menu (menu.id)}
     <h3>{menu.label}</h3>
     {#each visibleGroups(menu) as group, g (g)}
@@ -73,6 +75,8 @@
     position: absolute; top: 0; left: 0; bottom: 0; width: min(360px, 86vw); z-index: 7; overflow: auto; overscroll-behavior: contain;
     background: var(--panel); border-right: 1px solid var(--line); padding: max(12px, env(safe-area-inset-top)) 14px max(12px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
     display: grid; gap: 10px; align-content: start;
+    /* It scrolls up and down; a sideways drag closes it (components/gestures.ts). */
+    touch-action: pan-y;
   }
   .actions, .settings { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
   button, select { min-height: 40px; }
