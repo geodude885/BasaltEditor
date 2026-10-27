@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { LONG_PRESS_MS, Pinch, Taps, TwoFingerTap, WaitingPress } from "./touch";
+import { dragStartsAfterPixels, LONG_PRESS_MS, Pinch, Taps, TwoFingerTap, WaitingPress } from "./touch";
 
 const press = (pointerType: string, timeStamp: number, x = 0, detail = 0) => ({ pointerType, detail, timeStamp, clientX: x, clientY: 0 });
 
@@ -131,5 +131,12 @@ describe("TwoFingerTap", () => {
     tap.down(3, 0, 0, 1000); tap.down(4, 50, 0, 1010);
     tap.up(3, 1100);
     expect(tap.up(4, 1120)).toBe(true);
+  });
+});
+
+describe("dragStartsAfterPixels", () => {
+  it("lets a fingertip wobble more than a mouse before it drags", () => {
+    expect(dragStartsAfterPixels("mouse")).toBeLessThan(dragStartsAfterPixels("touch"));
+    expect(dragStartsAfterPixels("pen")).toBe(dragStartsAfterPixels("touch"));
   });
 });

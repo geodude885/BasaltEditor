@@ -235,7 +235,7 @@ export async function openStored(text: string, name: string, files: Map<string, 
 function savedNote(what: string): string {
   const n = editor.problems.length;
   if (!n) return what;
-  editor.tab = "problems";
+  editor.revealTab("problems");
   return `${what}, but the game won't load it until its ${n} problem${n === 1 ? " is" : "s are"} fixed`;
 }
 
@@ -313,7 +313,7 @@ export async function copyChart(): Promise<void> {
     await navigator.clipboard.writeText(doc.text);
     toast(savedNote("Copied chart.json. Paste it over your chart's file"));
   } catch {
-    editor.tab = "help";
+    editor.revealTab("help");
     editor.showText = true;
   }
 }

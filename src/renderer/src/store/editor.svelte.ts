@@ -77,6 +77,8 @@ class EditorState {
   shotColouring = $state(savedShotColouring());
 
   tab = $state<Tab>("chart");
+  /** Counts requests to bring the settings tab into view (revealTab); each layout answers them its own way. */
+  tabRevealed = $state(0);
   tapTimes = $state.raw<number[]>([]);
   confirmNew = $state(false);
   /** Shows chart.json as text to copy by hand, when the clipboard refuses. */
@@ -99,6 +101,16 @@ class EditorState {
 
   readonly problems = $derived([...problems(doc.chart, doc.tempo), ...fileProblems(this.files, doc.chart)]);
   readonly lookCues = $derived(timedLookCues(doc.chart, doc.tempo));
+
+  /**
+   * Shows a settings tab, wherever the layout keeps them: the desktop's tab bar is always there, so
+   * it just switches; the phone opens its drawer on it (MobileApp watches `tabRevealed`). Shared code
+   * asks for a tab this way rather than reaching into either layout.
+   */
+  revealTab(tab: Tab): void {
+    this.tab = tab;
+    this.tabRevealed++;
+  }
 
   setSelection(indices: Iterable<number>): void {
     this.selection.clear();

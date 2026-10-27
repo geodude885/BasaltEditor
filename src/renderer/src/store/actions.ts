@@ -242,7 +242,7 @@ export function selectLookCue(index: number): void {
   editor.selectedLookCue = index;
   editor.selection.clear();
   editor.selectedPhase = -1;
-  editor.tab = "looks";
+  editor.revealTab("looks");
 }
 
 export function addStageCueAtPlayhead(): void {
@@ -267,7 +267,7 @@ export function removeLookCue(index: number): void {
 export function selectPhase(index: number): void {
   editor.selectedPhase = index;
   editor.selection.clear();
-  editor.tab = "phases";
+  editor.revealTab("phases");
 }
 
 export function toggleTimelineRow(row: TimelineRow): void {
