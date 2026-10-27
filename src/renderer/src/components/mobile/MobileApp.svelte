@@ -3,6 +3,7 @@
   // the editor always reaches the editor. Landscape first - the lane beside the timeline - with
   // portrait stacking the same pieces. Settings open in a drawer from the rail; the selected event's
   // fields float over the lane.
+  import { rise, type Side } from "../motion";
   import { editor } from "../../store/editor.svelte";
   import { layout } from "../../store/layout.svelte";
   import { mobile } from "../../store/mobile.svelte";
@@ -22,6 +23,7 @@
     return () => document.documentElement.classList.remove("compact");
   });
 
+  const floatSide = $derived<Side>(layout.landscape ? "left" : "bottom");
   const inspecting = $derived(editor.selection.size > 0 && !mobile.drawer);
 </script>
 
@@ -36,7 +38,7 @@
       <div class="timebox"><Timeline /></div>
     {/if}
     {#if inspecting}
-      <aside class="float" aria-label="Selected">
+      <aside class="float" aria-label="Selected" in:rise={{ from: floatSide }} out:rise={{ from: floatSide }}>
         <Inspector />
       </aside>
     {/if}

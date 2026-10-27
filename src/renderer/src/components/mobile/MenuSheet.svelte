@@ -2,6 +2,7 @@
   // The phone layout's menu: the command table's File, Edit and Playback menus, then the playing
   // settings and the look of the editor - the theme, projectile colours and the look preview - what the
   // desktop's menu bar and transport hold, behind one button.
+  import { panel, veil } from "../motion";
   import { appearance, THEME_CHOICES, THEME_NAMES, type ThemeChoice } from "../../store/appearance.svelte";
   import { commandButton, menus, visibleGroups, type Command } from "../../store/commands";
   import { editor } from "../../store/editor.svelte";
@@ -23,8 +24,8 @@
   }
 </script>
 
-<button class="scrim" aria-label="Close the menu" onclick={() => { mobile.menu = false; }}></button>
-<div class="sheet" role="dialog" aria-label="Menu">
+<button class="scrim" in:veil out:veil aria-label="Close the menu" onclick={() => { mobile.menu = false; }}></button>
+<div class="sheet" role="dialog" aria-label="Menu" in:panel={{ from: "left" }} out:panel={{ from: "left" }}>
   {#each shown as menu (menu.id)}
     <h3>{menu.label}</h3>
     {#each visibleGroups(menu) as group, g (g)}

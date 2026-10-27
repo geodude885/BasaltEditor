@@ -1,5 +1,7 @@
 <script lang="ts">
   // The phone layout's settings: a rail of tabs, and the open tab's panel in a drawer over the editor.
+  import { layout } from "../../store/layout.svelte";
+  import { panel, type Side } from "../motion";
   import Icon from "../Icon.svelte";
   import type { Tab } from "../../store/editor.svelte";
   import { mobile } from "../../store/mobile.svelte";
@@ -16,6 +18,7 @@
   const TABS: [Tab, string][] = [
     ["chart", "Chart"], ["phases", "Phases"], ["looks", "Looks"], ["tempo", "Tempo"], ["actors", "Actors"], ["problems", "Issues"], ["help", "Help"],
   ];
+  const side = $derived<Side>(layout.landscape ? "left" : "bottom");
   const title = $derived(TABS.find(([id]) => id === mobile.drawer)?.[1] ?? "");
 </script>
 
@@ -26,7 +29,7 @@
     {/each}
   </nav>
 {:else if mobile.drawer}
-  <section class="drawer" aria-label={title}>
+  <section class="drawer" aria-label={title} in:panel={{ from: side }} out:panel={{ from: side }}>
     <header><h3>{title}</h3><button aria-label="Close" onclick={() => { mobile.drawer = null; }}><Icon name="close" /></button></header>
     <div class="panel">
       {#if mobile.drawer === "chart"}<ChartPanel />

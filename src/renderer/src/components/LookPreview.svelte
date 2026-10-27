@@ -2,6 +2,8 @@
   // The look preview: a small window, over either layout, showing BossBattles Stage's look on a painted
   // arena - at the playhead as it plays, or where the selected look's fade ends. Drag it by its title;
   // Hit and Health try the edges that answer the fight.
+  import { rise } from "./motion";
+  import Icon from "./Icon.svelte";
   import {
     isCueForPack, lookCueTimeLabel, STAGE_PACK, stageCueAt, stageLookAfterCue, stageLookAt, stageLookBeforeCue, type StageLook,
   } from "../model/looks";
@@ -110,7 +112,7 @@
   }
 </script>
 
-<aside class="preview" class:compact={layout.compact} class:large={!layout.compact && size === "large"} aria-label="Look preview" bind:this={box}
+<aside class="preview" in:rise out:rise class:compact={layout.compact} class:large={!layout.compact && size === "large"} aria-label="Look preview" bind:this={box}
   style:left={place ? `${place.x}px` : null} style:top={place ? `${place.y}px` : null}
   style:right={place ? "auto" : null} style:bottom={place ? "auto" : null}>
   <header role="toolbar" tabindex="-1" onpointerdown={grab} onpointermove={drag} onpointerup={() => { grabbed = null; }}>
@@ -121,9 +123,9 @@
         onclick={() => { follow = "selected"; }}>Selected</button>
     </span>
     {#if !layout.compact}
-      <button class="icon" title={size === "small" ? "Larger" : "Smaller"} onclick={() => { size = size === "small" ? "large" : "small"; }}>{size === "small" ? "⤢" : "⤡"}</button>
+      <button class="icon" title={size === "small" ? "Larger" : "Smaller"} onclick={() => { size = size === "small" ? "large" : "small"; }}><Icon name={size === "small" ? "expand" : "shrink"} /></button>
     {/if}
-    <button class="icon" title="Hide (K)" aria-label="Hide the look preview" onclick={() => editor.toggleLookPreview()}>✕</button>
+    <button class="icon" title="Hide (K)" aria-label="Hide the look preview" onclick={() => editor.toggleLookPreview()}><Icon name="close" /></button>
   </header>
 
   <div class="screen">

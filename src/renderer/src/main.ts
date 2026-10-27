@@ -24,6 +24,9 @@ async function startDesktopLibrary(api: EditorApi): Promise<void> {
   if (isDesktop(api) && await api.chartsFolder()) library.start(desktopLibrary(api));
 }
 
+// iOS Safari only applies :active (the buttons' press) when the page listens for touches somewhere.
+document.addEventListener("touchstart", () => {}, { passive: true });
+
 appearance.start();
 layout.start();
 
