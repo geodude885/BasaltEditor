@@ -71,8 +71,19 @@ export class Pinch {
   }
 }
 
+/** How far a resting fingertip wobbles: a finger moving less than this hasn't moved. */
+const FINGER_SLOP_PIXELS = 8;
+/** How far a mouse moves before a press is a drag: it doesn't wobble. */
+const MOUSE_SLOP_PIXELS = 3;
+
+/**
+ * How far a press must move before it drags what it pressed (markers, tiles). Every canvas uses
+ * this, so a finger resting on something - to long-press it, say - doesn't nudge it.
+ */
+export const dragStartsAfterPixels = (pointerType: string): number => pointerType === "mouse" ? MOUSE_SLOP_PIXELS : FINGER_SLOP_PIXELS;
+
 /** How far a finger on empty space moves before its press becomes a pan. */
-export const TOUCH_PAN_STARTS_AFTER_PIXELS = 8;
+export const TOUCH_PAN_STARTS_AFTER_PIXELS = FINGER_SLOP_PIXELS;
 /** How long a finger is held still before its press becomes a long press. */
 export const LONG_PRESS_MS = 450;
 

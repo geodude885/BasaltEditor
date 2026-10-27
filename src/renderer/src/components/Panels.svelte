@@ -1,30 +1,19 @@
 <script lang="ts">
-  import { editor, type Tab } from "../store/editor.svelte";
-  import ActorsPanel from "./panels/ActorsPanel.svelte";
-  import ChartPanel from "./panels/ChartPanel.svelte";
-  import HelpPanel from "./panels/HelpPanel.svelte";
-  import LooksPanel from "./panels/LooksPanel.svelte";
-  import PhasesPanel from "./panels/PhasesPanel.svelte";
-  import ProblemsPanel from "./panels/ProblemsPanel.svelte";
-  import TempoPanel from "./panels/TempoPanel.svelte";
+  // The desktop's settings: a tab bar, and the open tab's panel. The tabs are in panels/tabs.ts.
+  import { editor } from "../store/editor.svelte";
+  import { PANEL_TABS, TAB_ORDER } from "./panels/tabs";
 
-  const tabs: [Tab, string][] = [["chart", "Chart"], ["phases", "Phases"], ["looks", "Looks"], ["tempo", "Tempo"], ["actors", "Actors"], ["problems", "Problems"], ["help", "Keys & help"]];
+  const Panel = $derived(PANEL_TABS[editor.tab].panel);
 </script>
 
 <div class="tabs">
   <div class="tabbar" role="tablist">
-    {#each tabs as [id, label] (id)}
-      <button role="tab" aria-selected={editor.tab === id} onclick={() => { editor.tab = id; }}>{label}</button>
+    {#each TAB_ORDER as id (id)}
+      <button role="tab" aria-selected={editor.tab === id} onclick={() => { editor.tab = id; }}>{PANEL_TABS[id].label}</button>
     {/each}
   </div>
   <div class="panel" role="tabpanel">
-    {#if editor.tab === "chart"}<ChartPanel />
-    {:else if editor.tab === "phases"}<PhasesPanel />
-    {:else if editor.tab === "looks"}<LooksPanel />
-    {:else if editor.tab === "tempo"}<TempoPanel />
-    {:else if editor.tab === "actors"}<ActorsPanel />
-    {:else if editor.tab === "problems"}<ProblemsPanel />
-    {:else}<HelpPanel />{/if}
+    <Panel />
   </div>
 </div>
 

@@ -63,7 +63,8 @@ src/renderer/src/
   views/lane/   lane canvas: geometry, draw, interaction (what a press hits), the component
   views/timeline/  timeline canvas: rows and markers, draw, interaction, the component
   views/highway/   note-highway editor: columns, tiles, draw, interaction, the component
-  components/   top bar and menu bar, transport, inspector, highway screen, the tab panels
+  components/   top bar and menu bar, transport, inspector, highway screen, quick actions, the tab
+                panels (panels/tabs.ts lists them), motion.ts (transitions) and gestures.ts (swipes)
   components/mobile/   the phone layout: shell, bar, menu sheet, drawer, selection bar
   components/library/  "Your charts"
   platform/     where the platforms differ: the browser's stand-ins for the desktop app (file
@@ -77,6 +78,21 @@ src/renderer/src/
   practice tools (`store/practice.svelte.ts`), "Your charts" - and only arrange them differently.
   Touch gestures live in `views/touch.ts`; a mouse never reaches the code that differs. A new
   feature goes in both.
+- **Layouts keep their own state.** `mobile.*` (store/mobile.svelte.ts) is read and written only in
+  `components/mobile/`. Shared code that needs a settings tab shown calls `editor.revealTab(tab)`:
+  the desktop switches its tab bar, the phone opens its drawer. The settings tabs are listed once, in
+  `components/panels/tabs.ts`.
+- **Motion comes from `components/motion.ts`**: one set of timings, and transitions used as separate
+  `in:` and `out:` directives (`in:panel={...} out:panel={...}`) so each knows its direction - things
+  leave faster than they arrive, and a leaving element ignores the pointer. Reduced motion turns
+  slides into a short fade. Canvases never animate: what's drawn follows the finger exactly.
+- **Touch gestures are recognised in plain classes** - `views/touch.ts` for the canvases (taps,
+  pinches, long presses, two-finger taps, `dragStartsAfterPixels` for any press that drags what it
+  pressed) and `views/swipe.ts` for panels - and wired up by `components/gestures.ts`'s actions
+  (`use:dismissable`, `use:edgeSwipe`). Touch only; every gesture also has a button. The browser
+  keeps any drag `touch-action` allows for scrolling, and combines `touch-action` only up to the
+  nearest scrolling element: a scrolling panel that swipes sideways needs `touch-action: pan-y` on
+  that scrolling element itself, or the swipe never arrives.
 - **Commands and their keys come from `store/commands.ts`**, one table of File / Edit / View /
   Playback menus. The desktop's `MenuBar` and the phone's menu sheet draw it, the Help tab lists it,
   and `store/keyboard.ts` matches key presses against each command's `keys` text ("Ctrl S", "Delete /

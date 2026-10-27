@@ -19,8 +19,8 @@
   import { boxIsAClick, prepare, theme, type Box } from "../theme";
   import { drawTimeline } from "./draw";
   import { COLLAPSIBLE_ROWS, layoutTimeline, markers, tOf } from "./geometry";
-  import { DRAG_STARTS_AFTER_PIXELS, markersInBox, pressWaitsOnTouch, touchTapWith, whatATimelinePressHits, whatATouchTapAdds, type TouchTap } from "./interaction";
-  import { Pinch, Taps, TwoFingerTap, WaitingPress, type PinchStep } from "../touch";
+  import { markersInBox, pressWaitsOnTouch, touchTapWith, whatATimelinePressHits, whatATouchTapAdds, type TouchTap } from "./interaction";
+  import { dragStartsAfterPixels, Pinch, Taps, TwoFingerTap, WaitingPress, type PinchStep } from "../touch";
 
   let canvas: HTMLCanvasElement;
   let w = $state(0);
@@ -28,7 +28,7 @@
     | { kind: "seek" }
     | { kind: "box"; adding: boolean; addsTo: number[] }
     // `hold`: a finger resting on the markers opens quick actions for them.
-    | { kind: "move"; startSeconds: number; textBefore: string; startTimes: [ChartEvent, number][]; moved: boolean; hold?: WaitingPress }
+    | { kind: "move"; startSeconds: number; textBefore: string; startTimes: [ChartEvent, number][]; moved: boolean; slop: number; hold?: WaitingPress }
     | { kind: "touch"; press: WaitingPress; t0: number; tap: TouchTap; adding: boolean };
   let drag: Drag | null = null;
   let box = $state<Box | null>(null);
@@ -119,7 +119,7 @@
         if (!editor.selection.has(hit)) select(hit, adds(ev));
         const events = doc.chart.events, at = { x: ev.clientX, y: ev.clientY };
         const d: Extract<Drag, { kind: "move" }> = {
-          kind: "move", startSeconds: secondsAt(x), textBefore: doc.text, moved: false,
+          kind: "move", startSeconds: secondsAt(x), textBefore: doc.text, moved: false, slop: dragStartsAfterPixels(ev.pointerType),
           startTimes: [...editor.selection].map(i => [events[i], evTime(events[i], doc.tempo)]),
         };
         if (ev.pointerType === "touch") d.hold = new WaitingPress(x, y, () => { if (drag === d && !d.moved) { drag = null; editor.quickActions = at; } });
@@ -160,7 +160,7 @@
     } else {
       drag.hold?.pans(x, y);
       const deltaSeconds = secondsAt(x) - drag.startSeconds;
-      if (!drag.moved && Math.abs(deltaSeconds * editor.view.pps) < DRAG_STARTS_AFTER_PIXELS) return;
+      if (!drag.moved && Math.abs(deltaSeconds * editor.view.pps) < drag.slop) return;
       drag.moved = true;
       for (const [e, from] of drag.startTimes) setEvTime(e, snapped(from + deltaSeconds), doc.tempo);
     }

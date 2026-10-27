@@ -4,47 +4,35 @@
   import { layout } from "../../store/layout.svelte";
   import { panel, type Side } from "../motion";
   import Icon from "../Icon.svelte";
-  import type { Tab } from "../../store/editor.svelte";
   import { mobile } from "../../store/mobile.svelte";
-  import ActorsPanel from "../panels/ActorsPanel.svelte";
-  import ChartPanel from "../panels/ChartPanel.svelte";
-  import HelpPanel from "../panels/HelpPanel.svelte";
-  import LooksPanel from "../panels/LooksPanel.svelte";
-  import PhasesPanel from "../panels/PhasesPanel.svelte";
-  import ProblemsPanel from "../panels/ProblemsPanel.svelte";
-  import TempoPanel from "../panels/TempoPanel.svelte";
+  import type { Tab } from "../../store/editor.svelte";
+  import { PANEL_TABS, TAB_ORDER } from "../panels/tabs";
 
   let { part }: { part: "rail" | "drawer" } = $props();
 
-  const TABS: [Tab, string][] = [
-    ["chart", "Chart"], ["phases", "Phases"], ["looks", "Looks"], ["tempo", "Tempo"], ["actors", "Actors"], ["problems", "Issues"], ["help", "Help"],
-  ];
   const side = $derived<Side>(layout.landscape ? "left" : "bottom");
   const close = () => { mobile.drawer = null; };
-  const title = $derived(TABS.find(([id]) => id === mobile.drawer)?.[1] ?? "");
+  // The open tab - or, while the drawer slides shut, the one it's closing on.
+  let last: Tab = "chart";
+  const open = $derived.by(() => { if (mobile.drawer) last = mobile.drawer; return PANEL_TABS[last]; });
+  const Panel = $derived(open.panel);
 </script>
 
 {#if part === "rail"}
   <nav class="rail" aria-label="Settings">
-    {#each TABS as [id, label] (id)}
-      <button aria-pressed={mobile.drawer === id} class:on={mobile.drawer === id} onclick={() => mobile.toggleDrawer(id)}>{label}</button>
+    {#each TAB_ORDER as id (id)}
+      <button aria-pressed={mobile.drawer === id} class:on={mobile.drawer === id} onclick={() => mobile.toggleDrawer(id)}>{PANEL_TABS[id].short}</button>
     {/each}
   </nav>
 {:else if mobile.drawer}
   <!-- Drag it back the way it came to close it: sideways in landscape, down by its header in portrait. -->
-  <section class="drawer" aria-label={title} in:panel={{ from: side }} out:panel={{ from: side }}
+  <section class="drawer" aria-label={open.label} in:panel={{ from: side }} out:panel={{ from: side }}
     use:dismissable={side === "left"
       ? { axis: "x", toward: -1, onClose: close }
       : { axis: "y", toward: 1, handle: "header", onClose: close }}>
-    <header><h3>{title}</h3><button aria-label="Close" onclick={() => { mobile.drawer = null; }}><Icon name="close" /></button></header>
+    <header><h3>{open.label}</h3><button aria-label="Close" onclick={() => { mobile.drawer = null; }}><Icon name="close" /></button></header>
     <div class="panel">
-      {#if mobile.drawer === "chart"}<ChartPanel />
-      {:else if mobile.drawer === "phases"}<PhasesPanel />
-      {:else if mobile.drawer === "looks"}<LooksPanel />
-      {:else if mobile.drawer === "tempo"}<TempoPanel />
-      {:else if mobile.drawer === "actors"}<ActorsPanel />
-      {:else if mobile.drawer === "problems"}<ProblemsPanel />
-      {:else}<HelpPanel />{/if}
+      <Panel />
     </div>
   </section>
 {/if}

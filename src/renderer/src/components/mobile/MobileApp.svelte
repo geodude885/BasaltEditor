@@ -3,6 +3,7 @@
   // the editor always reaches the editor. Landscape first - the lane beside the timeline - with
   // portrait stacking the same pieces. Settings open in a drawer from the rail; the selected event's
   // fields float over the lane.
+  import { untrack } from "svelte";
   import { dismissable, edgeSwipe } from "../gestures";
   import { library } from "../../store/library.svelte";
   import { rise, type Side } from "../motion";
@@ -23,6 +24,16 @@
   $effect(() => {
     document.documentElement.classList.add("compact");
     return () => document.documentElement.classList.remove("compact");
+  });
+
+  // Shared code asking for a settings tab (editor.revealTab): open the drawer on it, over the menu.
+  // Only requests made from now on: one from before this layout showed has been answered.
+  let answered = editor.tabRevealed;
+  $effect(() => {
+    const asked = editor.tabRevealed;
+    if (asked === answered) return;
+    answered = asked;
+    untrack(() => { mobile.drawer = editor.tab; mobile.menu = false; });
   });
 
   const floatSide = $derived<Side>(layout.landscape ? "left" : "bottom");

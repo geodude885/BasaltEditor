@@ -13,7 +13,6 @@
   import { doc } from "../store/document.svelte";
   import { editor } from "../store/editor.svelte";
   import { layout } from "../store/layout.svelte";
-  import { mobile } from "../store/mobile.svelte";
   import { seek } from "../store/playback";
   import { StagePreviewShader } from "../views/stagePreview";
 
@@ -90,7 +89,6 @@
     const index = showingSelected ? editor.selectedLookCue : now?.cue.index;
     if (index == null) return;
     selectLookCue(index);
-    if (layout.compact) mobile.drawer = "looks";
     if (!showingSelected) seek(now!.cue.time);
   }
 

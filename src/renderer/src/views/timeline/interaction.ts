@@ -74,6 +74,3 @@ export function markersInBox(markers: Marker[], box: Box): number[] {
   const b = normalise(box);
   return markers.filter(m => m.x >= b.x0 && m.x <= b.x1 && m.y >= b.y0 && m.y <= b.y1).map(m => m.i);
 }
-
-// A press that moves less than this is a click, not a drag.
-export const DRAG_STARTS_AFTER_PIXELS = 3;

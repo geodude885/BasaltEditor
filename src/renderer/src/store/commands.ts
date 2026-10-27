@@ -10,9 +10,7 @@ import { doc } from "./document.svelte";
 import { SHOT_COLOURINGS } from "../views/shotColours";
 import { editor } from "./editor.svelte";
 import { copyChart, newChart, openFiles, openFolder, openRecent, save, saveChartAs, savePackage, saveTarget } from "./files";
-import { layout } from "./layout.svelte";
 import { library } from "./library.svelte";
-import { mobile } from "./mobile.svelte";
 import { ensureAudio, seek } from "./playback";
 import { recording } from "./recording.svelte";
 import { backToPlayStart, loopPoint, loopPointLabel, playOrPause, practice, rewindBars, rewindSeconds, selectLoop } from "./practice.svelte";
@@ -62,8 +60,7 @@ export function startNewChart(): void {
   library.visible = false;
   if (window.editor.askUnsaved) { void newChart(); return; }
   editor.confirmNew = true;
-  editor.tab = "chart";
-  if (layout.compact) { mobile.menu = false; mobile.drawer = "chart"; }
+  editor.revealTab("chart");
 }
 
 /** Whether the open-folder dialog exists here; set by the platform at start-up. */

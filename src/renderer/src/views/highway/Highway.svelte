@@ -14,7 +14,7 @@
   import { practice } from "../../store/practice.svelte";
   import { seek, songStart } from "../../store/playback";
   import { boxIsAClick, prepare, theme, type Box } from "../theme";
-  import { Pinch, TwoFingerTap, WaitingPress } from "../touch";
+  import { dragStartsAfterPixels, Pinch, TwoFingerTap, WaitingPress } from "../touch";
   import { drawHighway } from "./draw";
   import { highwayColumns, HIT_LINE_FROM_TOP, LARGEST_HIGHWAY_PPS, SMALLEST_HIGHWAY_PPS, tiles, tilesInBox, type HighwayView } from "./geometry";
   import { scrubbedTime, shiftedColumn, tileDrag, whatAHighwayPressHits, whatAHighwayTapDoes } from "./interaction";
@@ -42,11 +42,10 @@
     | { kind: "empty"; press: WaitingPress; at: HighwayView; time0: number; adding: boolean }
     | { kind: "box"; adding: boolean; addsTo: number[]; clickAdds: boolean; at: HighwayView }
     // `hold`: a finger resting on the tiles opens quick actions for them.
-    | { kind: "tiles"; x0: number; y0: number; textBefore: string; moved: boolean; starts: [ChartEvent, number, number][]; hold?: WaitingPress };
+    | { kind: "tiles"; x0: number; y0: number; textBefore: string; moved: boolean; slop: number; starts: [ChartEvent, number, number][]; hold?: WaitingPress };
   let drag: Drag | null = null;
   const pinch = new Pinch(), twoTap = new TwoFingerTap();
 
-  const DRAG_STARTS_AFTER_PIXELS = 8;
 
   const pointerAt = (ev: PointerEvent | WheelEvent): [number, number] => { const r = canvas.getBoundingClientRect(); return [ev.clientX - r.left, ev.clientY - r.top]; };
   const adds = (ev: PointerEvent) => ev.shiftKey || editor.multiSelect;
@@ -87,7 +86,7 @@
       if (!editor.selection.has(press.index)) select(press.index, adding);
       const events = doc.chart.events, width = laneOf(doc.chart).width, held = { x: ev.clientX, y: ev.clientY };
       const d: Extract<Drag, { kind: "tiles" }> = {
-        kind: "tiles", x0: x, y0: y, textBefore: doc.text, moved: false,
+        kind: "tiles", x0: x, y0: y, textBefore: doc.text, moved: false, slop: dragStartsAfterPixels(ev.pointerType),
         starts: [...editor.selection].filter(i => events[i]?.projectile).map((i): [ChartEvent, number, number] => [events[i], evTime(events[i], doc.tempo), columnOfX(+events[i].projectile!.from?.x || 0, width)]),
       };
       if (ev.pointerType === "touch") d.hold = new WaitingPress(x, y, () => { if (drag === d && !d.moved) { drag = null; editor.quickActions = held; } });
@@ -124,7 +123,7 @@
       editor.setSelection(new Set([...drag.addsTo, ...tilesInBox(placed, box)]));
     } else {
       drag.hold?.pans(x, y);
-      if (!drag.moved && Math.hypot(x - drag.x0, y - drag.y0) < DRAG_STARTS_AFTER_PIXELS) return;
+      if (!drag.moved && Math.hypot(x - drag.x0, y - drag.y0) < drag.slop) return;
       drag.moved = true;
       const by = tileDrag(view, columns.length, drag.x0, drag.y0, x, y), width = laneOf(doc.chart).width;
       for (const [e, t, column] of drag.starts) {
