@@ -17,8 +17,12 @@ export type DismissOptions = {
   disabled?: boolean;
 };
 
-/** Presses on these never drag a panel: they have gestures of their own. */
-const KEEPS_ITS_OWN = "input, select, textarea, [data-no-swipe]";
+/**
+ * Presses on these never drag a panel: they drag themselves (sliders, text being selected), or say
+ * so. Other fields only react to taps, so a swipe starting on one still moves the panel - the
+ * settings drawer is mostly fields, and must stay easy to grab.
+ */
+const KEEPS_ITS_OWN = "input[type=range], textarea, [data-no-swipe]";
 
 /** After a drag, the click it would end in is swallowed - only that one. */
 function swallowNextClick(): void {

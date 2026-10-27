@@ -12,7 +12,7 @@ export type Toward = 1 | -1 | 0;
 /** How far past halfway-ish a panel must be dragged to close when it isn't flung. */
 const CLOSES_AFTER_SHARE = 0.35;
 /** A flick this fast (pixels a millisecond) closes it even when it hasn't gone far... */
-const FLING_SPEED = 0.45;
+const FLING_SPEED = 0.4;
 /** ...as long as it went this far, so a jitter isn't a fling. */
 const FLING_LEAST_PIXELS = 16;
 /** Dragged the wrong way, it moves only this much of the finger's way. */

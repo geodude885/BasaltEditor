@@ -73,6 +73,12 @@
     grid-template-areas: "bar bar" "rail main" "rail tools";
   }
   .bar { grid-area: bar; min-width: 0; }
+  /*
+   * Where a swipe from the left edge can start, the browser may only scroll up and down - otherwise
+   * it claims a sideways drag as a scroll and the swipe never reaches components/gestures.ts. The
+   * bars that scroll sideways keep that, so the swipe doesn't start on them.
+   */
+  .rail, .lanebox, .timebox :global(.row-headers) { touch-action: pan-y; }
   .rail { grid-area: rail; min-height: 0; display: flex; flex-direction: column; background: var(--panel); }
   .rail > :global(*) { flex: 1; }
   .tools { grid-area: tools; min-width: 0; }
