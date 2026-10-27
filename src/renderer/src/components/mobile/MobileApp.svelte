@@ -3,6 +3,8 @@
   // the editor always reaches the editor. Landscape first - the lane beside the timeline - with
   // portrait stacking the same pieces. Settings open in a drawer from the rail; the selected event's
   // fields float over the lane.
+  import { dismissable, edgeSwipe } from "../gestures";
+  import { library } from "../../store/library.svelte";
   import { rise, type Side } from "../motion";
   import { editor } from "../../store/editor.svelte";
   import { layout } from "../../store/layout.svelte";
@@ -27,9 +29,11 @@
   const inspecting = $derived(editor.selection.size > 0 && !mobile.drawer);
 </script>
 
-<div class="shell" class:portrait={!layout.landscape}>
+<!-- A swipe in from the left edge (or across the rail) opens the menu. -->
+<div class="shell" class:portrait={!layout.landscape}
+  use:edgeSwipe={{ onOpen: () => { mobile.drawer = null; mobile.menu = true; }, disabled: mobile.menu || library.visible }}>
   <div class="bar"><MobileBar /></div>
-  <div class="rail"><MobileDrawer part="rail" /></div>
+  <div class="rail" data-swipe-open><MobileDrawer part="rail" /></div>
   <main class="main">
     <div class="lanebox"><LaneView /></div>
     {#if editor.mainView === "highway"}
@@ -38,7 +42,9 @@
       <div class="timebox"><Timeline /></div>
     {/if}
     {#if inspecting}
-      <aside class="float" aria-label="Selected" in:rise={{ from: floatSide }} out:rise={{ from: floatSide }}>
+      <!-- Flick it aside to let go of the selection. -->
+      <aside class="float" aria-label="Selected" in:rise={{ from: floatSide }} out:rise={{ from: floatSide }}
+        use:dismissable={{ axis: "x", toward: layout.landscape ? -1 : 0, onClose: () => editor.selection.clear() }}>
         <Inspector />
       </aside>
     {/if}
@@ -81,7 +87,7 @@
   .timebox :global(.timeline) { grid-template-columns: 76px minmax(0, 1fr); }
   .float {
     position: absolute; z-index: 3; left: 6px; bottom: 6px; top: 6px; width: min(340px, 46%); overflow: auto; overscroll-behavior: contain;
-    background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px; touch-action: pan-y;
   }
   .float :global(.inspector) { border-top: 0; }
 

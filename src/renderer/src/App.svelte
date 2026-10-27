@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { rise } from "./components/motion";
+  import { dismissable } from "./components/gestures";
+  import { rise, type Side } from "./components/motion";
   import { onMount } from "svelte";
   import Inspector from "./components/Inspector.svelte";
   import Panels from "./components/Panels.svelte";
@@ -53,6 +54,8 @@
     const files = [...(ev.dataTransfer?.files ?? [])];
     if (files.length) void openDropped(files);
   }
+  // Where toasts come from: below on the desktop, from the top bar on a phone.
+  const toastFrom = $derived<Side>(layout.compact ? "top" : "bottom");
 </script>
 
 <svelte:window onkeydown={handleShortcut} ondragover={dragover} ondrop={drop} onblur={() => { dropping = false; }} />
@@ -85,10 +88,11 @@
 <div class="drop" class:show={dropping}>Drop chart files</div>
 <!-- A new toast rises in as the one before sinks away, in the same spot. Global, so it still moves
      when the whole block goes (the toast timing out). -->
-<div class="toasts" aria-live="polite">
+<div class="toasts" class:top={layout.compact} aria-live="polite">
   {#if editor.toast}
     {#key editor.toast.id}
-      <div class="toast" role="status" in:rise|global out:rise|global>{editor.toast.text}</div>
+      <div class="toast" role="status" in:rise|global={{ from: toastFrom }} out:rise|global={{ from: toastFrom }}
+        use:dismissable={{ axis: "x", toward: 0, onClose: () => { editor.toast = null; } }}>{editor.toast.text}</div>
     {/key}
   {/if}
 </div>
@@ -109,10 +113,14 @@
     position: fixed; left: 16px; right: 16px; bottom: max(18px, env(safe-area-inset-bottom)); z-index: 30; pointer-events: none;
     display: grid; justify-items: center;
   }
+  /* On a phone the bottom is all buttons: toasts drop in under the top bar instead. */
+  .toasts.top { bottom: auto; top: calc(env(safe-area-inset-top) + 60px); }
   /* Both in one cell, so one leaving and the next arriving overlap rather than stack. */
   .toast {
     grid-area: 1 / 1; background: var(--raised); border: 1px solid var(--accent);
     padding: 8px 14px; border-radius: 8px; font-size: 13px; max-width: 100%; box-shadow: 0 6px 18px var(--shadow);
+    /* Swipe it aside to dismiss it; the space around it lets taps through. */
+    pointer-events: auto; touch-action: none;
   }
   .drop {
     position: fixed; inset: 0; background: color-mix(in srgb, var(--accent) 13%, transparent); border: 3px dashed var(--accent); display: grid; place-items: center;
