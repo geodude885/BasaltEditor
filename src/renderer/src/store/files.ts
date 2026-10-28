@@ -7,11 +7,26 @@ import { template } from "../model/samples";
 import { loadChart, toast } from "./actions";
 import { doc } from "./document.svelte";
 import { editor } from "./editor.svelte";
-// library.svelte.ts imports this module too; each only calls the other from inside functions.
-import { library } from "./library.svelte";
 import { loadSong, unloadSong } from "./playback";
 
 const api = () => window.editor;
+
+/**
+ * Your charts, as far as opening and saving need it. The library (store/library.svelte.ts) registers
+ * itself here when it starts, so it can open charts through this module without this one importing
+ * it back. Without one - no library here - there is nothing to keep charts in.
+ */
+export interface ChartKeeper {
+  readonly available: boolean;
+  /** Keeps changes as they're made (the browser), rather than on Save (the Charts folder). */
+  readonly autosaves: boolean;
+  /** Keeps the open chart's latest changes now. False if that failed. */
+  flush(): Promise<boolean>;
+  /** A chart was just saved into it, from here. */
+  saved(): void;
+}
+let keeper: ChartKeeper | null = null;
+export function keepChartsWith(k: ChartKeeper): void { keeper = k; }
 
 /** The chart folder's files as they are on disk, by path - so Save writes only a song or cover that is new or changed. */
 let onDisk = new Map<string, Uint8Array>();
@@ -23,8 +38,8 @@ let onDisk = new Map<string, Uint8Array>();
  */
 export function saveTarget(): "folder" | "new-folder" | "library" | "file" {
   if (editor.folder) return "folder";
-  if (library.available && isDesktop(api())) return "new-folder";
-  return library.available && library.autosaves ? "library" : "file";
+  if (keeper?.available && isDesktop(api())) return "new-folder";
+  return keeper?.available && keeper.autosaves ? "library" : "file";
 }
 
 /** The desktop app's frame and dialogs in the page's theme. Nothing to do in a browser. */
@@ -185,7 +200,7 @@ export async function refreshRecent(): Promise<void> {
  * saved now, not when its timer would have, which would be after the next chart had replaced them.
  */
 export async function mayReplaceChart(): Promise<boolean> {
-  await library.flush();
+  await keeper?.flush();
   const ask = api().askUnsaved;
   if (!doc.dirty || !ask) return true;
   const choice = await ask(doc.chart.name || "Untitled");
@@ -249,7 +264,7 @@ export async function save(): Promise<void> {
   if (target === "file") { await saveChartAs(); return; }
   if (target === "library") {
     editor.libraryAdd = true;
-    if (!await library.flush()) return;
+    if (keeper && !await keeper.flush()) return;
     doc.markSaved();
     toast(savedNote("Saved in Your charts"));
     return;
@@ -278,7 +293,7 @@ async function saveToCharts(what: string): Promise<void> {
     onDisk = new Map(own.map(f => [f.path, f.bytes]));
     doc.markSaved();
     void refreshRecent();
-    if (library.visible) void library.refresh();
+    keeper?.saved();
     toast(savedNote(`${what} in Your charts, as ${folder.split(/[\\/]/).pop()} in the game's Charts folder`));
   } catch (e) {
     toast(`Could not save into the game's Charts folder: ${(e as Error).message}`);

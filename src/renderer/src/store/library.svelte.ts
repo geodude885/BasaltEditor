@@ -7,7 +7,7 @@ import * as Jsonc from "../model/jsonc";
 import { toast } from "./actions";
 import { doc } from "./document.svelte";
 import { editor } from "./editor.svelte";
-import { mayReplaceChart, openStored } from "./files";
+import { keepChartsWith, mayReplaceChart, openStored, type ChartKeeper } from "./files";
 
 export type { ChartSummary };
 
@@ -29,7 +29,7 @@ export interface LibrarySource {
 const CURRENT_KEY = "basalt-library-current";
 const SAVE_AFTER_MS = 800;
 
-class Library {
+class Library implements ChartKeeper {
   /** Whether there is a library here: the web, or the desktop app with the game installed. */
   available = $state(false);
   /** Charts save themselves as they change (the web), rather than with Ctrl S (the desktop). */
@@ -48,6 +48,8 @@ class Library {
     this.#source = source;
     this.available = true;
     this.autosaves = source.autosaves ?? true;
+    // Opening and saving (store/files.ts) reach Your charts through this, not by importing it.
+    keepChartsWith(this);
     if (!this.autosaves) return;
     $effect.root(() => {
       $effect(() => {
@@ -63,6 +65,11 @@ class Library {
   async flush(): Promise<boolean> {
     clearTimeout(this.#timer);
     return this.#sync();
+  }
+
+  /** A chart was just saved in, from store/files.ts: show it, if the list is up. */
+  saved(): void {
+    if (this.visible) void this.refresh();
   }
 
   show(): void {
