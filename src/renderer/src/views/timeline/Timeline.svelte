@@ -20,7 +20,7 @@
   import { drawTimeline } from "./draw";
   import { COLLAPSIBLE_ROWS, layoutTimeline, markers, tOf } from "./geometry";
   import { markersInBox, pressWaitsOnTouch, touchTapWith, whatATimelinePressHits, whatATouchTapAdds, type TouchTap } from "./interaction";
-  import { dragStartsAfterPixels, Pinch, Taps, TwoFingerTap, WaitingPress, type PinchStep } from "../touch";
+  import { dragStartsAfterPixels, Fingers, restingFinger, Taps, WaitingPress, type PinchStep } from "../touch";
 
   let canvas: HTMLCanvasElement;
   let w = $state(0);
@@ -53,7 +53,7 @@
   const snapped = (seconds: number) => doc.tempo.snap(seconds, editor.snap);
   const pointerAt = (ev: PointerEvent | WheelEvent): [number, number] => { const r = canvas.getBoundingClientRect(); return [ev.clientX - r.left, ev.clientY - r.top]; };
 
-  const taps = new Taps(), pinch = new Pinch(), twoTap = new TwoFingerTap();
+  const taps = new Taps(), fingers = new Fingers("x");
   /** Shift, or the touch screens' multi-select button, adds to the selection. */
   const adds = (ev: PointerEvent) => ev.shiftKey || editor.multiSelect;
 
@@ -79,14 +79,13 @@
   function pointerdown(ev: PointerEvent): void {
     const [x, y] = pointerAt(ev);
     canvas.setPointerCapture(ev.pointerId);
-    if (ev.pointerType === "touch") twoTap.down(ev.pointerId, x, y, ev.timeStamp);
-    if (ev.pointerType === "touch" && pinch.down(ev.pointerId, x, y)) {
+    if (fingers.down(ev, x, y)) {
       // A second finger: the first one's press becomes a pinch. Keep a move already made; drop a box.
       if (drag?.kind === "move") pointerup();
       else { if (drag?.kind === "touch") drag.press.end(); drag = null; box = null; }
       return;
     }
-    if (pinch.busy) return;
+    if (fingers.busy) return;
     const press = whatATimelinePressHits(doc.chart, doc.tempo, editor.view, layout, placed, editor.lookCues, x, y, taps.isDouble(ev));
     // Select mode: empty space boxes straight away, with any pointer.
     if (editor.selectMode && pressWaitsOnTouch(press, layout, y)) {
@@ -122,7 +121,7 @@
           kind: "move", startSeconds: secondsAt(x), textBefore: doc.text, moved: false, slop: dragStartsAfterPixels(ev.pointerType),
           startTimes: [...editor.selection].map(i => [events[i], evTime(events[i], doc.tempo)]),
         };
-        if (ev.pointerType === "touch") d.hold = new WaitingPress(x, y, () => { if (drag === d && !d.moved) { drag = null; editor.quickActions = at; } });
+        d.hold = restingFinger(ev, x, y, () => { if (drag === d && !d.moved) { drag = null; editor.quickActions = at; } });
         drag = d;
         return;
       }
@@ -143,11 +142,8 @@
 
   function pointermove(ev: PointerEvent): void {
     const [x, y] = pointerAt(ev);
-    if (ev.pointerType === "touch") {
-      twoTap.move(ev.pointerId, x, y);
-      const step = pinch.move(ev.pointerId, x, y);
-      if (step) { pinchStep(step); return; }
-    }
+    const step = fingers.move(ev, x, y);
+    if (step) { pinchStep(step); return; }
     if (!drag) return;
     if (drag.kind === "touch") {
       if (drag.press.pans(x, y)) editor.view.t0 = Math.max(-1, drag.t0 - (x - drag.press.x0) / editor.view.pps);
@@ -167,9 +163,8 @@
   }
 
   function pointerup(ev?: PointerEvent): void {
-    if (ev?.pointerType === "touch") pinch.up(ev.pointerId);
     // Two fingers tapped together: undo, once the rest of this lift is done.
-    const twoTapped = ev?.pointerType === "touch" && twoTap.up(ev.pointerId, ev.timeStamp, ev.type === "pointercancel");
+    const twoTapped = !!ev && fingers.up(ev);
     if (drag?.kind === "move") drag.hold?.end();
     if (drag?.kind === "touch") {
       drag.press.end();

@@ -88,7 +88,8 @@ src/renderer/src/
   slides into a short fade. Canvases never animate: what's drawn follows the finger exactly.
 - **Touch gestures are recognised in plain classes** - `views/touch.ts` for the canvases (taps,
   pinches, long presses, two-finger taps, `dragStartsAfterPixels` for any press that drags what it
-  pressed) and `views/swipe.ts` for panels - and wired up by `components/gestures.ts`'s actions
+  pressed; a canvas takes `Fingers` for the pinch and two-finger undo every canvas has, and
+  `restingFinger` for a long press on what it pressed) and `views/swipe.ts` for panels - and wired up by `components/gestures.ts`'s actions
   (`use:dismissable`, `use:edgeSwipe`). Touch only; every gesture also has a button. The browser
   keeps any drag `touch-action` allows for scrolling, and combines `touch-action` only up to the
   nearest scrolling element: a scrolling panel that swipes sideways needs `touch-action: pan-y` on

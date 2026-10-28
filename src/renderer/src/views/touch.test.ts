@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { dragStartsAfterPixels, LONG_PRESS_MS, Pinch, Taps, TwoFingerTap, WaitingPress } from "./touch";
+import { dragStartsAfterPixels, Fingers, LONG_PRESS_MS, Pinch, restingFinger, Taps, TwoFingerTap, WaitingPress } from "./touch";
 
 const press = (pointerType: string, timeStamp: number, x = 0, detail = 0) => ({ pointerType, detail, timeStamp, clientX: x, clientY: 0 });
 
@@ -138,5 +138,46 @@ describe("dragStartsAfterPixels", () => {
   it("lets a fingertip wobble more than a mouse before it drags", () => {
     expect(dragStartsAfterPixels("mouse")).toBeLessThan(dragStartsAfterPixels("touch"));
     expect(dragStartsAfterPixels("pen")).toBe(dragStartsAfterPixels("touch"));
+  });
+});
+
+describe("Fingers", () => {
+  const ev = (pointerId: number, timeStamp: number, pointerType = "touch", type = "pointerup") => ({ pointerId, pointerType, timeStamp, type });
+
+  it("leaves a mouse alone", () => {
+    const fingers = new Fingers();
+    expect(fingers.down(ev(1, 0, "mouse"), 0, 0)).toBe(false);
+    expect(fingers.down(ev(2, 10, "mouse"), 50, 0)).toBe(false);
+    expect(fingers.busy).toBe(false);
+    expect(fingers.move(ev(2, 20, "mouse"), 90, 0)).toBeNull();
+    expect(fingers.up(ev(1, 30, "mouse"))).toBe(false);
+  });
+
+  it("pinches along the axis time runs on", () => {
+    const across = new Fingers("x"), down = new Fingers("y");
+    for (const f of [across, down]) { f.down(ev(1, 0), 0, 100); f.down(ev(2, 10), 0, 200); }
+    expect(across.busy).toBe(true);
+    // Fingers spreading up and down: the highway zooms about their middle, which moved down; along x
+    // their middle stayed put, so the timeline doesn't pan.
+    expect(down.move(ev(2, 20), 0, 300)).toEqual({ zoom: 2, atX: 200, panX: 50 });
+    expect(across.move(ev(2, 20), 0, 300)!.panX).toBe(0);
+  });
+
+  it("says when two fingers tapped together", () => {
+    const fingers = new Fingers();
+    expect(fingers.down(ev(1, 0), 100, 0)).toBe(false);
+    expect(fingers.down(ev(2, 20), 200, 0)).toBe(true);
+    expect(fingers.up(ev(1, 100))).toBe(false);
+    expect(fingers.up(ev(2, 120))).toBe(true);
+    expect(fingers.busy).toBe(false);
+  });
+});
+
+describe("restingFinger", () => {
+  it("waits for a long press with a finger only", () => {
+    expect(restingFinger({ pointerType: "mouse" }, 0, 0, () => {})).toBeUndefined();
+    const press = restingFinger({ pointerType: "touch" }, 0, 0, () => {});
+    expect(press).toBeInstanceOf(WaitingPress);
+    press!.end();
   });
 });
