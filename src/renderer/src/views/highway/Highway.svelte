@@ -10,7 +10,11 @@
   import { addProjectileInColumn, select, undoByTouch } from "../../store/actions";
   import { appearance } from "../../store/appearance.svelte";
   import { doc } from "../../store/document.svelte";
-  import { editor } from "../../store/editor.svelte";
+  import { display } from "../../store/display.svelte";
+  import { editing } from "../../store/editing.svelte";
+  import { session } from "../../store/session.svelte";
+  import { transport } from "../../store/transport.svelte";
+  import { ui } from "../../store/ui.svelte";
   import { practice } from "../../store/practice.svelte";
   import { seek, songStart } from "../../store/playback";
   import { boxIsAClick, prepare, theme, type Box } from "../theme";
@@ -26,14 +30,14 @@
   let box = $state<Box | null>(null);
   const columns = highwayColumns();
 
-  const view = $derived<HighwayView>({ w, h, hitY: h * HIT_LINE_FROM_TOP, pps: practice.highwayPps, time: editor.time });
+  const view = $derived<HighwayView>({ w, h, hitY: h * HIT_LINE_FROM_TOP, pps: practice.highwayPps, time: transport.time });
   const placed = $derived(tiles(doc.chart, doc.tempo, view, columns));
 
   $effect(() => {
     if (!w || !h) return;
     drawHighway(prepare(canvas, w, h), {
-      chart: doc.chart, tempo: doc.tempo, view, columns, tiles: placed, selection: editor.selection,
-      song: editor.song, songStart: songStart(), box, loop, shotColouring: editor.shotColouring,
+      chart: doc.chart, tempo: doc.tempo, view, columns, tiles: placed, selection: editing.selection,
+      song: session.song, songStart: songStart(), box, loop, shotColouring: display.shotColouring,
     }, theme(appearance.scheme));
   });
 
@@ -48,15 +52,15 @@
   const fingers = new Fingers("y");
 
   const pointerAt = (ev: PointerEvent | WheelEvent): [number, number] => { const r = canvas.getBoundingClientRect(); return [ev.clientX - r.left, ev.clientY - r.top]; };
-  const adds = (ev: PointerEvent) => ev.shiftKey || editor.multiSelect;
-  const snapped = (seconds: number) => doc.tempo.snap(seconds, editor.snap);
+  const adds = (ev: PointerEvent) => ev.shiftKey || editing.multiSelect;
+  const snapped = (seconds: number) => doc.tempo.snap(seconds, editing.snap);
 
   function stretch(factor: number): void {
     practice.highwayPps = Math.max(SMALLEST_HIGHWAY_PPS, Math.min(LARGEST_HIGHWAY_PPS, practice.highwayPps * factor));
   }
 
   function startBox(x: number, y: number, adding: boolean, clickAdds: boolean, at: HighwayView): void {
-    drag = { kind: "box", adding, addsTo: adding ? [...editor.selection] : [], clickAdds, at };
+    drag = { kind: "box", adding, addsTo: adding ? [...editing.selection] : [], clickAdds, at };
     box = { x0: x, y0: y, x1: x, y1: y };
   }
 
@@ -68,7 +72,7 @@
     if (drag.kind === "tiles" && drag.moved) {
       const moved = drag.starts.map(([e]) => e);
       doc.commit(drag.textBefore, ["events"]);
-      editor.setSelection(moved.map(e => doc.chart.events.indexOf(e)).filter(i => i >= 0));
+      editing.setSelection(moved.map(e => doc.chart.events.indexOf(e)).filter(i => i >= 0));
     }
     drag = null;
     box = null;
@@ -79,22 +83,22 @@
     canvas.setPointerCapture(ev.pointerId);
     if (fingers.down(ev, x, y)) { endDrag(); return; }
     if (fingers.busy) return;
-    const adding = adds(ev), at = view, press = whatAHighwayPressHits(placed, x, y, ev.pointerType, editor.selectMode);
+    const adding = adds(ev), at = view, press = whatAHighwayPressHits(placed, x, y, ev.pointerType, editing.selectMode);
     if (press.kind === "tiles") {
-      if (!editor.selection.has(press.index)) select(press.index, adding);
+      if (!editing.selection.has(press.index)) select(press.index, adding);
       const events = doc.chart.events, width = laneOf(doc.chart).width, held = { x: ev.clientX, y: ev.clientY };
       const d: Extract<Drag, { kind: "tiles" }> = {
         kind: "tiles", x0: x, y0: y, textBefore: doc.text, moved: false, slop: dragStartsAfterPixels(ev.pointerType),
-        starts: [...editor.selection].filter(i => events[i]?.projectile).map((i): [ChartEvent, number, number] => [events[i], evTime(events[i], doc.tempo), columnOfX(+events[i].projectile!.from?.x || 0, width)]),
+        starts: [...editing.selection].filter(i => events[i]?.projectile).map((i): [ChartEvent, number, number] => [events[i], evTime(events[i], doc.tempo), columnOfX(+events[i].projectile!.from?.x || 0, width)]),
       };
-      d.hold = restingFinger(ev, x, y, () => { if (drag === d && !d.moved) { drag = null; editor.quickActions = held; } });
+      d.hold = restingFinger(ev, x, y, () => { if (drag === d && !d.moved) { drag = null; ui.quickActions = held; } });
       drag = d;
     } else if (press.kind === "box") {
       startBox(x, y, adding, press.clickAdds, at);
     } else {
       // Held still: box-select from here.
       const d: Extract<Drag, { kind: "empty" }> = {
-        kind: "empty", at, time0: editor.time, adding,
+        kind: "empty", at, time0: transport.time, adding,
         press: new WaitingPress(x, y, () => { if (drag === d) startBox(x, y, adding, false, at); }),
       };
       drag = d;
@@ -106,7 +110,7 @@
     const step = fingers.move(ev, x, y);
     if (step) {
       stretch(step.zoom);
-      seek(Math.max(0, editor.time + step.panX / practice.highwayPps));
+      seek(Math.max(0, transport.time + step.panX / practice.highwayPps));
       return;
     }
     if (!drag) return;
@@ -115,7 +119,7 @@
     } else if (drag.kind === "box") {
       if (!box) return;
       box = { ...box, x1: x, y1: y };
-      editor.setSelection(new Set([...drag.addsTo, ...tilesInBox(placed, box)]));
+      editing.setSelection(new Set([...drag.addsTo, ...tilesInBox(placed, box)]));
     } else {
       drag.hold?.pans(x, y);
       if (!drag.moved && Math.hypot(x - drag.x0, y - drag.y0) < drag.slop) return;
@@ -141,7 +145,7 @@
       const { clickAdds, adding, at } = drag, [x0, y0] = [box.x0, box.y0];
       endDrag();
       if (clickAdds) tap(at, x0, y0, adding);
-      else if (!adding) editor.selection.clear();
+      else if (!adding) editing.selection.clear();
       return;
     }
     endDrag();
@@ -149,8 +153,8 @@
 
   /** A tap on empty space: let go of the selection, or add a tile there. */
   function tap(at: HighwayView, x: number, y: number, adding: boolean): void {
-    const does = whatAHighwayTapDoes(at, columns.length, x, y, editor.selection.size > 0, adding);
-    if (does.kind === "let-go") editor.selection.clear();
+    const does = whatAHighwayTapDoes(at, columns.length, x, y, editing.selection.size > 0, adding);
+    if (does.kind === "let-go") editing.selection.clear();
     else addProjectileInColumn(does.seconds, columns[does.column].column);
   }
 
@@ -163,7 +167,7 @@
   function wheel(ev: WheelEvent): void {
     ev.preventDefault();
     if (ev.ctrlKey || ev.metaKey) stretch(ev.deltaY < 0 ? 1.15 : 1 / 1.15);
-    else seek(Math.max(0, editor.time - ev.deltaY / practice.highwayPps));
+    else seek(Math.max(0, transport.time - ev.deltaY / practice.highwayPps));
   }
 </script>
 

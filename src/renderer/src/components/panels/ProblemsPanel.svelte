@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { editor } from "../../store/editor.svelte";
+  import { session } from "../../store/session.svelte";
 </script>
 
 <div class="problems">
-  {#each editor.problems as problem, i (i)}
+  {#each session.problems as problem, i (i)}
     <div>{problem}</div>
   {:else}
     <div class="none">No problems found.</div>

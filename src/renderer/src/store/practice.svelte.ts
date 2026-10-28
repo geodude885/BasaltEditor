@@ -4,7 +4,7 @@ import { DEFAULT_HIGHWAY_PPS } from "../views/highway/geometry";
 import { barsBefore, loopBetween } from "../model/practice";
 import { selectProjectilesBetween } from "./actions";
 import { doc } from "./document.svelte";
-import { editor } from "./editor.svelte";
+import { transport } from "./transport.svelte";
 import { play, seek } from "./playback";
 
 class PracticeState {
@@ -24,21 +24,21 @@ export const practice = new PracticeState();
 
 /** Plays or pauses, remembering where playing started - a bar early with pre-roll on. */
 export function playOrPause(): void {
-  if (!editor.playing) {
-    practice.playFrom = editor.time;
-    if (practice.preroll) seek(barsBefore(doc.tempo, editor.time, 1));
+  if (!transport.playing) {
+    practice.playFrom = transport.time;
+    if (practice.preroll) seek(barsBefore(doc.tempo, transport.time, 1));
   }
   play();
 }
 
 /** Back by bars - not past the loop's start while inside the loop, nor past the chart's. */
 export function rewindBars(bars: number): void {
-  const loop = practice.loop, inLoop = !!loop && editor.time >= loop[0] && editor.time <= loop[1];
-  seek(Math.max(inLoop ? loop![0] : 0, barsBefore(doc.tempo, editor.time, bars)));
+  const loop = practice.loop, inLoop = !!loop && transport.time >= loop[0] && transport.time <= loop[1];
+  seek(Math.max(inLoop ? loop![0] : 0, barsBefore(doc.tempo, transport.time, bars)));
 }
 
 export function rewindSeconds(seconds: number): void {
-  seek(Math.max(0, editor.time - seconds));
+  seek(Math.max(0, transport.time - seconds));
 }
 
 export function backToPlayStart(): void {
@@ -48,8 +48,8 @@ export function backToPlayStart(): void {
 /** Sets the loop's first point, then its second; with a loop already, clears it. */
 export function loopPoint(): void {
   if (practice.loop) { practice.loop = null; practice.loopStart = null; return; }
-  if (practice.loopStart == null) { practice.loopStart = editor.time; return; }
-  practice.loop = loopBetween(practice.loopStart, editor.time);
+  if (practice.loopStart == null) { practice.loopStart = transport.time; return; }
+  practice.loop = loopBetween(practice.loopStart, transport.time);
   practice.loopStart = null;
 }
 
@@ -64,5 +64,5 @@ export function selectLoop(): void {
 /** Keeps a playing loop going round: past its end, back to its start. App.svelte calls it every frame. */
 export function keepLooping(): void {
   const loop = practice.loop;
-  if (loop && editor.playing && editor.time >= loop[1]) seek(loop[0]);
+  if (loop && transport.playing && transport.time >= loop[1]) seek(loop[0]);
 }

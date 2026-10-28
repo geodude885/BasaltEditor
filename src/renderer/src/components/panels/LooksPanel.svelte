@@ -9,17 +9,17 @@
   import type { LookCue } from "../../model/types";
   import { addStageCueAtPlayhead, removeLookCue, selectLookCue } from "../../store/actions";
   import { doc } from "../../store/document.svelte";
-  import { editor } from "../../store/editor.svelte";
+  import { editing } from "../../store/editing.svelte";
   import { seek } from "../../store/playback";
   import { commandButton } from "../../store/commands";
   import { checked, num, text } from "../fields";
 
   const groups = stageParameterGroups();
   const visuals = $derived(doc.chart.visuals ?? []);
-  const index = $derived(editor.selectedLookCue);
+  const index = $derived(editing.selectedLookCue);
   const cue = $derived<LookCue | undefined>(visuals[index]);
   const isStageCue = $derived(!!cue && isCueForPack(cue, STAGE_PACK));
-  const startsFrom = $derived<StageLook | null>(cue && isStageCue ? stageLookBeforeCue(editor.lookCues, index) : null);
+  const startsFrom = $derived<StageLook | null>(cue && isStageCue ? stageLookBeforeCue(doc.lookCues, index) : null);
   const fadesTo = $derived<StageLook | null>(cue && startsFrom ? stageLookAfterCue(startsFrom, cue) : null);
 
   const editSelectedCue = (mutate: (cue: LookCue) => void) => doc.change(["visuals"], () => mutate(doc.chart.visuals![index]));

@@ -3,7 +3,7 @@
 import { peakBetween } from "../../audio/peaks";
 import type { Tempo } from "../../model/tempo";
 import type { LoadedChart } from "../../model/types";
-import type { Song } from "../../store/editor.svelte";
+import type { Song } from "../../store/session.svelte";
 import { shotPaint, stripePath, type ShotColouring } from "../shotColours";
 import { alpha, drawBox, type Box, type Theme } from "../theme";
 import { beatsBetween, columnSpan, timeOfY, yOfTime, type HighwayColumn, type HighwayView, type Tile } from "./geometry";

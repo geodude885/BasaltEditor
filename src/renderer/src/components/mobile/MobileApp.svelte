@@ -7,7 +7,9 @@
   import { dismissable, edgeSwipe } from "../gestures";
   import { library } from "../../store/library.svelte";
   import { rise, type Side } from "../motion";
-  import { editor } from "../../store/editor.svelte";
+  import { display } from "../../store/display.svelte";
+  import { editing } from "../../store/editing.svelte";
+  import { ui } from "../../store/ui.svelte";
   import { layout } from "../../store/layout.svelte";
   import { mobile } from "../../store/mobile.svelte";
   import LaneView from "../../views/lane/LaneView.svelte";
@@ -26,18 +28,18 @@
     return () => document.documentElement.classList.remove("compact");
   });
 
-  // Shared code asking for a settings tab (editor.revealTab): open the drawer on it, over the menu.
+  // Shared code asking for a settings tab (ui.revealTab): open the drawer on it, over the menu.
   // Only requests made from now on: one from before this layout showed has been answered.
-  let answered = editor.tabRevealed;
+  let answered = ui.tabRevealed;
   $effect(() => {
-    const asked = editor.tabRevealed;
+    const asked = ui.tabRevealed;
     if (asked === answered) return;
     answered = asked;
-    untrack(() => { mobile.drawer = editor.tab; mobile.menu = false; });
+    untrack(() => { mobile.drawer = ui.tab; mobile.menu = false; });
   });
 
   const floatSide = $derived<Side>(layout.landscape ? "left" : "bottom");
-  const inspecting = $derived(editor.selection.size > 0 && !mobile.drawer);
+  const inspecting = $derived(editing.selection.size > 0 && !mobile.drawer);
 </script>
 
 <!-- A swipe in from the left edge (or across the rail) opens the menu. -->
@@ -47,7 +49,7 @@
   <div class="rail" data-swipe-open><MobileDrawer part="rail" /></div>
   <main class="main">
     <div class="lanebox"><LaneView /></div>
-    {#if editor.mainView === "highway"}
+    {#if display.mainView === "highway"}
       <div class="highwaybox"><HighwayScreen /></div>
     {:else}
       <div class="timebox"><Timeline /></div>
@@ -55,14 +57,14 @@
     {#if inspecting}
       <!-- Flick it aside to let go of the selection. -->
       <aside class="float" aria-label="Selected" in:rise={{ from: floatSide }} out:rise={{ from: floatSide }}
-        use:dismissable={{ axis: "x", toward: layout.landscape ? -1 : 0, onClose: () => editor.selection.clear() }}>
+        use:dismissable={{ axis: "x", toward: layout.landscape ? -1 : 0, onClose: () => editing.selection.clear() }}>
         <Inspector />
       </aside>
     {/if}
     <MobileDrawer part="drawer" />
   </main>
   <div class="tools"><SelectionBar /></div>
-  {#if editor.lookPreview}<LookPreview />{/if}
+  {#if display.lookPreview}<LookPreview />{/if}
   {#if mobile.menu}<MenuSheet />{/if}
 </div>
 

@@ -1,6 +1,6 @@
-// The phone layout's own state: which sheet or drawer is open. Kept apart from editor.svelte.ts so the
+// The phone layout's own state: which sheet or drawer is open. Kept apart from the shared stores so the
 // desktop layout carries none of it.
-import type { Tab } from "./editor.svelte";
+import type { Tab } from "./ui.svelte";
 
 class MobileState {
   /** The menu sheet: files, playback settings, theme. */

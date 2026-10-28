@@ -6,7 +6,8 @@
   import { panel, veil } from "../motion";
   import { appearance, THEME_CHOICES, THEME_NAMES, type ThemeChoice } from "../../store/appearance.svelte";
   import { commandButton, menus, visibleGroups, type Command } from "../../store/commands";
-  import { editor } from "../../store/editor.svelte";
+  import { display } from "../../store/display.svelte";
+  import { transport } from "../../store/transport.svelte";
   import { mobile } from "../../store/mobile.svelte";
   import { setRate, setVolume } from "../../store/playback";
   import { num } from "../fields";
@@ -43,12 +44,12 @@
   <h3>Settings</h3>
   <div class="settings">
     <label><span>Speed</span>
-      <select value={String(editor.rate)} onchange={e => setRate(num(e))}>
+      <select value={String(transport.rate)} onchange={e => setRate(num(e))}>
         <option value="1">100%</option><option value="0.75">75%</option><option value="0.5">50%</option><option value="0.25">25%</option>
       </select>
     </label>
     <label><span>Volume</span>
-      <input type="range" min="0" max="1" step="0.05" value={editor.volume} oninput={e => setVolume(num(e))} />
+      <input type="range" min="0" max="1" step="0.05" value={transport.volume} oninput={e => setVolume(num(e))} />
     </label>
     <div class="wide"><TapOffset /></div>
     <p class="note">If your taps land late, move Tap timing right; early, move it left.</p>
@@ -60,7 +61,7 @@
     </select>
     <a href="?mobile=0">Desktop layout</a>
     <label class="wide"><span>Projectile colours</span>
-      <select value={editor.shotColouring} onchange={e => editor.colourShotsBy(e.currentTarget.value as ShotColouring)}>
+      <select value={display.shotColouring} onchange={e => display.colourShotsBy(e.currentTarget.value as ShotColouring)}>
         {#each SHOT_COLOURINGS as [colouring, label] (colouring)}<option value={colouring}>{label}</option>{/each}
       </select>
     </label>

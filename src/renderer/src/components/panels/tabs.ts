@@ -1,9 +1,9 @@
 // The settings tabs, once: what each is called and which panel it shows. The desktop's tab bar
 // (Panels.svelte) and the phone's rail and drawer (mobile/MobileDrawer.svelte) both draw from this,
-// so a new tab is one entry here and one name in editor.svelte.ts's Tab - and TypeScript says if
+// so a new tab is one entry here and one name in store/ui.svelte.ts's Tab - and TypeScript says if
 // either is missing.
 import type { Component } from "svelte";
-import type { Tab } from "../../store/editor.svelte";
+import type { Tab } from "../../store/ui.svelte";
 import ActorsPanel from "./ActorsPanel.svelte";
 import ChartPanel from "./ChartPanel.svelte";
 import HelpPanel from "./HelpPanel.svelte";

@@ -7,11 +7,11 @@
   import type { ChartEvent, Projectile, Structure } from "../model/types";
   import { copySelected, editSelected, mirrorSelected, removeSelected, throwFromActor } from "../store/actions";
   import { doc } from "../store/document.svelte";
-  import { editor } from "../store/editor.svelte";
+  import { editing } from "../store/editing.svelte";
   import BatchInspector from "./BatchInspector.svelte";
   import { checked, num, text } from "./fields";
 
-  const selected = $derived([...editor.selection].filter(i => doc.chart.events[i]));
+  const selected = $derived([...editing.selection].filter(i => doc.chart.events[i]));
   const index = $derived(selected.length === 1 ? selected[0] : -1);
   const e = $derived<ChartEvent | undefined>(doc.chart.events[index]);
   const kind = $derived(e ? kindOf(e) : "?");

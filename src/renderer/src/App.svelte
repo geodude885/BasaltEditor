@@ -16,7 +16,9 @@
   import { SAMPLE } from "./model/samples";
   import { fit, loadChart, toast } from "./store/actions";
   import { doc, restoreDraft } from "./store/document.svelte";
-  import { editor } from "./store/editor.svelte";
+  import { display } from "./store/display.svelte";
+  import { transport } from "./store/transport.svelte";
+  import { ui } from "./store/ui.svelte";
   import { openDropped } from "./store/files";
   import { handleShortcut } from "./store/keyboard";
   import { layout } from "./store/layout.svelte";
@@ -35,7 +37,7 @@
   });
 
   // Keep an A-B loop going round, in either layout and whichever editor is showing.
-  $effect(() => { void editor.time; keepLooping(); });
+  $effect(() => { void transport.time; keepLooping(); });
 
   $effect(() => { document.title = `${doc.dirty ? "• " : ""}${doc.chart.name || "Untitled"} - Basalt Editor`; });
 
@@ -73,29 +75,29 @@
       <ShotLegend />
       <Inspector />
     </section>
-    <section class="pane timepane" class:highway={editor.mainView === "highway"} aria-label={editor.mainView === "highway" ? "Highway" : "Timeline"}>
+    <section class="pane timepane" class:highway={display.mainView === "highway"} aria-label={display.mainView === "highway" ? "Highway" : "Timeline"}>
       <Transport />
-      {#if editor.mainView === "highway"}<div class="highwaybox"><HighwayScreen /></div>{:else}<Timeline />{/if}
+      {#if display.mainView === "highway"}<div class="highwaybox"><HighwayScreen /></div>{:else}<Timeline />{/if}
       <Panels />
     </section>
   </main>
 </div>
 <!-- The phone layout shows its own, under its menu sheet. -->
-{#if editor.lookPreview}<LookPreview />{/if}
+{#if display.lookPreview}<LookPreview />{/if}
 {/if}
 
 {#if library.visible}<Library />{/if}
 
 <div class="drop" class:show={dropping}>Drop chart files</div>
-{#if editor.quickActions}<QuickActions />{/if}
+{#if ui.quickActions}<QuickActions />{/if}
 
 <!-- A new toast rises in as the one before sinks away, in the same spot. Global, so it still moves
      when the whole block goes (the toast timing out). -->
 <div class="toasts" class:top={layout.compact} aria-live="polite">
-  {#if editor.toast}
-    {#key editor.toast.id}
+  {#if ui.toast}
+    {#key ui.toast.id}
       <div class="toast" role="status" in:rise|global={{ from: toastFrom }} out:rise|global={{ from: toastFrom }}
-        use:dismissable={{ axis: "x", toward: 0, onClose: () => { editor.toast = null; } }}>{editor.toast.text}</div>
+        use:dismissable={{ axis: "x", toward: 0, onClose: () => { ui.toast = null; } }}>{ui.toast.text}</div>
     {/key}
   {/if}
 </div>

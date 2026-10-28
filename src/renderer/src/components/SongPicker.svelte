@@ -4,17 +4,17 @@
   import { findSong, isSong } from "../io/files";
   import { clockText } from "../model/tempo";
   import { doc } from "../store/document.svelte";
-  import { editor } from "../store/editor.svelte";
+  import { session } from "../store/session.svelte";
   import { chooseSong, removeSong, useSong } from "../store/files";
 
   const named = $derived(doc.chart.music?.file ?? "");
-  const songs = $derived([...editor.files.keys()].filter(isSong));
-  const playing = $derived(editor.song?.name ?? "");
+  const songs = $derived([...session.files.keys()].filter(isSong));
+  const playing = $derived(session.song?.name ?? "");
   const status = $derived.by(() => {
     if (!named) return "No song yet.";
     if (!playing) return "Not open here. Choose the file to hear it.";
-    if (findSong(editor.files, named) !== playing) return `Playing ${playing} until ${named} is open.`;
-    const seconds = editor.song?.buffer?.duration;
+    if (findSong(session.files, named) !== playing) return `Playing ${playing} until ${named} is open.`;
+    const seconds = session.song?.buffer?.duration;
     return seconds ? `Open · ${clockText(seconds, 0)}` : "Open · reading…";
   });
 </script>
@@ -23,7 +23,7 @@
   <div class="now">
     <span class="label">Song</span>
     <b title={named}>{named || "None"}</b>
-    <small class:warn={!!named && findSong(editor.files, named) !== playing}>{status}</small>
+    <small class:warn={!!named && findSong(session.files, named) !== playing}>{status}</small>
   </div>
   <div class="row">
     <button class="primary" onclick={chooseSong}>{named ? "Change song…" : "Choose song…"}</button>

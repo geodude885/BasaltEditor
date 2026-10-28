@@ -67,7 +67,7 @@ export const webApi: EditorApi = {
       if (path) opened.push(await read(f, path));
     }
     // A page cannot write back into the folder it read, so it is no folder to save into: an empty
-    // name leaves editor.folder falsy and Save asks where to save, as for loose files.
+    // name leaves session.folder falsy and Save asks where to save, as for loose files.
     return { folder: "", files: opened };
   },
 

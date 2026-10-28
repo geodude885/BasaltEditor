@@ -8,7 +8,11 @@ import {
 } from "./actions";
 import { doc } from "./document.svelte";
 import { SHOT_COLOURINGS } from "../views/shotColours";
-import { editor } from "./editor.svelte";
+import { display } from "./display.svelte";
+import { editing } from "./editing.svelte";
+import { session } from "./session.svelte";
+import { transport } from "./transport.svelte";
+import { ui } from "./ui.svelte";
 import { copyChart, newChart, openFiles, openFolder, openRecent, save, saveChartAs, savePackage, saveTarget } from "./files";
 import { library } from "./library.svelte";
 import { ensureAudio, seek } from "./playback";
@@ -50,7 +54,7 @@ const SAVE_HELP: Record<ReturnType<typeof saveTarget>, string> = {
 export type MenuId = "file" | "edit" | "view" | "playback";
 export type Menu = { id: MenuId; label: string; groups: Command[][] };
 
-const selection = () => editor.selection.size > 0;
+const selection = () => editing.selection.size > 0;
 
 /**
  * Starts a new chart. The desktop app asks about unsaved changes in its own dialog; elsewhere the
@@ -59,8 +63,8 @@ const selection = () => editor.selection.size > 0;
 export function startNewChart(): void {
   library.visible = false;
   if (window.editor.askUnsaved) { void newChart(); return; }
-  editor.confirmNew = true;
-  editor.revealTab("chart");
+  ui.confirmNew = true;
+  ui.revealTab("chart");
 }
 
 /** Whether the open-folder dialog exists here; set by the platform at start-up. */
@@ -79,9 +83,9 @@ export function menus(): Menu[] {
           { id: "open-folder", label: "Open folder…", run: openFolder, shown: () => platform.canOpenFolders },
         ],
         // The desktop app's recent chart folders, by folder name.
-        editor.recentFolders.slice(0, RECENT_SHOWN).map((folder, i): Command => ({
+        session.recentFolders.slice(0, RECENT_SHOWN).map((folder, i): Command => ({
           id: `recent-${i}`, label: `Open recent: ${folder.split(/[\\/]/).filter(Boolean).pop()}`, run: () => openRecent(folder),
-          enabled: () => folder !== editor.folder,
+          enabled: () => folder !== session.folder,
         })),
         [
           { id: "save", label: saveTarget() === "file" ? "Save chart.json as…" : "Save", keys: "Ctrl S", run: save, whileTyping: true,
@@ -104,7 +108,7 @@ export function menus(): Menu[] {
           { id: "paste", label: "Paste at the playhead", keys: "Ctrl V", run: paste, browserDefault: true },
           { id: "mirror", label: "Mirror", keys: "X", run: mirrorSelected, enabled: selection, help: "Mirror the selection left/right" },
           { id: "delete", label: "Delete", keys: "Delete / Backspace", run: removeSelected, enabled: selection, help: "Delete the selection" },
-          { id: "select-none", label: "Select none", keys: "Escape", run: () => editor.selection.clear(), enabled: selection },
+          { id: "select-none", label: "Select none", keys: "Escape", run: () => editing.selection.clear(), enabled: selection },
         ],
         [
           { id: "add-projectile", label: "Add a projectile", keys: "P", run: () => addProjectile(), help: "Add a projectile at the playhead" },
@@ -113,9 +117,9 @@ export function menus(): Menu[] {
           { id: "add-phase", label: "Start a phase", run: addPhase },
         ],
         [
-          { id: "select-mode", label: "Select mode", run: () => { editor.selectMode = !editor.selectMode; }, checked: () => editor.selectMode,
+          { id: "select-mode", label: "Select mode", run: () => { editing.selectMode = !editing.selectMode; }, checked: () => editing.selectMode,
             help: "A drag on empty space draws a selection box" },
-          { id: "multi-select", label: "Multi-select", run: () => { editor.multiSelect = !editor.multiSelect; }, checked: () => editor.multiSelect,
+          { id: "multi-select", label: "Multi-select", run: () => { editing.multiSelect = !editing.multiSelect; }, checked: () => editing.multiSelect,
             help: "Taps add to the selection, as holding Shift does" },
           { id: "select-bar", label: "Select this bar", run: selectBar },
           { id: "select-loop", label: "Select the loop", run: selectLoop, shown: () => !!practice.loop },
@@ -127,10 +131,10 @@ export function menus(): Menu[] {
     {
       id: "view", label: "View", groups: [
         [
-          { id: "view-timeline", label: "Timeline", run: () => { editor.mainView = "timeline"; }, checked: () => editor.mainView === "timeline" },
+          { id: "view-timeline", label: "Timeline", run: () => { display.mainView = "timeline"; }, checked: () => display.mainView === "timeline" },
           // Its key switches back and forth; a click (no key press) just shows the highway.
-          { id: "view-highway", label: "Highway", keys: "H", run: ev => { editor.mainView = ev && editor.mainView === "highway" ? "timeline" : "highway"; },
-            checked: () => editor.mainView === "highway", help: "Switch between the timeline and the highway" },
+          { id: "view-highway", label: "Highway", keys: "H", run: ev => { display.mainView = ev && display.mainView === "highway" ? "timeline" : "highway"; },
+            checked: () => display.mainView === "highway", help: "Switch between the timeline and the highway" },
         ],
         [
           { id: "zoom-in", label: "Zoom in", keys: "]", run: () => zoom(1.4), help: "Zoom the timeline in (or Ctrl + scroll)" },
@@ -139,11 +143,11 @@ export function menus(): Menu[] {
         ],
         // Projectile colours: one of these at a time.
         SHOT_COLOURINGS.map(([colouring, label]): Command => ({
-          id: `shot-colours-${colouring}`, label: `Projectiles: ${label.toLowerCase()}`, run: () => editor.colourShotsBy(colouring),
-          checked: () => editor.shotColouring === colouring,
+          id: `shot-colours-${colouring}`, label: `Projectiles: ${label.toLowerCase()}`, run: () => display.colourShotsBy(colouring),
+          checked: () => display.shotColouring === colouring,
         })),
         [
-          { id: "look-preview", label: "Look preview", keys: "K", run: () => editor.toggleLookPreview(), checked: () => editor.lookPreview,
+          { id: "look-preview", label: "Look preview", keys: "K", run: () => display.toggleLookPreview(), checked: () => display.lookPreview,
             help: "Show or hide the look preview" },
         ],
       ],
@@ -151,7 +155,7 @@ export function menus(): Menu[] {
     {
       id: "playback", label: "Playback", groups: [
         [
-          { id: "play", label: editor.playing ? "Pause" : "Play", keys: "Space", run: playOrPause, help: "Play / pause" },
+          { id: "play", label: transport.playing ? "Pause" : "Play", keys: "Space", run: playOrPause, help: "Play / pause" },
           { id: "to-start", label: "Back to the start", keys: "Home", run: () => seek(0) },
           { id: "last-play", label: "Back to where playing started", keys: ".", run: backToPlayStart },
           { id: "back-bar", label: "Back a bar", keys: ",", run: () => rewindBars(1) },
@@ -168,7 +172,7 @@ export function menus(): Menu[] {
             help: "Set the loop's start, then its end; again to clear it" },
           { id: "preroll", label: "Pre-roll a bar", run: () => { practice.preroll = !practice.preroll; }, checked: () => practice.preroll,
             help: "Start playing a bar early, to hear the music lead in" },
-          { id: "click", label: "Beat click", run: () => { editor.click = !editor.click; ensureAudio(); }, checked: () => editor.click },
+          { id: "click", label: "Beat click", run: () => { transport.click = !transport.click; ensureAudio(); }, checked: () => transport.click },
         ],
       ],
     },

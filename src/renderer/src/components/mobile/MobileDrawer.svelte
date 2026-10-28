@@ -5,7 +5,7 @@
   import { panel, type Side } from "../motion";
   import Icon from "../Icon.svelte";
   import { mobile } from "../../store/mobile.svelte";
-  import type { Tab } from "../../store/editor.svelte";
+  import type { Tab } from "../../store/ui.svelte";
   import { PANEL_TABS, TAB_ORDER } from "../panels/tabs";
 
   let { part }: { part: "rail" | "drawer" } = $props();

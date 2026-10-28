@@ -3,6 +3,7 @@
 // Undo keeps texts, not objects.
 import { evTime } from "../model/chart";
 import * as Jsonc from "../model/jsonc";
+import { timedLookCues } from "../model/looks";
 import { Tempo } from "../model/tempo";
 import type { LoadedChart } from "../model/types";
 
@@ -29,6 +30,8 @@ class ChartDocument {
 
   readonly tempo = $derived(new Tempo(this.chart.bpm));
   readonly dirty = $derived(this.text !== this.saved);
+  /** The looks (visuals cues) in time order, with when each starts and fades. */
+  readonly lookCues = $derived(timedLookCues(this.chart, this.tempo));
   get canUndo(): boolean { return this.#undo.length > 0; }
   get canRedo(): boolean { return this.#redo.length > 0; }
 

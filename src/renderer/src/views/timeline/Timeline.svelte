@@ -12,7 +12,11 @@
   } from "../../store/actions";
   import { doc } from "../../store/document.svelte";
   import { appearance } from "../../store/appearance.svelte";
-  import { editor } from "../../store/editor.svelte";
+  import { display } from "../../store/display.svelte";
+  import { editing } from "../../store/editing.svelte";
+  import { session } from "../../store/session.svelte";
+  import { transport } from "../../store/transport.svelte";
+  import { ui } from "../../store/ui.svelte";
   import { keepPlayheadInView, seek, songStart } from "../../store/playback";
   import { practice } from "../../store/practice.svelte";
   import { untrack } from "svelte";
@@ -33,46 +37,46 @@
   let drag: Drag | null = null;
   let box = $state<Box | null>(null);
 
-  const layout = $derived(layoutTimeline(editor.collapsedTimelineRows, editor.extraTimelineHeightPixels));
-  const placed = $derived(markers(doc.chart, doc.tempo, editor.view, layout));
+  const layout = $derived(layoutTimeline(display.collapsedTimelineRows, display.extraTimelineHeightPixels));
+  const placed = $derived(markers(doc.chart, doc.tempo, display.timeline, layout));
 
-  $effect(() => { editor.timelineWidth = w; });
+  $effect(() => { display.timelineWidth = w; });
   // Showing again (say, after the highway moved the playhead): start where the playhead is.
   $effect(() => { if (w) untrack(keepPlayheadInView); });
 
   $effect(() => {
     if (!w) return;
     drawTimeline(prepare(canvas, w, layout.height), w, layout.height, {
-      chart: doc.chart, tempo: doc.tempo, view: editor.view, time: editor.time, snap: editor.snap,
-      selection: editor.selection, selectedPhase: editor.selectedPhase, lookCues: editor.lookCues, selectedLookCue: editor.selectedLookCue, shotColouring: editor.shotColouring,
-      markers: placed, song: editor.song, songStart: songStart(), clips: editor.clips, box, layout, loop: practice.loop, loopStart: practice.loopStart,
+      chart: doc.chart, tempo: doc.tempo, view: display.timeline, time: transport.time, snap: editing.snap,
+      selection: editing.selection, selectedPhase: editing.selectedPhase, lookCues: doc.lookCues, selectedLookCue: editing.selectedLookCue, shotColouring: display.shotColouring,
+      markers: placed, song: session.song, songStart: songStart(), clips: session.clips, box, layout, loop: practice.loop, loopStart: practice.loopStart,
     }, theme(appearance.scheme));
   });
 
-  const secondsAt = (x: number) => tOf(editor.view, x);
-  const snapped = (seconds: number) => doc.tempo.snap(seconds, editor.snap);
+  const secondsAt = (x: number) => tOf(display.timeline, x);
+  const snapped = (seconds: number) => doc.tempo.snap(seconds, editing.snap);
   const pointerAt = (ev: PointerEvent | WheelEvent): [number, number] => { const r = canvas.getBoundingClientRect(); return [ev.clientX - r.left, ev.clientY - r.top]; };
 
   const taps = new Taps(), fingers = new Fingers("x");
   /** Shift, or the touch screens' multi-select button, adds to the selection. */
-  const adds = (ev: PointerEvent) => ev.shiftKey || editor.multiSelect;
+  const adds = (ev: PointerEvent) => ev.shiftKey || editing.multiSelect;
 
   /** A finger lifted without moving: do what the tap means there. */
   function touchTap(d: Extract<Drag, { kind: "touch" }>): void {
-    const t = secondsAt(d.press.x0), tap = touchTapWith(d.tap, editor.selection.size > 0, d.adding);
+    const t = secondsAt(d.press.x0), tap = touchTapWith(d.tap, editing.selection.size > 0, d.adding);
     switch (tap.kind) {
-      case "let-go": editor.selection.clear(); return;
+      case "let-go": editing.selection.clear(); return;
       case "add-projectile": addProjectileInColumn(t, tap.column); return;
       case "add-look-cue": seek(snapped(t)); addStageCueAtPlayhead(); return;
       case "add-move": seek(snapped(t)); addMove(); return;
       case "seek-and-clear-selection":
-        if (!d.adding) editor.selection.clear();
+        if (!d.adding) editing.selection.clear();
         seek(Math.max(0, t));
     }
   }
 
   function pinchStep({ zoom: factor, atX, panX }: PinchStep): void {
-    editor.view.t0 = Math.max(-1, editor.view.t0 - panX / editor.view.pps);
+    display.timeline.t0 = Math.max(-1, display.timeline.t0 - panX / display.timeline.pps);
     zoom(factor, atX);
   }
 
@@ -86,10 +90,10 @@
       return;
     }
     if (fingers.busy) return;
-    const press = whatATimelinePressHits(doc.chart, doc.tempo, editor.view, layout, placed, editor.lookCues, x, y, taps.isDouble(ev));
+    const press = whatATimelinePressHits(doc.chart, doc.tempo, display.timeline, layout, placed, doc.lookCues, x, y, taps.isDouble(ev));
     // Select mode: empty space boxes straight away, with any pointer.
-    if (editor.selectMode && pressWaitsOnTouch(press, layout, y)) {
-      drag = { kind: "box", adding: adds(ev), addsTo: adds(ev) ? [...editor.selection] : [] };
+    if (editing.selectMode && pressWaitsOnTouch(press, layout, y)) {
+      drag = { kind: "box", adding: adds(ev), addsTo: adds(ev) ? [...editing.selection] : [] };
       box = { x0: x, y0: y, x1: x, y1: y };
       return;
     }
@@ -97,10 +101,10 @@
       const adding = adds(ev);
       // Held still: box-select from here.
       const d: Extract<Drag, { kind: "touch" }> = {
-        kind: "touch", t0: editor.view.t0, tap: whatATouchTapAdds(layout, y), adding,
+        kind: "touch", t0: display.timeline.t0, tap: whatATouchTapAdds(layout, y), adding,
         press: new WaitingPress(x, y, () => {
           if (drag !== d) return;
-          drag = { kind: "box", adding, addsTo: adding ? [...editor.selection] : [] };
+          drag = { kind: "box", adding, addsTo: adding ? [...editing.selection] : [] };
           box = { x0: x, y0: y, x1: x, y1: y };
         }),
       };
@@ -115,22 +119,22 @@
       case "add-move": seek(snapped(secondsAt(x))); addMove(); return;
       case "select-events": {
         const hit = pickCycled(press.underPointer, "timeline", x, y);
-        if (!editor.selection.has(hit)) select(hit, adds(ev));
+        if (!editing.selection.has(hit)) select(hit, adds(ev));
         const events = doc.chart.events, at = { x: ev.clientX, y: ev.clientY };
         const d: Extract<Drag, { kind: "move" }> = {
           kind: "move", startSeconds: secondsAt(x), textBefore: doc.text, moved: false, slop: dragStartsAfterPixels(ev.pointerType),
-          startTimes: [...editor.selection].map(i => [events[i], evTime(events[i], doc.tempo)]),
+          startTimes: [...editing.selection].map(i => [events[i], evTime(events[i], doc.tempo)]),
         };
-        d.hold = restingFinger(ev, x, y, () => { if (drag === d && !d.moved) { drag = null; editor.quickActions = at; } });
+        d.hold = restingFinger(ev, x, y, () => { if (drag === d && !d.moved) { drag = null; ui.quickActions = at; } });
         drag = d;
         return;
       }
       case "box-select":
-        drag = { kind: "box", adding: adds(ev), addsTo: adds(ev) ? [...editor.selection] : [] };
+        drag = { kind: "box", adding: adds(ev), addsTo: adds(ev) ? [...editing.selection] : [] };
         box = { x0: x, y0: y, x1: x, y1: y };
         return;
       case "seek-and-clear-selection":
-        if (!adds(ev)) editor.selection.clear();
+        if (!adds(ev)) editing.selection.clear();
         seek(Math.max(0, secondsAt(x)));
         drag = { kind: "seek" };
         return;
@@ -146,17 +150,17 @@
     if (step) { pinchStep(step); return; }
     if (!drag) return;
     if (drag.kind === "touch") {
-      if (drag.press.pans(x, y)) editor.view.t0 = Math.max(-1, drag.t0 - (x - drag.press.x0) / editor.view.pps);
+      if (drag.press.pans(x, y)) display.timeline.t0 = Math.max(-1, drag.t0 - (x - drag.press.x0) / display.timeline.pps);
     } else if (drag.kind === "box") {
       if (!box) return;
       box = { ...box, x1: x, y1: y };
-      editor.setSelection(new Set([...drag.addsTo, ...markersInBox(placed, box)]));
+      editing.setSelection(new Set([...drag.addsTo, ...markersInBox(placed, box)]));
     } else if (drag.kind === "seek") {
       seek(Math.max(0, secondsAt(x)));
     } else {
       drag.hold?.pans(x, y);
       const deltaSeconds = secondsAt(x) - drag.startSeconds;
-      if (!drag.moved && Math.abs(deltaSeconds * editor.view.pps) < drag.slop) return;
+      if (!drag.moved && Math.abs(deltaSeconds * display.timeline.pps) < drag.slop) return;
       drag.moved = true;
       for (const [e, from] of drag.startTimes) setEvTime(e, snapped(from + deltaSeconds), doc.tempo);
     }
@@ -171,14 +175,14 @@
       if (!drag.press.panning && ev?.type === "pointerup") touchTap(drag);
     } else if (drag?.kind === "box" && box) {
       if (boxIsAClick(box)) {
-        if (!drag.adding) editor.selection.clear();
+        if (!drag.adding) editing.selection.clear();
         seek(Math.max(0, secondsAt(box.x0)));
       }
-      editor.selectedPhase = -1;
+      editing.selectedPhase = -1;
     } else if (drag?.kind === "move" && drag.moved) {
       const moved = drag.startTimes.map(([e]) => e);
       doc.commit(drag.textBefore, ["events"]);
-      editor.setSelection(moved.map(e => doc.chart.events.indexOf(e)));
+      editing.setSelection(moved.map(e => doc.chart.events.indexOf(e)));
     }
     drag = null;
     box = null;
@@ -195,14 +199,14 @@
     ev.preventDefault();
     const [x] = pointerAt(ev);
     if (ev.ctrlKey || ev.metaKey) zoom(ev.deltaY < 0 ? 1.25 : 0.8, x);
-    else editor.view.t0 = Math.max(-1, editor.view.t0 + (ev.deltaX || ev.deltaY) / editor.view.pps);
+    else display.timeline.t0 = Math.max(-1, display.timeline.t0 + (ev.deltaX || ev.deltaY) / display.timeline.pps);
   }
 
   let resizing: { startY: number; startExtraPixels: number } | null = null;
 
   function startResizing(ev: PointerEvent): void {
     (ev.currentTarget as HTMLElement).setPointerCapture(ev.pointerId);
-    resizing = { startY: ev.clientY, startExtraPixels: editor.extraTimelineHeightPixels };
+    resizing = { startY: ev.clientY, startExtraPixels: display.extraTimelineHeightPixels };
   }
 
   function resize(ev: PointerEvent): void {
@@ -210,7 +214,7 @@
   }
 
   function stopResizing(): void {
-    if (resizing) editor.rememberTimelineLayout();
+    if (resizing) display.rememberTimelineLayout();
     resizing = null;
   }
 </script>
@@ -240,7 +244,7 @@
   <div class="resize-handle" role="separator" aria-orientation="horizontal" aria-label="Drag to make the timeline taller or shorter"
     title="Drag to make the timeline taller or shorter; double-click to reset"
     onpointerdown={startResizing} onpointermove={resize} onpointerup={stopResizing}
-    ondblclick={() => { setExtraTimelineHeight(0); editor.rememberTimelineLayout(); }}></div>
+    ondblclick={() => { setExtraTimelineHeight(0); display.rememberTimelineLayout(); }}></div>
 </div>
 
 <style>
