@@ -1,6 +1,7 @@
 import { peakBetween } from "../../audio/peaks";
 import { endOf, evTime, phaseTime } from "../../model/chart";
-import { STAGE_PACK, stageLookAt, stagePreview, type TimedLookCue } from "../../model/looks";
+import { STAGE_PACK, stageLookAt, type TimedLookCue } from "../../model/looks";
+import { stageStrip, type StageSparkle } from "../../model/stageFrame";
 import type { Tempo } from "../../model/tempo";
 import type { LoadedChart } from "../../model/types";
 import type { ClipSpan } from "../../io/files";
@@ -167,25 +168,35 @@ function drawWave(ctx: CanvasRenderingContext2D, w: number, s: TimelineScene, t:
 }
 
 const LOOK_STRIP_STEP_PIXELS = 3;
+// The sky and the arena take most of the strip; the things in the key colour are a thin band, as they are a
+// small part of the screen.
+const LOOK_BAND_SHARES = [0.36, 0.44, 0.2];
 
-// What BossBattles Stage does over time - three bands: the sky, the arena around you, something in the
-// key colour - under a flag for each cue, with its fade as a ramp. Other packs' cues are flags only.
+// What BossBattles Stage does over time - three bands: the sky, the arena around you, the things in the
+// key colour - with its glitter and motes sparkling over the top one, under a flag for each cue, with its
+// fade as a ramp. Other packs' cues are flags only.
 function drawLooks(ctx: CanvasRenderingContext2D, w: number, s: TimelineScene, t: Theme): void {
   const [top, height] = s.layout.rows.look, collapsed = s.layout.collapsed.has("look");
   // Collapsed, the strip is just the arena around you.
-  const bands = collapsed ? 1 : 3, bandTop = top + (collapsed ? 1 : 4), bandHeight = (height - (collapsed ? 2 : 8)) / bands;
+  const shares = collapsed ? [1] : LOOK_BAND_SHARES, stripTop = top + (collapsed ? 1 : 4), stripHeight = height - (collapsed ? 2 : 8);
   const isStage = (cue: TimedLookCue) => cue.pack.toLowerCase() === STAGE_PACK.name.toLowerCase();
   const stageCues = s.lookCues.filter(isStage);
   ctx.fillStyle = alpha(t.wash, 0.02); ctx.fillRect(0, top, w, height);
 
   if (stageCues.length) {
-    for (let px = 0; px < w; px += LOOK_STRIP_STEP_PIXELS) {
-      const look = stageLookAt(stageCues, tOf(s.view, px + LOOK_STRIP_STEP_PIXELS / 2));
+    // Sampled at steady moments of chart time, not at pixels, so scrolling doesn't change what is sampled.
+    const step = LOOK_STRIP_STEP_PIXELS / s.view.pps;
+    for (let k = Math.floor(tOf(s.view, 0) / step); k * step < tOf(s.view, w); k++) {
+      const look = stageLookAt(stageCues, (k + 0.5) * step);
       if (!look.on) continue;
-      const preview = stagePreview(look);
-      (collapsed ? [preview.surroundings] : [preview.sky, preview.surroundings, preview.keyColoured]).forEach((colour, band) => {
+      const strip = stageStrip(look), x = Math.floor(xOf(s.view, k * step)), stepWidth = Math.ceil(xOf(s.view, (k + 1) * step)) - x;
+      let y = stripTop;
+      (collapsed ? [strip.surroundings] : [strip.sky, strip.surroundings, strip.keyColoured]).forEach((colour, band) => {
+        const bandHeight = stripHeight * shares[band];
         ctx.fillStyle = colour;
-        ctx.fillRect(px, bandTop + band * bandHeight, LOOK_STRIP_STEP_PIXELS, bandHeight);
+        ctx.fillRect(x, y, stepWidth, bandHeight);
+        if (band === 0 && strip.sparkle) drawSparkles(ctx, k, x, y, stepWidth, bandHeight, strip.sparkle);
+        y += bandHeight;
       });
     }
   }
@@ -206,4 +217,26 @@ function drawLooks(ctx: CanvasRenderingContext2D, w: number, s: TimelineScene, t
     const label = cue.off ? "off" : isStage(cue) ? "" : cue.pack;
     if (label) { ctx.fillStyle = t.text; ctx.fillText(label, cx + 10, top + 9); }
   }
+}
+
+// A steady random number from 0 to 1 for a strip step and a slot in it, so sparkles stay put as the timeline scrolls.
+const sparkleRandom = (k: number, slot: number, salt: number) => {
+  const v = Math.sin(k * 12.9898 + slot * 78.233 + salt * 37.719) * 43758.5453;
+  return v - Math.floor(v);
+};
+
+// Glitter as fine points and motes as soft larger ones, about as thick as the look makes them, in the
+// sparkle colour - or the rainbow, as Rainbow shimmer turns up.
+function drawSparkles(ctx: CanvasRenderingContext2D, k: number, x: number, y: number, w: number, h: number, sparkle: StageSparkle): void {
+  const dot = (slot: number, chance: number, size: number, opacity: number) => {
+    if (sparkleRandom(k, slot, 1) >= chance) return;
+    const rainbow = sparkleRandom(k, slot, 4) < sparkle.shimmer;
+    ctx.globalAlpha = opacity;
+    ctx.fillStyle = rainbow ? `hsl(${Math.round(sparkleRandom(k, slot, 5) * 360)} 90% 70%)` : sparkle.colour;
+    ctx.fillRect(x + sparkleRandom(k, slot, 2) * Math.max(0, w - size), y + sparkleRandom(k, slot, 3) * Math.max(0, h - size), size, size);
+  };
+  // Glitter runs to 2 and its density to 1; Motes to 2.
+  for (let slot = 0; slot < 2; slot++) dot(slot, sparkle.glitter * 0.3, 1, 1);
+  dot(2, sparkle.motes * 0.12, 2, 0.75);
+  ctx.globalAlpha = 1;
 }

@@ -2,9 +2,10 @@
   import {
     colourChannels, cssToLinear, cueSetsParameter, isCueForPack, linearToCss, lookCueTimeLabel,
     setStageCueColour, setStageCueSetting, settingsWrittenIn, STAGE_PACK, stageCueValue, stageCueWarnings, stageLookAfterCue,
-    stageLookBeforeCue, stageParameterGroups, stagePreview, type PackParameter, type Rgb, type StageLook,
+    stageLookBeforeCue, stageParameterGroups, type PackParameter, type Rgb, type StageLook,
   } from "../../model/looks";
   import { evTime } from "../../model/chart";
+  import { stageStrip } from "../../model/stageFrame";
   import { round } from "../../model/tempo";
   import type { LookCue } from "../../model/types";
   import { addStageCueAtPlayhead, removeLookCue, selectLookCue } from "../../store/actions";
@@ -45,8 +46,8 @@
 </script>
 
 {#snippet swatches(look: StageLook, caption: string)}
-  {@const preview = stagePreview(look)}
-  <div class="swatches" title={look.on ? "The sky, the arena around you, and something in the key colour" : "The pack is off: the player's own look"}>
+  {@const preview = stageStrip(look)}
+  <div class="swatches" title={look.on ? "The sky, the arena around you, and the things in the key colour" : "The pack is off: the player's own look"}>
     <span style:background={preview.sky}></span><span style:background={preview.surroundings}></span><span style:background={preview.keyColoured}></span>
     <small>{caption}{look.on ? "" : " (off)"}</small>
   </div>

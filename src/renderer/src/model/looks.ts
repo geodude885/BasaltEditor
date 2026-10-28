@@ -191,23 +191,6 @@ export function hueToRgb(hueDegrees: number, saturation: number, value: number):
   return [f(5), f(3), f(1)];
 }
 
-export type StagePreview = { surroundings: string; keyColoured: string; sky: string };
-
-const SURROUNDINGS: Rgb = [0.18, 0.17, 0.15];
-const SURROUNDINGS_DEPTH_METRES = 8;
-const SKY: Rgb = [0.3, 0.45, 0.7];
-
-// Three swatches of how the look treats a scene: the arena around you, something in the key colour, the sky.
-export function stagePreview(look: StageLook): StagePreview {
-  const keyColoured = hueToRgb(look.settings._KeyHue, 0.9, 0.7);
-  const shade = (scene: Rgb, depth: number | null) => look.on ? shadeCentrePixelLikeStage(scene, depth, look.settings) : scene;
-  return {
-    surroundings: linearToCss(shade(SURROUNDINGS, SURROUNDINGS_DEPTH_METRES)),
-    keyColoured: linearToCss(shade(keyColoured, SURROUNDINGS_DEPTH_METRES)),
-    sky: linearToCss(shade(SKY, null)),
-  };
-}
-
 export const linearToSrgb = (v: number) => { const c = clamp(v, 0, 1); return c <= 0.0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055; };
 const srgbToLinear = (v: number) => v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
 

@@ -5,8 +5,11 @@
 // and projectiles in the key colour (whatever the key hue is) beside one that is not.
 import { hueToRgb, keyness, linearToSrgb, mix, stageColour, toKeySpace, type Rgb, type StageLook, type StageSettings } from "./looks";
 
-/** A painted arena: linear colours and each pixel's depth in metres (Infinity for the sky). */
-export type StageScene = { width: number; height: number; colour: Float32Array; depth: Float32Array };
+/**
+ * A painted arena: linear colours, each pixel's depth in metres (Infinity for the sky) and how much of it is
+ * something painted in the key colour (0 to 1) - left out of scenes made by hand.
+ */
+export type StageScene = { width: number; height: number; colour: Float32Array; depth: Float32Array; keyed?: Float32Array };
 
 /**
  * The fight, as the mod tells the shader: where in the beat (null without a bpm), health 0 to 1, a hit fading 1 to 0,
@@ -27,7 +30,7 @@ const GRASS: Rgb = [0.1, 0.19, 0.06], DIRT: Rgb = [0.26, 0.2, 0.13], LANE: Rgb =
 const STONE: Rgb = [0.21, 0.2, 0.18], STONE_LIT: Rgb = [0.3, 0.28, 0.25];
 const BOSS: Rgb = [0.07, 0.07, 0.09];
 
-type Hit = { colour: Rgb; depth: number };
+type Hit = { colour: Rgb; depth: number; keyed?: boolean };
 type Box = { x: number; z: number; width: number; height: number };
 type Ball = { x: number; y: number; z: number; radius: number; key: boolean };
 
@@ -46,7 +49,7 @@ const sceneCamera = (width: number, height: number) => ({ focal: height * 0.95, 
 
 /** Paints the arena, with things in the key colour painted in the key hue. Two by two samples a pixel. */
 export function paintStageScene(width: number, height: number, keyHueDegrees: number): StageScene {
-  const colour = new Float32Array(width * height * 3), depth = new Float32Array(width * height);
+  const colour = new Float32Array(width * height * 3), depth = new Float32Array(width * height), keyed = new Float32Array(width * height);
   const key = hueToRgb(keyHueDegrees, 0.9, 0.75), other = hueToRgb((keyHueDegrees + 200) % 360, 0.75, 0.6);
   const { focal, horizonY, centreX } = sceneCamera(width, height);
 
@@ -59,7 +62,7 @@ export function paintStageScene(width: number, height: number, keyHueDegrees: nu
       const d = Math.hypot(sx - bx, sy - by) / r;
       if (d <= 1) {
         const base = b.key ? key : other, light = 0.75 + 0.35 * clamp01(1 - Math.hypot(sx - (bx - r * 0.35), sy - (by - r * 0.35)) / r);
-        consider({ colour: base.map(v => v * light) as Rgb, depth: b.z - b.radius * Math.sqrt(1 - d * d) });
+        consider({ colour: base.map(v => v * light) as Rgb, depth: b.z - b.radius * Math.sqrt(1 - d * d), keyed: b.key });
       }
     }
     {
@@ -71,7 +74,7 @@ export function paintStageScene(width: number, height: number, keyHueDegrees: nu
       if (v >= 0 && v <= 1 && Math.abs(u - 0.5) <= halfWidth) {
         const eye = v > 0.1 && v < 0.15 && (Math.abs(u - 0.4) < 0.06 || Math.abs(u - 0.6) < 0.06);
         const core = Math.hypot((u - 0.5) * 1.6, v - 0.45) < 0.07;
-        consider({ colour: eye || core ? key : BOSS, depth: b.z });
+        consider({ colour: eye || core ? key : BOSS, depth: b.z, keyed: eye || core });
       }
     }
     for (const p of PILLARS) {
@@ -100,18 +103,20 @@ export function paintStageScene(width: number, height: number, keyHueDegrees: nu
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const sum: Rgb = [0, 0, 0];
-      let nearest = Infinity;
+      let nearest = Infinity, keyedSamples = 0;
       for (const [ox, oy] of [[0.25, 0.25], [0.75, 0.25], [0.25, 0.75], [0.75, 0.75]]) {
         const hit = sample(x + ox, y + oy);
         sum[0] += hit.colour[0] / 4; sum[1] += hit.colour[1] / 4; sum[2] += hit.colour[2] / 4;
         nearest = Math.min(nearest, hit.depth);
+        if (hit.keyed) keyedSamples++;
       }
       const i = y * width + x;
       colour.set(sum, i * 3);
       depth[i] = nearest;
+      keyed[i] = keyedSamples / 4;
     }
   }
-  return { width, height, colour, depth };
+  return { width, height, colour, depth, keyed };
 }
 
 /**
@@ -334,4 +339,60 @@ export function stageFrameKey(look: StageLook, fight: StageFight): string {
   const danger = clamp01(fight.hit * s._HitFlash * 1.5 + clamp01(1 - fight.health) * s._LowHealth);
   const magicMoves = s._Glitter > 0.001 || s._Motes > 0.001;
   return `${Object.values(s).join(",")}|${beat}|${danger}|${magicMoves ? fight.time ?? 0 : ""}`;
+}
+
+// ---- The timeline's strip: the look preview's arena, small, averaged into bands -------------------------
+
+/** How the look sparkles: Glitter times its density, Motes, the sparkles' colour and how rainbow they shimmer. */
+export type StageSparkle = { glitter: number; motes: number; colour: string; shimmer: number };
+/** A look summed up: the sky, the arena around you and the things in the key colour, as CSS colours, and its sparkle. */
+export type StageStrip = { sky: string; surroundings: string; keyColoured: string; sparkle: StageSparkle | null };
+
+const STRIP_SCENE_WIDTH = 64, STRIP_SCENE_HEIGHT = 36;
+const MOST_STRIP_SCENES_KEPT = 24, MOST_STRIPS_KEPT = 4000;
+const stripScenes = new Map<number, StageScene>();
+const strips = new Map<string, StageStrip>();
+const STILL: StageFight = { beatFraction: null, health: 1, hit: 0 };
+
+// Kept by key hue (whole degrees), forgetting the oldest; the timeline asks for many looks a redraw.
+function stripScene(keyHue: number): StageScene {
+  let scene = stripScenes.get(keyHue);
+  if (!scene) {
+    if (stripScenes.size >= MOST_STRIP_SCENES_KEPT) stripScenes.delete(stripScenes.keys().next().value!);
+    scene = paintStageScene(STRIP_SCENE_WIDTH, STRIP_SCENE_HEIGHT, keyHue);
+    stripScenes.set(keyHue, scene);
+  }
+  return scene;
+}
+
+const byteToCss = (r: number, g: number, b: number) => "#" + [r, g, b].map(v => Math.round(v).toString(16).padStart(2, "0")).join("");
+
+/**
+ * The look as the timeline's strip shows it: the look preview's arena, between beats and unhurt, averaged
+ * over its sky, everything else, and the projectiles and eyes in the key colour - so the glow is only as
+ * strong as it is around small things, and fog is by each thing's own distance. Sparkles are left to the
+ * overlay. Off, it is the arena as it is.
+ */
+export function stageStrip(look: StageLook): StageStrip {
+  const s = look.settings, keyHue = Math.round(s._KeyHue), id = look.on ? Object.values(s).join(",") : `off ${keyHue}`;
+  const kept = strips.get(id);
+  if (kept) return kept;
+
+  const scene = stripScene(keyHue), count = scene.width * scene.height, bytes = new Uint8ClampedArray(count * 4);
+  shadeStageFrame(scene, look.on ? { on: true, settings: { ...s, _Glitter: 0, _Motes: 0 } } : look, STILL, bytes);
+  const sums = [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]];
+  for (let i = 0; i < count; i++) {
+    const keyed = scene.keyed?.[i] ?? 0;
+    const sum = keyed >= 0.5 ? sums[2] : scene.depth[i] === Infinity ? sums[0] : sums[1];
+    sum[0] += bytes[i * 4]; sum[1] += bytes[i * 4 + 1]; sum[2] += bytes[i * 4 + 2]; sum[3]++;
+  }
+  const [sky, surroundings, keyColoured] = sums.map(([r, g, b, n]) => byteToCss(r / n, g / n, b / n));
+  const glitter = s._Glitter * s._GlitterDensity, sparkles = look.on && (glitter > 0.001 || s._Motes > 0.001);
+  const strip: StageStrip = {
+    sky, surroundings, keyColoured,
+    sparkle: sparkles ? { glitter, motes: s._Motes, colour: byteToCss(...[s._SparkleR, s._SparkleG, s._SparkleB].map(srgbByte) as Rgb), shimmer: s._Shimmer } : null,
+  };
+  if (strips.size >= MOST_STRIPS_KEPT) strips.clear();
+  strips.set(id, strip);
+  return strip;
 }

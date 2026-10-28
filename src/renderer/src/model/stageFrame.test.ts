@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { linearToSrgb, shadeCentrePixelLikeStage, stageCueAt, stageDefaults, stageSettingsFrom, type Rgb, type StageLook, type TimedLookCue } from "./looks";
-import { paintStageScene, shadeStageFrame, stageFrameKey, type StageFight, type StageScene } from "./stageFrame";
+import { paintStageScene, shadeStageFrame, stageFrameKey, stageStrip, type StageFight, type StageScene } from "./stageFrame";
 
 const between: StageFight = { beatFraction: null, health: 1, hit: 0 };
 const look = (settings: Record<string, number>, on = true): StageLook => ({ on, settings: stageSettingsFrom(new Map(Object.entries(settings))) });
@@ -97,5 +97,33 @@ describe("which cue the look is following", () => {
     expect(stageCueAt(cues, 1)).toBeNull();
     expect(stageCueAt(cues, 4)).toEqual({ cue: cues[0], progress: 0.5 });
     expect(stageCueAt(cues, 11)).toEqual({ cue: cues[2], progress: 0.5 });
+  });
+});
+
+describe("the timeline's strip", () => {
+  const channels = (css: string) => [1, 3, 5].map(at => parseInt(css.slice(at, at + 2), 16));
+  const bands = (strip: ReturnType<typeof stageStrip>) => [strip.sky, strip.surroundings, strip.keyColoured];
+
+  it("is the arena as it is at Stage's defaults, with no sparkle", () => {
+    const plain = stageStrip({ on: true, settings: stageDefaults() }), off = stageStrip(look({}, false));
+    expect(bands(plain)).toEqual(bands(off));
+    expect(plain.sparkle).toBeNull();
+  });
+
+  it("paints its key band in the key hue", () => {
+    const [r, g] = channels(stageStrip(look({ "Key hue": 120 })).keyColoured);
+    expect(g).toBeGreaterThan(r);
+  });
+
+  it("glows the key band only as much as the glow reaches round small things", () => {
+    const [r, g, b] = channels(stageStrip(look({ "Glow": 3 })).keyColoured);
+    expect(r).toBeGreaterThan(channels(stageStrip(look({})).keyColoured)[0]);
+    expect(Math.min(g, b)).toBeLessThan(200);
+  });
+
+  it("sums up the sparkle for the overlay", () => {
+    const strip = stageStrip(look({ "Glitter": 2, "Glitter density": 0.5, "Motes": 1 }));
+    expect(strip.sparkle).toMatchObject({ glitter: 1, motes: 1 });
+    expect(stageStrip(look({ "Glitter": 2, "Glitter density": 0.5, "Motes": 1 }))).toBe(strip);
   });
 });
