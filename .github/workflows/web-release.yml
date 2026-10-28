@@ -1,0 +1,58 @@
+name: Publish the website
+# The live site - the root of GitHub Pages - changes only here: when a release is published (after
+# release.yml has built its draft and you publish it by hand), or when run by hand from the Actions tab
+# with a tag or commit, for a fix to the website alone. Pre-releases don't count. Test copies are
+# ci.yml's: /prerelease/ from main, /pr-<number>/ from pull requests.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Tag or commit to publish as the live site (e.g. v0.3.0)
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    if: github.event_name == 'workflow_dispatch' || !github.event.release.prerelease
+    runs-on: ubuntu-latest
+    outputs:
+      commit: ${{ steps.commit.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: "${{ github.event.release.tag_name || inputs.ref }}" }
+      - id: commit
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-node@v4
+        with: { node-version: 24, cache: npm }
+      - run: npm ci
+      - run: npm test
+      # No BASALT_WEB_CHANNEL: this is the live site, so the page shows no test-copy label.
+      - run: npm run build:web
+      - uses: actions/upload-artifact@v4
+        with: { name: web-live, path: out/web, retention-days: 1 }
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    environment:
+      name: live
+      url: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
+    concurrency:
+      group: pages-live
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: "${{ github.event.repository.default_branch }}", sparse-checkout: .github, sparse-checkout-cone-mode: false }
+      - uses: actions/download-artifact@v4
+        with: { name: web-live, path: web }
+      - run: .github/publish-pages.sh live web
+        env:
+          TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          BUILT_FROM: ${{ needs.build.outputs.commit }}

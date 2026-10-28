@@ -7,6 +7,7 @@
   import { doc } from "../store/document.svelte";
   import { session } from "../store/session.svelte";
   import { ui } from "../store/ui.svelte";
+  import BuildBadge from "./BuildBadge.svelte";
   import Logo from "./Logo.svelte";
   import MenuBar from "./MenuBar.svelte";
 
@@ -15,6 +16,7 @@
 
 <header class="bar">
   <div class="brand"><Logo size={26} /> Basalt <span>Editor</span></div>
+  <BuildBadge />
   <MenuBar />
   <div class="chartname" title={session.folder ?? doc.name}>{doc.chart.name || "Untitled"}{doc.dirty ? " •" : ""}</div>
   <div class="spacer"></div>

@@ -112,8 +112,13 @@ src/renderer/src/
   folders inside the Charts folder; `BASALT_CHARTS_FOLDER` points it at another folder, to try it
   without touching real charts.
 - **The web build** (`npm run build:web`, `vite.config.web.ts`) is the same renderer with
-  `platform/web.ts` standing in for the preload; `ci.yml` builds it and, on every push to `main`
-  that passes, publishes it to GitHub Pages (the `gh-pages` branch).
+  `platform/web.ts` standing in for the preload, published to GitHub Pages (the `gh-pages` branch)
+  as several copies: the live site at the root, changed only by publishing a release
+  (`web-release.yml`); `/prerelease/` from every push to `main`; `/pr-<number>/` from each pull
+  request, taken down when it closes. `.github/publish-pages.sh` replaces one copy and leaves the
+  rest. Test copies say so in the top bar and their home-screen name (`BASALT_WEB_CHANNEL`,
+  `components/BuildBadge.svelte`). They share the live site's browser storage - same origin - so
+  nothing a copy stores there may be something an older or newer copy can't read.
 
 - **The renderer never touches Node or the file system directly** - only `window.editor`, through
   `store/files.ts`. It stays a plain web app: `npm run dev:renderer` serves it in a browser, with
@@ -162,10 +167,16 @@ the tests that check Stage against a transcription of the retired BossBattles Ni
 
 ## Releases
 
+- **Branches:** short-lived branches and pull requests into `main`; `main` is always releasable but
+  not yet released. Each pull request gets a preview to try on a phone, `main` is the prerelease,
+  and a tag marks a release. Make a `release/x.y` branch from a tag only to fix a release while
+  `main` holds unreleased work.
 - `ci.yml` runs check, tests and both builds on every push and pull request, then publishes the
-  website from `main`; only that publish job can write to the repository. Pushing a `v*` tag runs
-  `release.yml`: a matrix (`windows-latest`, `macos-latest`, `ubuntu-latest`) builds and publishes
-  to a draft release; publish the draft by hand. Keep the tag and `package.json`'s version in step.
+  test copy of the website (above); only its publish job can write to the repository. Pushing a
+  `v*` tag runs `release.yml`: a matrix (`windows-latest`, `macos-latest`, `ubuntu-latest`) builds
+  and publishes to a draft release; publish the draft by hand, which also publishes the live
+  website from that tag (`web-release.yml`; run it by hand with a tag for a website-only fix). Keep
+  the tag and `package.json`'s version in step.
 - Don't commit build output (`out/`, `dist/`); release assets aren't subject to git's 100 MB limit.
 - `electron-builder.yml`'s `publish` names the GitHub owner and repo the updater reads - it must
   match where releases actually go.
