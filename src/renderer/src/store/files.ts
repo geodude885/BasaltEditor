@@ -6,7 +6,8 @@ import { writeZip } from "../io/zip";
 import { template } from "../model/samples";
 import { loadChart, toast } from "./actions";
 import { doc } from "./document.svelte";
-import { editor } from "./editor.svelte";
+import { session } from "./session.svelte";
+import { ui } from "./ui.svelte";
 import { loadSong, unloadSong } from "./playback";
 
 const api = () => window.editor;
@@ -37,7 +38,7 @@ let onDisk = new Map<string, Uint8Array>();
  * or, with none of those, into a chart.json file it asks for.
  */
 export function saveTarget(): "folder" | "new-folder" | "library" | "file" {
-  if (editor.folder) return "folder";
+  if (session.folder) return "folder";
   if (keeper?.available && isDesktop(api())) return "new-folder";
   return keeper?.available && keeper.autosaves ? "library" : "file";
 }
@@ -48,10 +49,10 @@ export function followTheme(choice: "system" | "dark" | "light"): void {
 }
 
 function clearFiles(): void {
-  editor.files = new Map();
-  editor.clips = new Map();
-  if (editor.cover) URL.revokeObjectURL(editor.cover);
-  editor.cover = null;
+  session.files = new Map();
+  session.clips = new Map();
+  if (session.cover) URL.revokeObjectURL(session.cover);
+  session.cover = null;
   unloadSong();
 }
 
@@ -63,11 +64,11 @@ export async function openEntries(entries: FileEntry[], folder: string | null = 
     if (opened.chart) {
       loadChart(opened.chart.text, opened.chart.name);
       clearFiles();
-      editor.folder = folder;
+      session.folder = folder;
       onDisk = folder ? new Map(opened.files) : new Map();
       joinLibrary();
     }
-    editor.files = new Map([...editor.files, ...opened.files]);
+    session.files = new Map([...session.files, ...opened.files]);
     if (folder) void refreshRecent();
     // A song or cover opened on its own (not with a chart) becomes the chart's, replacing the one before.
     const song = opened.chart ? undefined : await adopt([...opened.files.keys()]);
@@ -100,18 +101,18 @@ function nameSong(file: string): void {
 async function useFiles(): Promise<void> {
   const named = doc.chart.music?.file;
   // The song the chart names; if it isn't among the files but another song is, that one plays meanwhile.
-  const songKey = findSong(editor.files, named) ?? (named ? findSong(editor.files) : undefined);
-  if (named && songKey && !findSong(editor.files, named)) toast(`${named} isn't open, so playing ${songKey}. Change the song in the Chart tab.`);
-  if (songKey && editor.song?.name !== songKey) {
-    if (!await loadSong(songKey, editor.files.get(songKey)!)) toastUndecodable(songKey);
+  const songKey = findSong(session.files, named) ?? (named ? findSong(session.files) : undefined);
+  if (named && songKey && !findSong(session.files, named)) toast(`${named} isn't open, so playing ${songKey}. Change the song in the Chart tab.`);
+  if (songKey && session.song?.name !== songKey) {
+    if (!await loadSong(songKey, session.files.get(songKey)!)) toastUndecodable(songKey);
     if (!named) doc.change(["music"], () => { doc.chart.music = { file: songKey, start: 0, volume: 1 }; });
   }
-  const coverKey = findCover(editor.files, doc.chart.cover);
+  const coverKey = findCover(session.files, doc.chart.cover);
   if (coverKey) {
-    showCover(editor.files.get(coverKey)!);
+    showCover(session.files.get(coverKey)!);
     if (!doc.chart.cover) doc.change(["cover"], () => { doc.chart.cover = coverKey; });
   }
-  editor.clips = clipSpans(editor.files);
+  session.clips = clipSpans(session.files);
 }
 
 /** Picks a song on its own and makes it the chart's, replacing the one before. */
@@ -120,13 +121,13 @@ export async function chooseSong(): Promise<void> {
   if (!file) return;
   const name = file.path.split(/[\\/]/).pop()!;
   if (!isSong(name)) { toast("Not a song. Choose an MP3, OGG or WAV file"); return; }
-  editor.files = new Map([...editor.files, [name, file.bytes]]);
+  session.files = new Map([...session.files, [name, file.bytes]]);
   await useSong(name);
 }
 
 /** Makes one of the open songs the chart's song, and plays it from now on. */
 export async function useSong(name: string): Promise<void> {
-  const bytes = editor.files.get(name);
+  const bytes = session.files.get(name);
   if (!bytes) return;
   nameSong(name);
   // Load it even if a song of the same name was open: this may be a different file.
@@ -138,8 +139,8 @@ const toastUndecodable = (name: string): void => toast(`Couldn't draw a waveform
 
 /** Shows a cover image, letting go of the one before. */
 function showCover(bytes: Uint8Array): void {
-  if (editor.cover) URL.revokeObjectURL(editor.cover);
-  editor.cover = URL.createObjectURL(new Blob([bytes as BlobPart]));
+  if (session.cover) URL.revokeObjectURL(session.cover);
+  session.cover = URL.createObjectURL(new Blob([bytes as BlobPart]));
 }
 
 /** Takes the song out of the chart. */
@@ -154,7 +155,7 @@ export async function chooseCover(): Promise<void> {
   if (!file) return;
   const name = file.path.split(/[\\/]/).pop()!;
   if (!isCover(name)) { toast("Not a cover. Choose a PNG or JPEG image"); return; }
-  editor.files = new Map([...editor.files, [name, file.bytes]]);
+  session.files = new Map([...session.files, [name, file.bytes]]);
   doc.change(["cover"], () => { doc.chart.cover = name; });
   showCover(file.bytes);
 }
@@ -191,7 +192,7 @@ async function openOpenedFolder(opened: OpenedFolder): Promise<void> {
 
 /** The chart folders opened lately, for File > Open recent. Nothing in a browser. */
 export async function refreshRecent(): Promise<void> {
-  try { editor.recentFolders = await api().recentFolders?.() ?? []; } catch { /* keep the list as it was */ }
+  try { session.recentFolders = await api().recentFolders?.() ?? []; } catch { /* keep the list as it was */ }
 }
 
 /**
@@ -220,7 +221,7 @@ export async function newChart(): Promise<void> {
   if (!await mayReplaceChart()) return;
   loadChart(template("My Chart"), "chart.json");
   clearFiles();
-  editor.folder = null;
+  session.folder = null;
   onDisk = new Map();
   joinLibrary();
   if (saveTarget() === "new-folder") await saveToCharts("Started");
@@ -228,16 +229,16 @@ export async function newChart(): Promise<void> {
 
 /** A chart just opened or started: a new entry in your charts, where there is a library. */
 function joinLibrary(): void {
-  editor.libraryId = null;
-  editor.libraryAdd = true;
+  session.libraryId = null;
+  session.libraryAdd = true;
 }
 
 /** Opens a chart kept in your charts, with its files - and its folder, on the desktop. The library says which entry it is. */
 export async function openStored(text: string, name: string, files: Map<string, Uint8Array>, folder: string | null = null): Promise<void> {
   loadChart(text, name);
   clearFiles();
-  editor.folder = folder;
-  editor.files = new Map(files);
+  session.folder = folder;
+  session.files = new Map(files);
   onDisk = folder ? new Map(files) : new Map();
   if (folder) void refreshRecent();
   await useFiles();
@@ -248,9 +249,9 @@ export async function openStored(text: string, name: string, files: Map<string, 
  * silently: the Problems tab opens and the message says so.
  */
 function savedNote(what: string): string {
-  const n = editor.problems.length;
+  const n = session.problems.length;
   if (!n) return what;
-  editor.revealTab("problems");
+  ui.revealTab("problems");
   return `${what}, but the game won't load it until its ${n} problem${n === 1 ? " is" : "s are"} fixed`;
 }
 
@@ -259,11 +260,11 @@ function savedNote(what: string): string {
  * there. In the browser, Your charts keeps it already; Save just makes sure, now.
  */
 export async function save(): Promise<void> {
-  const target = saveTarget(), folder = editor.folder;
+  const target = saveTarget(), folder = session.folder;
   if (target === "new-folder") { await saveToCharts("Saved"); return; }
   if (target === "file") { await saveChartAs(); return; }
   if (target === "library") {
-    editor.libraryAdd = true;
+    session.libraryAdd = true;
     if (keeper && !await keeper.flush()) return;
     doc.markSaved();
     toast(savedNote("Saved in Your charts"));
@@ -272,7 +273,7 @@ export async function save(): Promise<void> {
   if (!folder) return;
   try {
     await api().saveChart(folder, doc.text);
-    const changed = ownFiles(doc.chart, editor.files).filter(f => onDisk.get(f.path) !== f.bytes);
+    const changed = ownFiles(doc.chart, session.files).filter(f => onDisk.get(f.path) !== f.bytes);
     if (changed.length && api().saveFiles) {
       await api().saveFiles!(folder, changed);
       for (const f of changed) onDisk.set(f.path, f.bytes);
@@ -286,10 +287,10 @@ export async function save(): Promise<void> {
 
 /** Gives a chart with no folder one in the game's Charts folder, named after it, with its song, cover and clips. */
 async function saveToCharts(what: string): Promise<void> {
-  const own = ownFiles(doc.chart, editor.files), name = doc.chart.name || "My Chart";
+  const own = ownFiles(doc.chart, session.files), name = doc.chart.name || "My Chart";
   try {
     const folder = await api().createChartFolder!(name, [{ path: "chart.json", bytes: new TextEncoder().encode(doc.text) }, ...own]);
-    editor.folder = folder;
+    session.folder = folder;
     onDisk = new Map(own.map(f => [f.path, f.bytes]));
     doc.markSaved();
     void refreshRecent();
@@ -306,7 +307,7 @@ export async function saveChartAs(): Promise<void> {
 
 /** A package (.bbchart) with the song, cover and clips - it goes into the game's Charts folder as it is. */
 export async function savePackage(): Promise<void> {
-  const { entries, unwrapped } = packageContents(doc.text, doc.chart, editor.files);
+  const { entries, unwrapped } = packageContents(doc.text, doc.chart, session.files);
   const zip = writeZip(entries.map(e => [e.path, e.bytes]));
   await saveFile(packageName(doc.chart.name), zip, false);
   if (unwrapped) toast(`The song went in as ${unwrapped}: it was MP3 audio inside a WAV file, which the game can't read`);
@@ -328,7 +329,7 @@ export async function copyChart(): Promise<void> {
     await navigator.clipboard.writeText(doc.text);
     toast(savedNote("Copied chart.json. Paste it over your chart's file"));
   } catch {
-    editor.revealTab("help");
-    editor.showText = true;
+    ui.revealTab("help");
+    ui.showText = true;
   }
 }

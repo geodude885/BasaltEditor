@@ -5,13 +5,15 @@
   import { beatText, clockText } from "../../model/tempo";
   import { commandButton } from "../../store/commands";
   import { doc } from "../../store/document.svelte";
-  import { editor } from "../../store/editor.svelte";
+  import { editing } from "../../store/editing.svelte";
+  import { session } from "../../store/session.svelte";
+  import { transport } from "../../store/transport.svelte";
   import { mobile } from "../../store/mobile.svelte";
   import { num } from "../fields";
 
-  const count = $derived(editor.problems.length);
+  const count = $derived(session.problems.length);
   const clock = $derived.by(() => {
-    const t = Math.max(0, editor.time), tp = doc.tempo;
+    const t = Math.max(0, transport.time), tp = doc.tempo;
     return {
       time: clockText(t, 2),
       beat: tp.ok ? beatText(tp.beat(t), 1) : "",
@@ -21,13 +23,13 @@
 
 <header class="bar">
   <button class="icon" aria-label="Menu" aria-expanded={mobile.menu} onclick={() => { mobile.menu = !mobile.menu; mobile.drawer = null; }}><Icon name="menu" /></button>
-  <button class="primary play" {...commandButton("play")}>{editor.playing ? "Pause" : "Play"}</button>
+  <button class="primary play" {...commandButton("play")}>{transport.playing ? "Pause" : "Play"}</button>
   <!-- The rest scrolls sideways when the screen is too narrow for it all (portrait). -->
   <div class="scroll">
   <div class="name">{doc.chart.name || "Untitled"}{doc.dirty ? " •" : ""}</div>
   <button class="icon" aria-label="Back to the start" {...commandButton("to-start")}><Icon name="start" /></button>
   <div class="clock" aria-label="Playhead">{clock.time}{#if clock.beat}<small>b{clock.beat}</small>{/if}</div>
-  <select aria-label="Snap" value={String(editor.snap)} onchange={e => { editor.snap = num(e); }}>
+  <select aria-label="Snap" value={String(editing.snap)} onchange={e => { editing.snap = num(e); }}>
     <option value="1">1 beat</option><option value="0.5">1/2</option><option value="0.25">1/4</option><option value="0.125">1/8</option><option value="0">no snap</option>
   </select>
   <ViewSwitch />

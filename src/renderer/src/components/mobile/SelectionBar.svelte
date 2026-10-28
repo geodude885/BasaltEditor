@@ -5,16 +5,17 @@
   import { PROJECTILE_COLUMNS } from "../../model/columns";
   import { addProjectileInColumn } from "../../store/actions";
   import { commandButton } from "../../store/commands";
-  import { editor } from "../../store/editor.svelte";
+  import { editing } from "../../store/editing.svelte";
+  import { transport } from "../../store/transport.svelte";
   import { practice } from "../../store/practice.svelte";
 
-  const count = $derived(editor.selection.size);
+  const count = $derived(editing.selection.size);
 </script>
 
 <div class="tools">
   <button {...commandButton("select-mode")}>Select</button>
   <button {...commandButton("multi-select")}>Multi</button>
-  {#if editor.selectMode}
+  {#if editing.selectMode}
     <!-- Whole sections at once: the projectiles in the bar at the playhead, the loop, the rest, or all. -->
     <span class="group" role="group" aria-label="Select projectiles" in:grow={{ axis: "x" }} out:grow={{ axis: "x" }}>
       <button {...commandButton("select-bar")}>Bar</button>
@@ -31,7 +32,7 @@
     <button {...commandButton("select-none")}>Done</button>
   {:else}
     <!-- In the middle column, as a tap on the highway's middle would add it. -->
-    <button onclick={() => addProjectileInColumn(editor.time, Math.floor(PROJECTILE_COLUMNS / 2))}>+ Projectile</button>
+    <button onclick={() => addProjectileInColumn(transport.time, Math.floor(PROJECTILE_COLUMNS / 2))}>+ Projectile</button>
     <button {...commandButton("add-move")}>+ Move</button>
     <button {...commandButton("add-look")}>+ Look</button>
     <button {...commandButton("add-phase")}>+ Phase</button>

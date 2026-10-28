@@ -3,11 +3,12 @@
   import { round } from "../../model/tempo";
   import { tap, tapBpm, toast } from "../../store/actions";
   import { doc } from "../../store/document.svelte";
-  import { editor } from "../../store/editor.svelte";
+  import { transport } from "../../store/transport.svelte";
+  import { ui } from "../../store/ui.svelte";
   import { num } from "../fields";
 
   const list = $derived(tempoList(doc.chart));
-  const taps = $derived(editor.tapTimes.length);
+  const taps = $derived(ui.tapTimes.length);
 
   function setChange(i: number, field: "beat" | "bpm", value: number): void {
     const next = tempoList(doc.chart);
@@ -34,7 +35,7 @@
   <button class="primary" onclick={tap}>Tap</button>
   <span class="clock">{taps > 1 ? tapBpm().toFixed(1) : "–"}<small>bpm</small></span>
   <button disabled={taps <= 3} onclick={useTapped}>Use this tempo</button>
-  <button onclick={() => { editor.tapTimes = []; }}>Reset</button>
+  <button onclick={() => { ui.tapTimes = []; }}>Reset</button>
 </div>
 
 <h3>Tempo changes</h3>
@@ -50,7 +51,7 @@
   {/each}
 </div>
 <div class="row">
-  <button onclick={() => doc.change(["bpm"], () => addTempoChange(doc.chart, editor.time, doc.tempo))}>
+  <button onclick={() => doc.change(["bpm"], () => addTempoChange(doc.chart, transport.time, doc.tempo))}>
     {list.length ? "Tempo change at the playhead" : "Add a tempo"}
   </button>
 </div>

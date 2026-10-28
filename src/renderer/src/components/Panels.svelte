@@ -1,15 +1,15 @@
 <script lang="ts">
   // The desktop's settings: a tab bar, and the open tab's panel. The tabs are in panels/tabs.ts.
-  import { editor } from "../store/editor.svelte";
+  import { ui } from "../store/ui.svelte";
   import { PANEL_TABS, TAB_ORDER } from "./panels/tabs";
 
-  const Panel = $derived(PANEL_TABS[editor.tab].panel);
+  const Panel = $derived(PANEL_TABS[ui.tab].panel);
 </script>
 
 <div class="tabs">
   <div class="tabbar" role="tablist">
     {#each TAB_ORDER as id (id)}
-      <button role="tab" aria-selected={editor.tab === id} onclick={() => { editor.tab = id; }}>{PANEL_TABS[id].label}</button>
+      <button role="tab" aria-selected={ui.tab === id} onclick={() => { ui.tab = id; }}>{PANEL_TABS[id].label}</button>
     {/each}
   </div>
   <div class="panel" role="tabpanel">

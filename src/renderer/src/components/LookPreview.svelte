@@ -11,7 +11,9 @@
   import { stageFrameKey } from "../model/stageFrame";
   import { selectLookCue } from "../store/actions";
   import { doc } from "../store/document.svelte";
-  import { editor } from "../store/editor.svelte";
+  import { display } from "../store/display.svelte";
+  import { editing } from "../store/editing.svelte";
+  import { transport } from "../store/transport.svelte";
   import { layout } from "../store/layout.svelte";
   import { seek } from "../store/playback";
   import { StagePreviewShader } from "../views/stagePreview";
@@ -29,15 +31,15 @@
   let box: HTMLElement, canvas: HTMLCanvasElement;
 
   const [width, height] = $derived(SIZES[layout.compact ? "small" : size]);
-  const selectedCue = $derived(doc.chart.visuals?.[editor.selectedLookCue]);
+  const selectedCue = $derived(doc.chart.visuals?.[editing.selectedLookCue]);
   const canFollowSelected = $derived(!!selectedCue && isCueForPack(selectedCue, STAGE_PACK));
   const showingSelected = $derived(follow === "selected" && canFollowSelected);
 
   const look = $derived.by<StageLook>(() => {
-    if (showingSelected) return stageLookAfterCue(stageLookBeforeCue(editor.lookCues, editor.selectedLookCue), selectedCue!);
-    return stageLookAt(editor.lookCues, editor.time);
+    if (showingSelected) return stageLookAfterCue(stageLookBeforeCue(doc.lookCues, editing.selectedLookCue), selectedCue!);
+    return stageLookAt(doc.lookCues, transport.time);
   });
-  const now = $derived(stageCueAt(editor.lookCues, editor.time));
+  const now = $derived(stageCueAt(doc.lookCues, transport.time));
 
   const caption = $derived.by(() => {
     if (showingSelected) return `Where the look at ${lookCueTimeLabel(selectedCue!)} ends up`;
@@ -64,7 +66,7 @@
   let asked = "";
   $effect(() => {
     const shown = comparing ? { ...look, on: false } : look;
-    const fight = { beatFraction: doc.tempo.ok ? doc.tempo.beat(Math.max(0, editor.time)) % 1 : null, health, hit, time: editor.time };
+    const fight = { beatFraction: doc.tempo.ok ? doc.tempo.beat(Math.max(0, transport.time)) % 1 : null, health, hit, time: transport.time };
     const key = `${width}x${height}@${keyHue}|${stageFrameKey(shown, fight)}`;
     if (!shader || key === asked) return;
     shader.shade({ width, height, keyHue, look: shown, fight });
@@ -86,7 +88,7 @@
   $effect(() => () => cancelAnimationFrame(hitFrame));
 
   function editShownLook(): void {
-    const index = showingSelected ? editor.selectedLookCue : now?.cue.index;
+    const index = showingSelected ? editing.selectedLookCue : now?.cue.index;
     if (index == null) return;
     selectLookCue(index);
     if (!showingSelected) seek(now!.cue.time);
@@ -123,7 +125,7 @@
     {#if !layout.compact}
       <button class="icon" title={size === "small" ? "Larger" : "Smaller"} onclick={() => { size = size === "small" ? "large" : "small"; }}><Icon name={size === "small" ? "expand" : "shrink"} /></button>
     {/if}
-    <button class="icon" title="Hide (K)" aria-label="Hide the look preview" onclick={() => editor.toggleLookPreview()}><Icon name="close" /></button>
+    <button class="icon" title="Hide (K)" aria-label="Hide the look preview" onclick={() => display.toggleLookPreview()}><Icon name="close" /></button>
   </header>
 
   <div class="screen">

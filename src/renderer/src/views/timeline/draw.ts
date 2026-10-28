@@ -4,7 +4,7 @@ import { STAGE_PACK, stageLookAt, stagePreview, type TimedLookCue } from "../../
 import type { Tempo } from "../../model/tempo";
 import type { LoadedChart } from "../../model/types";
 import type { ClipSpan } from "../../io/files";
-import type { Song } from "../../store/editor.svelte";
+import type { Song } from "../../store/session.svelte";
 import { shotPaint, stripePath, type ShotColouring } from "../shotColours";
 import { alpha, drawBox, type Box, type Theme } from "../theme";
 import { tOf, xOf, type Marker, type TimelineLayout, type View } from "./geometry";

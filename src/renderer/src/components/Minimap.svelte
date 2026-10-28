@@ -3,7 +3,7 @@
   import { endOf } from "../model/chart";
   import { appearance } from "../store/appearance.svelte";
   import { doc } from "../store/document.svelte";
-  import { editor } from "../store/editor.svelte";
+  import { transport } from "../store/transport.svelte";
   import { practice } from "../store/practice.svelte";
   import { seek, songLength } from "../store/playback";
   import { drawMinimap, minimapTime } from "../views/minimap";
@@ -17,7 +17,7 @@
 
   $effect(() => {
     if (!w || !h) return;
-    drawMinimap(prepare(canvas, w, h), w, h, { chart: doc.chart, tempo: doc.tempo, length, time: editor.time, loop: practice.loop }, theme(appearance.scheme));
+    drawMinimap(prepare(canvas, w, h), w, h, { chart: doc.chart, tempo: doc.tempo, length, time: transport.time, loop: practice.loop }, theme(appearance.scheme));
   });
 
   function jump(ev: PointerEvent): void {

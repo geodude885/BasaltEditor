@@ -6,7 +6,7 @@ import { summaryOf, type ChartSummary } from "../io/summary";
 import * as Jsonc from "../model/jsonc";
 import { toast } from "./actions";
 import { doc } from "./document.svelte";
-import { editor } from "./editor.svelte";
+import { session } from "./session.svelte";
 import { keepChartsWith, mayReplaceChart, openStored, type ChartKeeper } from "./files";
 
 export type { ChartSummary };
@@ -53,7 +53,7 @@ class Library implements ChartKeeper {
     if (!this.autosaves) return;
     $effect.root(() => {
       $effect(() => {
-        void doc.text; void editor.files; void editor.libraryAdd;
+        void doc.text; void session.files; void session.libraryAdd;
         clearTimeout(this.#timer);
         this.#timer = window.setTimeout(() => void this.#sync(), SAVE_AFTER_MS);
       });
@@ -79,7 +79,7 @@ class Library implements ChartKeeper {
 
   /** Whether an entry is the chart open now. */
   isCurrent(id: string): boolean {
-    return id === editor.libraryId || id === editor.folder;
+    return id === session.libraryId || id === session.folder;
   }
 
   async refresh(): Promise<void> {
@@ -126,17 +126,17 @@ class Library implements ChartKeeper {
     try { await this.#source?.remove(id); }
     catch (e) { toast(`Could not delete that chart: ${(e as Error).message}`); return; }
     if (this.isCurrent(id)) {
-      editor.libraryId = null;
+      session.libraryId = null;
       // Its folder is gone: Save asks where to save again.
-      if (editor.folder === id) editor.folder = null;
+      if (session.folder === id) session.folder = null;
       this.#remember(null);
     }
     await this.refresh();
   }
 
   #become(stored: StoredChart): void {
-    editor.libraryId = stored.summary.id;
-    editor.libraryAdd = false;
+    session.libraryId = stored.summary.id;
+    session.libraryAdd = false;
     this.#created = stored.summary.created;
     this.#saved = new Map(stored.files);
     if (this.autosaves) this.#remember(stored.summary.id);
@@ -160,19 +160,19 @@ class Library implements ChartKeeper {
   async #sync(): Promise<boolean> {
     const source = this.#source;
     if (!source || !this.autosaves) return true;
-    let id = editor.libraryId;
+    let id = session.libraryId;
     if (!id) {
       // Opened or started charts join straight away; the example only once it's been changed.
-      if (!editor.libraryAdd && !doc.dirty) return true;
+      if (!session.libraryAdd && !doc.dirty) return true;
       id = crypto.randomUUID();
-      editor.libraryId = id;
-      editor.libraryAdd = false;
+      session.libraryId = id;
+      session.libraryAdd = false;
       this.#created = Date.now();
       this.#saved = new Map();
       this.#remember(id);
       void navigator.storage?.persist?.();
     }
-    const files = editor.files;
+    const files = session.files;
     const changed = [...files].filter(([path, bytes]) => this.#saved.get(path) !== bytes);
     const removed = [...this.#saved.keys()].filter(path => !files.has(path));
     try {

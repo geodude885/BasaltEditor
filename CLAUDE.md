@@ -58,8 +58,10 @@ src/renderer/src/
   io/           zip, sorting opened files into a chart and its song, cover and clips, what a package
                 holds, chart summaries for "Your charts"
   audio/        waveform peaks, MP3 inside a WAV
-  store/        document (text, chart, undo), editor (UI state), actions, files, playback, commands
-                and keyboard, practice, recording, library, layout
+  store/        document (text, chart, undo, looks), editing (selection, snap), transport (playhead,
+                playing, volume), display (which editor, timeline view, preview, colours), session
+                (files beside the chart, where it saves, problems), ui (tabs, toasts, quick actions);
+                actions, files, playback, commands and keyboard, practice, recording, library, layout
   views/lane/   lane canvas: geometry, draw, interaction (what a press hits), the component
   views/timeline/  timeline canvas: rows and markers, draw, interaction, the component
   views/highway/   note-highway editor: columns, tiles, draw, interaction, the component
@@ -74,14 +76,19 @@ src/renderer/src/
 - **Two layouts, one editor.** `store/layout.svelte.ts` picks the phone layout on touch screens with a
   phone-sized short side (`?mobile=1` / `?mobile=0` force it); App.svelte shows `MobileApp` or the
   desktop workbench. Both have the same features from the same stores, canvases and panels - the
-  timeline or the highway (`editor.mainView`), tap-along recording (`store/recording.svelte.ts`),
+  timeline or the highway (`display.mainView`), tap-along recording (`store/recording.svelte.ts`),
   practice tools (`store/practice.svelte.ts`), "Your charts" - and only arrange them differently.
   Touch gestures live in `views/touch.ts`; a mouse never reaches the code that differs. A new
   feature goes in both.
 - **Layouts keep their own state.** `mobile.*` (store/mobile.svelte.ts) is read and written only in
-  `components/mobile/`. Shared code that needs a settings tab shown calls `editor.revealTab(tab)`:
+  `components/mobile/`. Shared code that needs a settings tab shown calls `ui.revealTab(tab)`:
   the desktop switches its tab bar, the phone opens its drawer. The settings tabs are listed once, in
   `components/panels/tabs.ts`.
+- **State lives in the store it's about**, not in one catch-all: what is being edited in `editing`,
+  the playhead in `transport`, how things are shown in `display`, the chart's files in `session`,
+  the shared interface in `ui`, anything derived only from the chart on `doc`. A new field goes in
+  the store it belongs to; a new store when none fits. Settings kept between visits use
+  `store/remembered.ts`.
 - **Motion comes from `components/motion.ts`**: one set of timings, and transitions used as separate
   `in:` and `out:` directives (`in:panel={...} out:panel={...}`) so each knows its direction - things
   leave faster than they arrive, and a leaving element ignores the pointer. Reduced motion turns

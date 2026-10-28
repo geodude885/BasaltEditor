@@ -4,7 +4,7 @@
   import { LANE_COLOURS, WALL_COLOUR, WALL_DEFAULT } from "../../model/constants";
   import type { Phase, PhaseColours } from "../../model/types";
   import { doc } from "../../store/document.svelte";
-  import { editor } from "../../store/editor.svelte";
+  import { editing } from "../../store/editing.svelte";
   import { checked, num, text } from "../fields";
 
   let { phase, index }: { phase: Phase; index: number } = $props();
@@ -41,7 +41,7 @@
 
   function remove(): void {
     doc.change(["phases"], () => { doc.chart.phases!.splice(index, 1); });
-    editor.selectedPhase = -1;
+    editing.selectedPhase = -1;
   }
 </script>
 

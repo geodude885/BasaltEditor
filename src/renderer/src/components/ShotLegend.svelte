@@ -1,10 +1,10 @@
 <script lang="ts">
   // What the projectile colours mean (View > Projectile colours), for the structures this chart throws.
   import { doc } from "../store/document.svelte";
-  import { editor } from "../store/editor.svelte";
+  import { display } from "../store/display.svelte";
   import { shotLegend } from "../views/shotColours";
 
-  const entries = $derived(shotLegend(doc.chart, editor.shotColouring));
+  const entries = $derived(shotLegend(doc.chart, display.shotColouring));
 </script>
 
 {#if entries.length}

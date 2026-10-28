@@ -3,12 +3,12 @@
   import { round } from "../../model/tempo";
   import { addPhase, selectPhase } from "../../store/actions";
   import { doc } from "../../store/document.svelte";
-  import { editor } from "../../store/editor.svelte";
+  import { editing } from "../../store/editing.svelte";
   import { seek } from "../../store/playback";
   import PhaseEditor from "./PhaseEditor.svelte";
 
   const phases = $derived(doc.chart.phases ?? []);
-  const selected = $derived(phases[editor.selectedPhase]);
+  const selected = $derived(phases[editing.selectedPhase]);
 </script>
 
 <div class="row">
@@ -19,7 +19,7 @@
 {#if phases.length}
   <div class="phases" role="listbox" aria-label="Phases">
     {#each phases as phase, i (i)}
-      <button role="option" aria-selected={i === editor.selectedPhase} onclick={() => { selectPhase(i); seek(phaseTime(phase, doc.tempo)); }}>
+      <button role="option" aria-selected={i === editing.selectedPhase} onclick={() => { selectPhase(i); seek(phaseTime(phase, doc.tempo)); }}>
         <b>{phase.name || `Phase ${i + 1}`}</b>
         <span>{round(phaseTime(phase, doc.tempo), 2)} s{phase.scoreMultiplier && phase.scoreMultiplier !== 1 ? ` · ×${phase.scoreMultiplier}` : ""}</span>
       </button>
@@ -29,7 +29,7 @@
   <div class="note">No phases: the whole battle is one section. Add one at the playhead, or click the timeline's phase row.</div>
 {/if}
 
-{#if selected}<PhaseEditor phase={selected} index={editor.selectedPhase} />{/if}
+{#if selected}<PhaseEditor phase={selected} index={editing.selectedPhase} />{/if}
 
 <style>
   .phases { display: flex; flex-wrap: wrap; gap: 6px; }

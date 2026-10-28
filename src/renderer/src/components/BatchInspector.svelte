@@ -9,11 +9,11 @@
   import type { Projectile, Structure } from "../model/types";
   import { editSelectedProjectiles } from "../store/actions";
   import { doc } from "../store/document.svelte";
-  import { editor } from "../store/editor.svelte";
+  import { editing } from "../store/editing.svelte";
   import { checked, num, text } from "./fields";
 
-  const shots = $derived([...editor.selection].map(i => doc.chart.events[i]?.projectile).filter((p): p is Projectile => !!p));
-  const others = $derived(editor.selection.size - shots.length);
+  const shots = $derived([...editing.selection].map(i => doc.chart.events[i]?.projectile).filter((p): p is Projectile => !!p));
+  const others = $derived(editing.selection.size - shots.length);
   const actors = $derived(actorsOf(doc.chart));
 
   const structure = $derived(shared(shots, p => p.structure));

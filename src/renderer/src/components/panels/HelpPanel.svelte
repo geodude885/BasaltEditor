@@ -1,6 +1,6 @@
 <script lang="ts">
   import { doc } from "../../store/document.svelte";
-  import { editor } from "../../store/editor.svelte";
+  import { ui } from "../../store/ui.svelte";
   import { shortcutCommands } from "../../store/commands";
   import Logo from "../Logo.svelte";
 
@@ -17,12 +17,12 @@
   <div><b>Basalt Editor</b> <span class="version">{__APP_VERSION__}</span><br />A chart editor for Basalt, the RUMBLE boss battle mod</div>
 </div>
 
-{#if editor.showText}
+{#if ui.showText}
   <label><span>chart.json (select all and copy)</span>
     <!-- svelte-ignore a11y_autofocus -->
     <textarea rows="14" readonly autofocus value={doc.text} onfocus={e => e.currentTarget.select()}></textarea>
   </label>
-  <div class="row"><button onclick={() => { editor.showText = false; }}>Done</button></div>
+  <div class="row"><button onclick={() => { ui.showText = false; }}>Done</button></div>
 {/if}
 
 <div class="keys">

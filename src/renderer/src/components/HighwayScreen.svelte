@@ -5,7 +5,7 @@
   import { grow } from "./motion";
   import Icon from "./Icon.svelte";
   import { untrack } from "svelte";
-  import { editor } from "../store/editor.svelte";
+  import { transport } from "../store/transport.svelte";
   import { commandButton } from "../store/commands";
   import { loopPointLabel, practice } from "../store/practice.svelte";
   import { RECORD_KEYS, recording, type RecordMode } from "../store/recording.svelte";
@@ -16,7 +16,7 @@
   const columns = highwayColumns();
 
   // A take ends when playing stops, and when the highway goes away.
-  $effect(() => { if (!editor.playing) untrack(() => recording.finish()); });
+  $effect(() => { if (!transport.playing) untrack(() => recording.finish()); });
   $effect(() => () => recording.finish());
 
   const pads: HTMLButtonElement[] = [];
@@ -65,7 +65,7 @@
           <button class:on={recording.mode === mode} aria-pressed={recording.mode === mode} onclick={() => { recording.mode = mode; }}>{label}</button>
         {/each}
       </div>
-      <div class="count" aria-live="polite">{recording.count ? `${recording.count} in take` : editor.playing ? "Tap along" : "Play to record"}</div>
+      <div class="count" aria-live="polite">{recording.count ? `${recording.count} in take` : transport.playing ? "Tap along" : "Play to record"}</div>
     {/if}
     <div class="pair">
       <button aria-label="Back a bar" {...commandButton("back-bar")}>−bar</button>

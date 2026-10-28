@@ -5,23 +5,24 @@
   import { commandButton } from "../store/commands";
   import { saveTarget } from "../store/files";
   import { doc } from "../store/document.svelte";
-  import { editor } from "../store/editor.svelte";
+  import { session } from "../store/session.svelte";
+  import { ui } from "../store/ui.svelte";
   import Logo from "./Logo.svelte";
   import MenuBar from "./MenuBar.svelte";
 
-  const count = $derived(editor.problems.length);
+  const count = $derived(session.problems.length);
 </script>
 
 <header class="bar">
   <div class="brand"><Logo size={26} /> Basalt <span>Editor</span></div>
   <MenuBar />
-  <div class="chartname" title={editor.folder ?? doc.name}>{doc.chart.name || "Untitled"}{doc.dirty ? " •" : ""}</div>
+  <div class="chartname" title={session.folder ?? doc.name}>{doc.chart.name || "Untitled"}{doc.dirty ? " •" : ""}</div>
   <div class="spacer"></div>
   <div class="group">
     <button class="primary" {...commandButton("save")}>{saveTarget() === "file" ? "Save as…" : "Save"}</button>
     <button {...commandButton("undo")}>Undo</button>
     <button {...commandButton("redo")}>Redo</button>
-    <button class="chip" class:bad={count} class:ok={!count} onclick={() => { editor.tab = "problems"; }}>
+    <button class="chip" class:bad={count} class:ok={!count} onclick={() => { ui.tab = "problems"; }}>
       {count ? `${count} problem${count === 1 ? "" : "s"}` : "no problems"}
     </button>
     <select class="theme" title="Light or dark" aria-label="Theme" value={appearance.choice}

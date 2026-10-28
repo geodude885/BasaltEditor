@@ -9,7 +9,8 @@
   import type { LoadedChart } from "../../model/types";
   import { endWithSong, toast } from "../../store/actions";
   import { doc } from "../../store/document.svelte";
-  import { editor } from "../../store/editor.svelte";
+  import { session } from "../../store/session.svelte";
+  import { ui } from "../../store/ui.svelte";
   import { chooseCover, newChart } from "../../store/files";
   import { library } from "../../store/library.svelte";
   import SongPicker from "../SongPicker.svelte";
@@ -22,7 +23,7 @@
   const stats = $derived(density(c, doc.tempo));
   const end = $derived(endOf(c, doc.tempo));
   const colours = $derived(coloursOf(c));
-  const song = $derived(editor.song?.buffer ? songLength() : null);
+  const song = $derived(session.song?.buffer ? songLength() : null);
   const walls = $derived(colours.walls);
   const m = $derived(c.music);
 
@@ -37,11 +38,11 @@
   }
 </script>
 
-{#if editor.confirmNew}
+{#if ui.confirmNew}
   <div class="confirm">
     Start a new chart? {library.available ? "This one stays in Your charts." : "Changes to this one that aren't saved will be lost."}
-    <button class="primary" onclick={() => { editor.confirmNew = false; void newChart(); }}>Start new</button>
-    <button onclick={() => { editor.confirmNew = false; }}>Keep editing</button>
+    <button class="primary" onclick={() => { ui.confirmNew = false; void newChart(); }}>Start new</button>
+    <button onclick={() => { ui.confirmNew = false; }}>Keep editing</button>
   </div>
 {/if}
 
@@ -133,8 +134,8 @@
     <label><span>Cover image</span><input value={c.cover ?? ""} placeholder="cover.png" onchange={e => set("cover", text(e).trim() || undefined)} /></label>
     <button onclick={chooseCover}>{c.cover ? "Change cover…" : "Choose cover…"}</button>
   </div>
-  {#if editor.cover}
-    <img src={editor.cover} alt="Cover" />
+  {#if session.cover}
+    <img src={session.cover} alt="Cover" />
   {:else}
     <div class="note">Choose a PNG or JPEG to see it here.</div>
   {/if}

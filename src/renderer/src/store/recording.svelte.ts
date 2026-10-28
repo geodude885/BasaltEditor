@@ -8,7 +8,9 @@ import { afterReplacing, sameTap } from "../model/takes";
 import type { ChartEvent, LoadedChart } from "../model/types";
 import { addProjectileInColumn, toast } from "./actions";
 import { doc } from "./document.svelte";
-import { editor } from "./editor.svelte";
+import { display } from "./display.svelte";
+import { editing } from "./editing.svelte";
+import { transport } from "./transport.svelte";
 import { playheadNow } from "./playback";
 import { practice } from "./practice.svelte";
 
@@ -38,10 +40,10 @@ class Recording {
 
   /** A pad tapped. Playing, it adds to the take; paused, it just adds a projectile at the playhead. */
   hit(column: number): void {
-    if (!editor.playing) { addProjectileInColumn(editor.time, column); return; }
+    if (!transport.playing) { addProjectileInColumn(transport.time, column); return; }
     if (this.#take && this.#take.chart !== doc.chart) this.#take = null; // undone or reloaded mid-take
-    const t = Math.max(0, playheadNow() - this.offsetMs / 1000 * editor.rate);
-    const c = doc.chart, ev = newTimed(c, t, doc.tempo, editor.snap), at = evTime(ev, doc.tempo);
+    const t = Math.max(0, playheadNow() - this.offsetMs / 1000 * transport.rate);
+    const c = doc.chart, ev = newTimed(c, t, doc.tempo, editing.snap), at = evTime(ev, doc.tempo);
     const take = this.#take ??= { chart: c, before: doc.text, from: at, to: at, added: [], taps: [] };
     if (take.taps.some(tap => sameTap(tap, { t: at, column }))) return;
     ev.projectile = straightProjectile(c, xOfColumn(column, laneOf(c).width), firstActorId(c));
@@ -57,7 +59,7 @@ class Recording {
   toggle(): void {
     this.finish();
     this.armed = !this.armed;
-    if (this.armed) editor.mainView = "highway";
+    if (this.armed) display.mainView = "highway";
   }
 
   /** Ends the take in progress - one undo step - and selects what it added. */
@@ -75,7 +77,7 @@ class Recording {
       replaced = before - doc.chart.events.length;
     }
     doc.commit(take.before, ["events"]);
-    editor.setSelection(take.added.map(e => doc.chart.events.indexOf(e)).filter(i => i >= 0));
+    editing.setSelection(take.added.map(e => doc.chart.events.indexOf(e)).filter(i => i >= 0));
     toast(`Recorded ${take.added.length}${replaced ? `, replacing ${replaced}` : ""}`);
   }
 
