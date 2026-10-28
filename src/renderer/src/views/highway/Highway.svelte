@@ -28,7 +28,7 @@
   let canvas: HTMLCanvasElement;
   let w = $state(0), h = $state(0);
   let box = $state<Box | null>(null);
-  const columns = highwayColumns();
+  const columns = $derived(highwayColumns(display.highwayColumns));
 
   const view = $derived<HighwayView>({ w, h, hitY: h * HIT_LINE_FROM_TOP, pps: practice.highwayPps, time: transport.time });
   const placed = $derived(tiles(doc.chart, doc.tempo, view, columns));
@@ -127,7 +127,7 @@
       const by = tileDrag(view, columns.length, drag.x0, drag.y0, x, y), width = laneOf(doc.chart).width;
       for (const [e, t, column] of drag.starts) {
         setEvTime(e, snapped(t + by.seconds), doc.tempo);
-        if (e.projectile) moveToColumn(e.projectile, columns[shiftedColumn(column, by.columns, columns.length)].column, width);
+        if (e.projectile) moveToColumn(e.projectile, columns[shiftedColumn(column, by.columns, columns.length)].column, width, columns.length);
       }
     }
   }
@@ -155,7 +155,7 @@
   function tap(at: HighwayView, x: number, y: number, adding: boolean): void {
     const does = whatAHighwayTapDoes(at, columns.length, x, y, editing.selection.size > 0, adding);
     if (does.kind === "let-go") editing.selection.clear();
-    else addProjectileInColumn(does.seconds, columns[does.column].column);
+    else addProjectileInColumn(does.seconds, columns[does.column].column, columns.length);
   }
 
   // Not onwheel: it must not be passive, or preventDefault cannot stop the page scrolling.

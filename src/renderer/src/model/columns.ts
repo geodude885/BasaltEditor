@@ -1,21 +1,24 @@
 // The positions across the lane that the timeline's projectile row and the highway editor share: a
 // projectile sits in the column nearest where it starts across the lane, and one added in a column
-// starts there. Five, an odd number, so the middle of the lane is a column.
+// starts there. The timeline always draws five, an odd number, so the middle of the lane is a column; the
+// highway shows as many as the editor is set to (HIGHWAY_COLUMNS_RANGE), five to start with.
 import { laneOf } from "./chart";
 import { round } from "./tempo";
 import type { LoadedChart, Projectile } from "./types";
 
 export const PROJECTILE_COLUMNS = 5;
+/** How few and how many columns the highway can have: up to one per number and letter key. */
+export const HIGHWAY_COLUMNS_RANGE = [1, 36] as const;
 
-/** The column nearest a point across a lane this wide (x = 0 is the middle). */
-export function columnOfX(x: number, laneWidth: number): number {
-  const last = PROJECTILE_COLUMNS - 1;
+/** The column nearest a point across a lane this wide (x = 0 is the middle), out of `count` columns. */
+export function columnOfX(x: number, laneWidth: number, count = PROJECTILE_COLUMNS): number {
+  const last = count - 1;
   return Math.min(last, Math.max(0, Math.round(((+x || 0) / laneWidth + 0.5) * last)));
 }
 
-/** Where a column is across a lane this wide. */
-export function xOfColumn(column: number, laneWidth: number): number {
-  return round((column / (PROJECTILE_COLUMNS - 1) - 0.5) * laneWidth, 2);
+/** Where a column is across a lane this wide, out of `count` columns. One column is the middle. */
+export function xOfColumn(column: number, laneWidth: number, count = PROJECTILE_COLUMNS): number {
+  return count < 2 ? 0 : round((column / (count - 1) - 0.5) * laneWidth, 2);
 }
 
 /**
@@ -33,8 +36,8 @@ export function straightProjectile(c: LoadedChart, x: number, by: string): Proje
 }
 
 /** Moves a projectile to a column, keeping its aim the same way off its start - straight stays straight. */
-export function moveToColumn(p: Projectile, column: number, laneWidth: number): void {
-  const x = xOfColumn(column, laneWidth), dx = x - (+p.from.x || 0);
+export function moveToColumn(p: Projectile, column: number, laneWidth: number, count = PROJECTILE_COLUMNS): void {
+  const x = xOfColumn(column, laneWidth, count), dx = x - (+p.from.x || 0);
   p.from.x = x;
   if (p.to && p.to !== "player") p.to.x = round((+p.to.x || 0) + dx, 2);
 }

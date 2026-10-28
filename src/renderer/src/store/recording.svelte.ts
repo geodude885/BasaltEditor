@@ -20,8 +20,8 @@ type Take = { chart: LoadedChart; before: string; from: number; to: number; adde
 
 const OFFSET_KEY = "basalt-tap-offset";
 
-/** On a keyboard, the keys that tap the highway's columns, left to right. */
-export const RECORD_KEYS = ["1", "2", "3", "4", "5"];
+/** On a keyboard, the keys that tap the highway's columns, left to right: the number row, then the letters row by row. */
+export const RECORD_KEYS = [..."1234567890qwertyuiopasdfghjklzxcvbnm"];
 
 function savedOffset(): number {
   try { const ms = parseFloat(localStorage.getItem(OFFSET_KEY) ?? ""); if (Number.isFinite(ms)) return ms; } catch { /* none */ }
@@ -40,13 +40,13 @@ class Recording {
 
   /** A pad tapped. Playing, it adds to the take; paused, it just adds a projectile at the playhead. */
   hit(column: number): void {
-    if (!transport.playing) { addProjectileInColumn(transport.time, column); return; }
+    if (!transport.playing) { addProjectileInColumn(transport.time, column, display.highwayColumns); return; }
     if (this.#take && this.#take.chart !== doc.chart) this.#take = null; // undone or reloaded mid-take
     const t = Math.max(0, playheadNow() - this.offsetMs / 1000 * transport.rate);
     const c = doc.chart, ev = newTimed(c, t, doc.tempo, editing.snap), at = evTime(ev, doc.tempo);
     const take = this.#take ??= { chart: c, before: doc.text, from: at, to: at, added: [], taps: [] };
     if (take.taps.some(tap => sameTap(tap, { t: at, column }))) return;
-    ev.projectile = straightProjectile(c, xOfColumn(column, laneOf(c).width), firstActorId(c));
+    ev.projectile = straightProjectile(c, xOfColumn(column, laneOf(c).width, display.highwayColumns), firstActorId(c));
     c.events.push(ev);
     take.added.push(c.events.at(-1)!);
     take.taps.push({ t: at, column });

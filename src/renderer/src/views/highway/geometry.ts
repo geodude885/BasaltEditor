@@ -11,9 +11,10 @@ export type HighwayColumn = { column: number; label: string };
 
 const PROJECTILE_LABELS = ["Far left", "Left", "Middle", "Right", "Far right"];
 
-/** The columns the highway shows, left to right. */
-export function highwayColumns(): HighwayColumn[] {
-  return Array.from({ length: PROJECTILE_COLUMNS }, (_, column): HighwayColumn => ({ column, label: PROJECTILE_LABELS[column] ?? `${column + 1}` }));
+/** The columns the highway shows, left to right: the five are named, any other number numbered. */
+export function highwayColumns(count = PROJECTILE_COLUMNS): HighwayColumn[] {
+  return Array.from({ length: count }, (_, column): HighwayColumn =>
+    ({ column, label: count === PROJECTILE_COLUMNS ? PROJECTILE_LABELS[column] : `Column ${column + 1}` }));
 }
 
 /** The highway on screen: its size, where the hit line is, and how many pixels a second takes. */
@@ -50,7 +51,7 @@ export function tiles(c: LoadedChart, tp: Tempo, v: HighwayView, columns: Highwa
     if (!e.projectile) return;
     const t = evTime(e, tp);
     if (!Number.isFinite(t) || t < earliest || t > latest) return;
-    const index = columns.findIndex(col => col.column === columnOfX(+e.projectile!.from?.x || 0, width));
+    const index = columns.findIndex(col => col.column === columnOfX(+e.projectile!.from?.x || 0, width, count));
     if (index < 0) return;
     const [cx, cw] = columnSpan(v, count, index), inset = cw * TILE_SIDE_INSET;
     out.push({ i, column: index, t, x: cx + inset, y: yOfTime(v, t) - TILE_HEIGHT_PIXELS / 2, w: cw - 2 * inset, h: TILE_HEIGHT_PIXELS });

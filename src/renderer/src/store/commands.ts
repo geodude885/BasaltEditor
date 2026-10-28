@@ -163,7 +163,7 @@ export function menus(): Menu[] {
         ],
         [
           { id: "record", label: "Record taps", keys: "R", run: () => recording.toggle(),
-            checked: () => recording.armed, help: "Arm tap-along recording on the highway; play, then tap 1 to 5 for the columns" },
+            checked: () => recording.armed, help: "Arm tap-along recording on the highway; play, then tap the columns' pads or keys" },
           { id: "record-replace", label: "Takes replace what's there", run: () => { recording.mode = recording.mode === "replace" ? "add" : "replace"; },
             checked: () => recording.mode === "replace", shown: () => recording.armed },
         ],

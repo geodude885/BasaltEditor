@@ -92,10 +92,10 @@ export function addProjectile(at?: Point): void {
   insert(ev);
 }
 
-/** Adds a projectile flying straight down the lane from a column across it, at a time (snapped). */
-export function addProjectileInColumn(seconds: number, column: number): void {
+/** Adds a projectile flying straight down the lane from a column across it (out of `count`, five unless given), at a time (snapped). */
+export function addProjectileInColumn(seconds: number, column: number, count?: number): void {
   const c = doc.chart, ev = newTimed(c, seconds, doc.tempo, editing.snap);
-  ev.projectile = straightProjectile(c, xOfColumn(column, laneOf(c).width), firstActorId(c));
+  ev.projectile = straightProjectile(c, xOfColumn(column, laneOf(c).width, count), firstActorId(c));
   insert(ev);
 }
 

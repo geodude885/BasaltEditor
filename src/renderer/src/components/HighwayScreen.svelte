@@ -1,8 +1,11 @@
 <script lang="ts">
   // The highway with its recording pads under it, one per column, and its practice controls beside it,
-  // in either layout. Arm recording and play: each pad tap - or key 1 to 5 - drops a projectile in that
-  // column, snapped. Pausing ends the take.
+  // in either layout. Arm recording and play: each pad tap - or its key, 1 to 5 and on through the letters
+  // for more columns - drops a projectile in that column, snapped. Pausing ends the take. While armed, a
+  // column's key taps it rather than running its shortcut, so it listens before App does (capture).
   import { grow } from "./motion";
+  import { HIGHWAY_COLUMNS_RANGE } from "../model/columns";
+  import { display } from "../store/display.svelte";
   import Icon from "./Icon.svelte";
   import { untrack } from "svelte";
   import { transport } from "../store/transport.svelte";
@@ -13,7 +16,7 @@
   import { highwayColumns } from "../views/highway/geometry";
   import Minimap from "./Minimap.svelte";
 
-  const columns = highwayColumns();
+  const columns = $derived(highwayColumns(display.highwayColumns));
 
   // A take ends when playing stops, and when the highway goes away.
   $effect(() => { if (!transport.playing) untrack(() => recording.finish()); });
@@ -34,7 +37,7 @@
   function key(ev: KeyboardEvent): void {
     if (!recording.armed || ev.repeat || ev.ctrlKey || ev.metaKey || ev.altKey) return;
     if ((ev.target as Element).closest?.("input, select, textarea")) return;
-    const index = RECORD_KEYS.indexOf(ev.key);
+    const index = RECORD_KEYS.indexOf(ev.key.toLowerCase());
     if (index < 0 || index >= columns.length) return;
     ev.preventDefault();
     hit(index);
@@ -43,7 +46,7 @@
   const MODES: [RecordMode, string][] = [["add", "Add"], ["replace", "Replace"]];
 </script>
 
-<svelte:window onkeydown={key} />
+<svelte:window onkeydowncapture={key} />
 
 <div class="screen">
   <div class="road">
@@ -52,7 +55,7 @@
       <div class="pads" in:grow out:grow style:grid-template-columns="repeat({columns.length}, minmax(0, 1fr))">
         {#each columns as column, index (index)}
           <button class="pad" aria-label="Tap {column.label}" aria-keyshortcuts={RECORD_KEYS[index]} bind:this={pads[index]}
-            onpointerdown={ev => { ev.preventDefault(); hit(index); }}><kbd>{RECORD_KEYS[index]}</kbd></button>
+            onpointerdown={ev => { ev.preventDefault(); hit(index); }}><kbd>{RECORD_KEYS[index].toUpperCase()}</kbd></button>
         {/each}
       </div>
     {/if}
@@ -74,6 +77,11 @@
     <button {...commandButton("last-play")}><Icon name="back" /> Last play</button>
     <button class:on={practice.loopStart != null} {...commandButton("loop")}>{loopPointLabel()}</button>
     <button {...commandButton("preroll")}>Pre-roll</button>
+    <label class="columns" title="How many columns the highway has, each with a pad and a key ({HIGHWAY_COLUMNS_RANGE[0]} to {HIGHWAY_COLUMNS_RANGE[1]})">
+      <span>Columns</span>
+      <input type="number" min={HIGHWAY_COLUMNS_RANGE[0]} max={HIGHWAY_COLUMNS_RANGE[1]} step="1" value={display.highwayColumns}
+        onchange={ev => { display.setHighwayColumns(+ev.currentTarget.value); ev.currentTarget.value = String(display.highwayColumns); }} />
+    </label>
     <Minimap />
   </div>
 </div>
@@ -101,6 +109,8 @@
   .count { font-size: 12px; color: var(--text-dim); text-align: center; }
   .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
   .pair button { font-size: 12px; }
+  .columns { display: grid; gap: 2px; font-size: 12px; color: var(--text-dim); text-align: center; }
+  .columns input { width: 100%; min-width: 0; text-align: center; }
 
   :global(.shell.portrait) .screen { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
   :global(.shell.portrait) .controls { flex-direction: row; flex-wrap: wrap; border-left: 0; border-top: 1px solid var(--line); }

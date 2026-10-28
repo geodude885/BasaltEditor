@@ -1,6 +1,7 @@
 // How the chart is shown: which editor, where the timeline looks and how its rows are laid out, the
-// look preview, what colours projectiles. Choices worth keeping are remembered here, not in the chart.
+// look preview, what colours projectiles, how many columns the highway has. Choices worth keeping are remembered here, not in the chart.
 import { SvelteSet } from "svelte/reactivity";
+import { HIGHWAY_COLUMNS_RANGE, PROJECTILE_COLUMNS } from "../model/columns";
 import { SHOT_COLOURINGS, type ShotColouring } from "../views/shotColours";
 import { MOST_EXTRA_TIMELINE_HEIGHT_PIXELS, type TimelineRow } from "../views/timeline/geometry";
 import { remember, remembered } from "./remembered";
@@ -12,6 +13,9 @@ const COLLAPSED_ROWS_KEY = "basalt-collapsed-timeline-rows";
 const EXTRA_TIMELINE_HEIGHT_KEY = "basalt-extra-timeline-height";
 const LOOK_PREVIEW_KEY = "basalt-look-preview";
 const SHOT_COLOURING_KEY = "basalt-shot-colouring";
+const HIGHWAY_COLUMNS_KEY = "basalt-highway-columns";
+
+const highwayColumnCount = (n: number): number => Math.min(HIGHWAY_COLUMNS_RANGE[1], Math.max(HIGHWAY_COLUMNS_RANGE[0], Math.round(n)));
 
 class Display {
   /** Which editor is showing: the timeline, or the highway. */
@@ -32,6 +36,11 @@ class Display {
   /** What colours projectiles in the lane, timeline and highway. */
   shotColouring = $state(remembered<ShotColouring>(SHOT_COLOURING_KEY, "plain",
     text => SHOT_COLOURINGS.some(([c]) => c === text) ? text as ShotColouring : undefined));
+  /** How many columns the highway has, and so how many pads and keys record. */
+  highwayColumns = $state(remembered(HIGHWAY_COLUMNS_KEY, PROJECTILE_COLUMNS, text => {
+    const n = parseInt(text, 10);
+    return Number.isFinite(n) ? highwayColumnCount(n) : undefined;
+  }));
 
   toggleLookPreview(): void {
     this.lookPreview = !this.lookPreview;
@@ -41,6 +50,12 @@ class Display {
   colourShotsBy(colouring: ShotColouring): void {
     this.shotColouring = colouring;
     remember(SHOT_COLOURING_KEY, colouring);
+  }
+
+  setHighwayColumns(n: number): void {
+    if (!Number.isFinite(n)) return;
+    this.highwayColumns = highwayColumnCount(n);
+    remember(HIGHWAY_COLUMNS_KEY, String(this.highwayColumns));
   }
 
   rememberTimelineLayout(): void {

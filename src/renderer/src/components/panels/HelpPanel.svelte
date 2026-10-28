@@ -2,12 +2,15 @@
   import { doc } from "../../store/document.svelte";
   import { ui } from "../../store/ui.svelte";
   import { shortcutCommands } from "../../store/commands";
+  import { display } from "../../store/display.svelte";
+  import { RECORD_KEYS } from "../../store/recording.svelte";
   import Logo from "../Logo.svelte";
 
   const keys: [string, string][] = $derived([
     ...shortcutCommands().map((c): [string, string] => [c.keys!, c.help ?? c.label]),
     ["Double-click", "On the lane: a projectile from there. On a timeline row: a projectile, move or look at that beat."],
-    ["1 – 5", "With Record on, on the highway: tap that column as the song plays. Pausing ends the take."],
+    [display.highwayColumns > 1 ? `1 – ${RECORD_KEYS[display.highwayColumns - 1].toUpperCase()}` : "1",
+      "With Record on, on the highway: tap that column as the song plays. Pausing ends the take. Set how many columns beside the highway."],
     ["Alt / F10", "Go to the menus; the arrows move round them"],
   ]);
 </script>

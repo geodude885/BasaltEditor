@@ -27,6 +27,13 @@ describe("the highway", () => {
     expect(columnIndexAtX(view, 5, 499)).toBe(4);
   });
 
+  it("can have more columns, numbered, with a projectile in the one nearest where it starts", () => {
+    const columns = highwayColumns(9);
+    expect(columns.map(c => c.label)).toEqual(Array.from({ length: 9 }, (_, i) => `Column ${i + 1}`));
+    const placed = tiles(chart(), new Tempo(undefined), { ...view, time: 10 }, columns);
+    expect(placed.map(t => t.column)).toEqual([0, 8]);
+  });
+
   it("places each projectile in its column at its time, leaving out those far off screen", () => {
     const placed = tiles(chart(), new Tempo(undefined), view, highwayColumns());
     expect(placed.map(t => [t.i, t.column])).toEqual([[0, 0], [1, 4]]);
