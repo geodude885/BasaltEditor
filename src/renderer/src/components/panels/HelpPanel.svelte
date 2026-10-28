@@ -14,7 +14,7 @@
 
 <div class="about">
   <Logo size={40} />
-  <div><b>Basalt Editor</b> <span class="version">{__APP_VERSION__}</span><br />A chart editor for Basalt, the RUMBLE boss battle mod</div>
+  <div><b>Basalt Editor</b> <span class="version">{__APP_VERSION__}{__BUILD_LABEL__ ? ` (${__BUILD_LABEL__})` : ""}</span><br />A chart editor for Basalt, the RUMBLE boss battle mod</div>
 </div>
 
 {#if ui.showText}

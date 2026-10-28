@@ -1,0 +1,27 @@
+name: Take down a preview
+# A pull request's preview (/pr-<number>/, published by ci.yml) goes when the pull request closes,
+# merged or not.
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: read
+
+jobs:
+  take-down:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: pages-pr-${{ github.event.pull_request.number }}
+      cancel-in-progress: false
+    steps:
+      # The script from the default branch: a closed pull request's own code may be gone.
+      - uses: actions/checkout@v4
+        with: { ref: "${{ github.event.repository.default_branch }}", sparse-checkout: .github, sparse-checkout-cone-mode: false }
+      - run: .github/publish-pages.sh "pr-${{ github.event.pull_request.number }}"
+        env:
+          TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}

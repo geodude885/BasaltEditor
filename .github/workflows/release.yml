@@ -1,5 +1,6 @@
 # Push a tag like v0.2.0 (matching package.json's version) to build all three platforms into a
-# draft GitHub release. Review the draft, then publish it - installed copies update from it.
+# draft GitHub release. Review the draft, then publish it - installed copies update from it, and
+# web-release.yml publishes the live website from the same tag.
 name: Release
 on:
   push:

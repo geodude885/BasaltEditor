@@ -14,7 +14,7 @@ export default defineConfig({
   },
   renderer: {
     resolve: { alias: { $data: resolve("data") } },
-    define: { __APP_VERSION__: JSON.stringify(version) },
+    define: { __APP_VERSION__: JSON.stringify(version), __BUILD_LABEL__: JSON.stringify("") },
     plugins: [svelte(), noDevServerInCsp()],
   },
 });
