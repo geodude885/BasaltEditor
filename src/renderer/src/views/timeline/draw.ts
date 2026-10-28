@@ -3,12 +3,13 @@ import { endOf, evTime, phaseTime } from "../../model/chart";
 import { STAGE_PACK, stageLookAt, type TimedLookCue } from "../../model/looks";
 import { stageStrip, type StageSparkle, type StageStrip } from "../../model/stageFrame";
 import type { Tempo } from "../../model/tempo";
+import { playedClips, type TrackRow } from "../../model/tracks";
 import type { LoadedChart } from "../../model/types";
 import type { ClipSpan } from "../../io/files";
 import type { Song } from "../../store/session.svelte";
 import { shotPaint, stripePath, type ShotColouring } from "../shotColours";
 import { alpha, drawBox, type Box, type Theme } from "../theme";
-import { tOf, xOf, type Marker, type TimelineLayout, type View } from "./geometry";
+import { clipLaneSpan, tOf, xOf, type Marker, type TimelineLayout, type View } from "./geometry";
 
 /** Everything the timeline shows but the playhead, which moves every frame while playing and is drawn over it. */
 export type TimelineScene = {
@@ -25,6 +26,8 @@ export type TimelineScene = {
   /** Where the chart starts in the song. */
   songStart: number;
   clips: Map<string, ClipSpan>;
+  /** The recorded-clips row's lanes, one per track, from trackRows. */
+  trackRows: TrackRow[];
   box: Box | null;
   layout: TimelineLayout;
   /** The A-B loop, shaded, or null. */
@@ -115,20 +118,25 @@ export function drawTimeline(ctx: CanvasRenderingContext2D, w: number, h: number
 
   if (s.box) drawBox(ctx, s.box, t);
 
-  // Recorded clips (made in game - shown, kept, not edited here).
-  for (const track of c.tracks ?? []) {
-    const clips = track.clips ?? [];
-    clips.forEach((k, i) => {
-      const start = k.t ?? (tp.ok && k.beat != null ? tp.seconds(k.beat) : 0);
-      const next = i + 1 < clips.length ? (clips[i + 1].t ?? 0) : null;
-      const recording = s.clips.get(k.clip);
-      let stop = k.to != null ? start + (k.to - (k.from ?? 0)) : (recording ? start + (recording.end - (k.from ?? 0)) : end);
-      if (next != null) stop = Math.min(stop, next);
-      const inset = collapsed.has("clip") ? 2 : 4;
-      ctx.fillStyle = alpha(t.clip, 0.2); ctx.fillRect(x(start), rows.clip[0] + inset, x(stop) - x(start) - 1, rows.clip[1] - inset * 2);
-      if (!collapsed.has("clip")) { ctx.fillStyle = t.clip; ctx.textAlign = "left"; ctx.fillText(k.clip, x(start) + 4, rows.clip[0] + 19); }
-    });
-  }
+  // Recorded clips (made in game - shown, kept, not edited here): a lane per track, in the order of the
+  // actors. Each clip runs until the next in its own track; mimed ones are faint and hatched.
+  const clipCollapsed = collapsed.has("clip");
+  s.trackRows.forEach((row, lane) => {
+    const [laneTop, laneHeight] = clipLaneSpan(s.layout, lane), inset = clipCollapsed ? 1 : 3;
+    if (lane > 0 && !clipCollapsed) { ctx.fillStyle = t.grid; ctx.fillRect(0, Math.round(laneTop), w, 1); }
+    const played = playedClips(c.tracks?.[row.track]?.clips ?? [], tp, end, clip => s.clips.get(clip)?.end);
+    for (const k of played) {
+      const a = Math.max(-2, x(k.start)), b = Math.min(w + 2, x(k.stop) - 1);
+      if (b <= a) continue;
+      const box = { x: a, y: laneTop + inset, w: b - a, h: laneHeight - inset * 2 };
+      ctx.fillStyle = alpha(t.clip, k.mime ? 0.07 : 0.22);
+      ctx.fillRect(box.x, box.y, box.w, box.h);
+      if (k.mime) hatchMime(ctx, box, t);
+      if (clipCollapsed || laneHeight < 16) continue;
+      ctx.fillStyle = k.mime ? t.textDim : t.clip; ctx.textAlign = "left";
+      ctx.fillText(k.mime ? `${k.clip} (mime)` : k.clip, x(k.start) + 4, laneTop + laneHeight / 2 + 4);
+    }
+  });
 
   // The end.
   ctx.fillStyle = t.bad; ctx.fillRect(x(end), rulerBottom, 2, h);
@@ -239,6 +247,20 @@ function drawLooks(ctx: CanvasRenderingContext2D, w: number, s: TimelineScene, t
     const label = cue.off ? "off" : isStage(cue) ? "" : cue.pack;
     if (label) { ctx.fillStyle = t.text; ctx.fillText(label, cx + 10, top + 9); }
   }
+}
+
+// A mimed clip: hatched and edged with dashes in the clip colour, so it reads as there but not sung.
+function hatchMime(ctx: CanvasRenderingContext2D, box: { x: number; y: number; w: number; h: number }, t: Theme): void {
+  ctx.save();
+  ctx.beginPath(); ctx.rect(box.x, box.y, box.w, box.h); ctx.clip();
+  ctx.strokeStyle = alpha(t.clip, 0.35); ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let d = -box.h; d < box.w; d += 6) { ctx.moveTo(box.x + d, box.y + box.h); ctx.lineTo(box.x + d + box.h, box.y); }
+  ctx.stroke();
+  ctx.restore();
+  ctx.strokeStyle = alpha(t.clip, 0.7); ctx.setLineDash([3, 3]);
+  ctx.strokeRect(box.x + 0.5, box.y + 0.5, box.w - 1, box.h - 1);
+  ctx.setLineDash([]);
 }
 
 // A steady random number from 0 to 1 for a strip step and a slot in it, so sparkles stay put as the timeline scrolls.

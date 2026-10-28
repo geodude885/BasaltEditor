@@ -6,7 +6,7 @@ import type { LoadedChart } from "../model/types";
 import { laneMap } from "./lane/geometry";
 import { moveProjectilePoint, projectilesStartingInBox, whatALanePressHits } from "./lane/interaction";
 import { boxIsAClick } from "./theme";
-import { COLLAPSED_ROW_HEIGHT_PIXELS, layoutTimeline, markers, xOf, type TimelineRow } from "./timeline/geometry";
+import { clipLaneSpan, COLLAPSED_ROW_HEIGHT_PIXELS, layoutTimeline, markers, xOf, type TimelineRow } from "./timeline/geometry";
 import { markersInBox, phaseIndexAt, pressWaitsOnTouch, touchTapWith, whatATimelinePressHits, whatATouchTapAdds } from "./timeline/interaction";
 
 const sample = () => { const c = Jsonc.parse(SAMPLE) as LoadedChart; c.events ??= []; return c; };
@@ -158,5 +158,17 @@ describe("touch taps on the timeline", () => {
     expect(pressWaitsOnTouch({ kind: "box-select" }, layout, middleOf("shot"))).toBe(true);
     expect(pressWaitsOnTouch({ kind: "seek" }, layout, middleOf("look"))).toBe(true);
     expect(pressWaitsOnTouch({ kind: "seek" }, layout, 2)).toBe(false);
+  });
+});
+
+describe("the recorded row", () => {
+  it("has a lane per track, splitting the thin strip when collapsed", () => {
+    const one = layoutTimeline(new Set(), 0, 1), two = layoutTimeline(new Set(), 0, 2);
+    expect(two.rows.clip[1]).toBeGreaterThan(one.rows.clip[1]);
+    expect(layoutTimeline(new Set(), 0, 0).rows.clip).toEqual(one.rows.clip);
+    const [top, height] = two.rows.clip;
+    expect([clipLaneSpan(two, 0)[0], clipLaneSpan(two, 1)[0] + clipLaneSpan(two, 1)[1]]).toEqual([top, top + height]);
+    const collapsed = layoutTimeline(new Set<TimelineRow>(["clip"]), 0, 3);
+    expect(clipLaneSpan(collapsed, 2)[1] * 3).toBeCloseTo(collapsed.rows.clip[1]);
   });
 });

@@ -79,6 +79,25 @@ export function addActor(c: LoadedChart): void {
   c.actors = [...all.map(a => ({ ...a })), { id: `actor${n}`, name: `Actor ${n}`, at: { x: 1, z: laneOf(c).length }, look: "default" }];
 }
 
+/**
+ * Changes an actor's id, and every phase, event, projectile and track that names it - those that name no
+ * actor keep doing so. Returns the keys it changed besides "actors".
+ */
+export function renameActor(c: LoadedChart, index: number, id: string): string[] {
+  const list = actorsOf(c).map(a => ({ ...a, at: a.at ? { ...a.at } : undefined })), old = list[index].id;
+  list[index].id = id;
+  c.actors = list;
+  if (!old || old === id) return [];
+  const changed = new Set<string>();
+  for (const p of c.phases ?? []) if (p.actor === old) { p.actor = id; changed.add("phases"); }
+  for (const e of c.events) {
+    if (e.actor === old) { e.actor = id; changed.add("events"); }
+    if (e.projectile?.by === old) { e.projectile.by = id; changed.add("events"); }
+  }
+  for (const track of c.tracks ?? []) if (track.actor === old) { track.actor = id; changed.add("tracks"); }
+  return [...changed];
+}
+
 // ---- Settings that are more than one field ------------------------------------------------------
 
 const isEmptyValue = (value: unknown) => value === undefined || value === "" || (typeof value === "number" && Number.isNaN(value));

@@ -3,6 +3,7 @@ import { actorsOf, endOf, evTime, laneOf, phaseTime } from "./chart";
 import { STRUCTURES } from "./constants";
 import { lookCueProblems } from "./looks";
 import { round, type Tempo } from "./tempo";
+import { trackProblems } from "./tracks";
 import type { LoadedChart } from "./types";
 
 export function problems(c: LoadedChart, tp: Tempo): string[] {
@@ -53,6 +54,7 @@ export function problems(c: LoadedChart, tp: Tempo): string[] {
   const last = Math.max(0, ...c.events.map(e => evTime(e, tp)).filter(Number.isFinite));
   if (c.end != null && c.end < last) out.push(`end (${c.end}) is before the last event (${round(last, 2)})`);
   if (c.tracks?.length && (c.format ?? 1) < 2) out.push('tracks need "format": 2');
+  out.push(...trackProblems(c, tp));
   if (c.zone?.length != null && !(c.zone.length > 0 && c.zone.length <= L.length)) out.push(`zone.length must be over 0 and up to the lane's length (${L.length})`);
   if (c.zone?.height != null && c.zone.height < 1) out.push("zone.height must be at least 1 m");
   if (c.rules?.spawn != null && !["all", "discs", "none"].includes(String(c.rules.spawn).toLowerCase())) out.push("rules.spawn must be all, discs or none");

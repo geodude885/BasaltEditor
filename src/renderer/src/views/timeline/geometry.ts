@@ -20,20 +20,32 @@ const SHARE_OF_EXTRA_HEIGHT: Partial<Record<TimelineRow, number>> = { wave: 0.35
 export const MOST_EXTRA_TIMELINE_HEIGHT_PIXELS = 400;
 
 export type RowSpan = readonly [top: number, height: number];
-export type TimelineLayout = { rows: Record<TimelineRow, RowSpan>; height: number; collapsed: ReadonlySet<TimelineRow> };
+/** The rows' places, and how many lanes the recorded-clips row has: one per track, and one when there are none. */
+export type TimelineLayout = { rows: Record<TimelineRow, RowSpan>; height: number; collapsed: ReadonlySet<TimelineRow>; clipLanes: number };
 
-export function layoutTimeline(collapsed: ReadonlySet<TimelineRow>, extraHeightPixels: number): TimelineLayout {
+// Each track after the first adds a lane this tall to the recorded-clips row.
+const CLIP_LANE_HEIGHT_PIXELS = 24;
+
+export function layoutTimeline(collapsed: ReadonlySet<TimelineRow>, extraHeightPixels: number, tracks = 0): TimelineLayout {
+  const clipLanes = Math.max(1, tracks);
   const growing = TIMELINE_ROWS.filter(row => SHARE_OF_EXTRA_HEIGHT[row] && !collapsed.has(row));
   const totalShare = growing.reduce((sum, row) => sum + SHARE_OF_EXTRA_HEIGHT[row]!, 0);
   const rows = {} as Record<TimelineRow, RowSpan>;
   let top = 0;
   for (const row of TIMELINE_ROWS) {
     const extra = growing.includes(row) ? Math.round(extraHeightPixels * SHARE_OF_EXTRA_HEIGHT[row]! / totalShare) : 0;
-    const height = collapsed.has(row) ? COLLAPSED_ROW_HEIGHT_PIXELS : EXPANDED_ROW_HEIGHT_PIXELS[row] + extra;
+    const lanes = row === "clip" ? (clipLanes - 1) * CLIP_LANE_HEIGHT_PIXELS : 0;
+    const height = collapsed.has(row) ? COLLAPSED_ROW_HEIGHT_PIXELS : EXPANDED_ROW_HEIGHT_PIXELS[row] + lanes + extra;
     rows[row] = [top, height];
     top += height;
   }
-  return { rows, height: top, collapsed };
+  return { rows, height: top, collapsed, clipLanes };
+}
+
+/** A lane of the recorded-clips row: its top and height. Collapsed, the lanes share the thin strip. */
+export function clipLaneSpan(layout: TimelineLayout, lane: number): RowSpan {
+  const [top, height] = layout.rows.clip, each = height / layout.clipLanes;
+  return [top + lane * each, each];
 }
 
 export type View = { t0: number; pps: number };

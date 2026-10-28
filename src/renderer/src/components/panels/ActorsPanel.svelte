@@ -1,7 +1,8 @@
 <script lang="ts">
-  import { actorsOf, firstActorId, laneOf, stoneName } from "../../model/chart";
+  import { actorsOf, laneOf, stoneName } from "../../model/chart";
   import { LOOKS, STONES } from "../../model/constants";
-  import { addActor } from "../../model/edits";
+  import { addActor, renameActor } from "../../model/edits";
+  import { trackOfActor, trackRows } from "../../model/tracks";
   import type { Actor } from "../../model/types";
   import { doc } from "../../store/document.svelte";
   import { num, text } from "../fields";
@@ -46,8 +47,9 @@
   {#each actors as a, i (i)}
     {@const look = a.look ?? "you"}
     {@const stones = stonesOf(a)}
+    {@const recorded = trackOfActor(doc.chart, a.id ?? "") >= 0}
     <div class="item">
-      <label><span>Id</span><input value={a.id ?? ""} onchange={e => edit(i, a => { a.id = text(e); })} /></label>
+      <label><span>Id</span><input value={a.id ?? ""} onchange={e => { const id = text(e); doc.change(["actors"], () => renameActor(doc.chart, i, id)); }} /></label>
       <label><span>Name</span><input value={a.name ?? ""} onchange={e => edit(i, a => { a.name = text(e); })} /></label>
       <label><span>x</span><input type="number" step="0.1" value={a.at?.x ?? 0} onchange={e => setSpot(i, "x", num(e))} /></label>
       <label><span>z</span><input type="number" step="0.1" value={a.at?.z ?? laneOf(doc.chart).length} onchange={e => setSpot(i, "z", num(e))} /></label>
@@ -73,7 +75,8 @@
           {#each STONES as s (s)}<option>{s}</option>{/each}
         </select>
       </label>
-      <button disabled={actors.length < 2} onclick={() => doc.change(["actors"], () => { doc.chart.actors = actorsOf(doc.chart).filter((_, j) => j !== i); })}>Remove</button>
+      <button disabled={actors.length < 2 || recorded} title={recorded ? "This actor has recorded clips. Remove its track in game first." : null}
+        onclick={() => doc.change(["actors"], () => { doc.chart.actors = actorsOf(doc.chart).filter((_, j) => j !== i); })}>Remove</button>
     </div>
   {/each}
 </div>
@@ -84,6 +87,6 @@
 <div class="row"><button onclick={() => doc.change(["actors"], () => addActor(doc.chart))}>Add an actor</button></div>
 {#if doc.chart.tracks?.length}
   <div class="note">
-    This chart has recorded clips ({doc.chart.tracks.map(t => t.actor ?? firstActorId(doc.chart)).join(", ")}). Record or re-record them in game.
+    Recorded clips for {trackRows(doc.chart).map(row => row.label).join(", ")}, each in a row of its own on the timeline. Record or re-record them in game.
   </div>
 {/if}

@@ -22,7 +22,8 @@
   import { untrack } from "svelte";
   import { boxIsAClick, prepare, theme, type Box } from "../theme";
   import { drawPlayhead, drawTimeline } from "./draw";
-  import { COLLAPSIBLE_ROWS, eventSpots, layoutTimeline, placeMarkers, tOf } from "./geometry";
+  import { trackRows } from "../../model/tracks";
+  import { clipLaneSpan, COLLAPSIBLE_ROWS, eventSpots, layoutTimeline, placeMarkers, tOf } from "./geometry";
   import { markersInBox, pressWaitsOnTouch, touchTapWith, whatATimelinePressHits, whatATouchTapAdds, type TouchTap } from "./interaction";
   import { dragStartsAfterPixels, Fingers, restingFinger, Taps, WaitingPress, type PinchStep } from "../touch";
 
@@ -37,7 +38,9 @@
   let drag: Drag | null = null;
   let box = $state<Box | null>(null);
 
-  const layout = $derived(layoutTimeline(display.collapsedTimelineRows, display.extraTimelineHeightPixels));
+  // The recorded-clips row has a lane per track, labelled with its actor.
+  const trackLanes = $derived(trackRows(doc.chart));
+  const layout = $derived(layoutTimeline(display.collapsedTimelineRows, display.extraTimelineHeightPixels, trackLanes.length));
   // The events' times and rows only when the chart changes; their places as the view moves.
   const spots = $derived(eventSpots(doc.chart, doc.tempo, layout));
   const placed = $derived(placeMarkers(spots, display.timeline));
@@ -54,7 +57,7 @@
     drawTimeline(prepare(still, w, layout.height), w, layout.height, {
       chart: doc.chart, tempo: doc.tempo, view: display.timeline, snap: editing.snap,
       selection: editing.selection, selectedPhase: editing.selectedPhase, lookCues: doc.lookCues, selectedLookCue: editing.selectedLookCue, shotColouring: display.shotColouring,
-      markers: placed, song: session.song, songStart: songStart(), clips: session.clips, box, layout, loop: practice.loop, loopStart: practice.loopStart,
+      markers: placed, song: session.song, songStart: songStart(), clips: session.clips, trackRows: trackLanes, box, layout, loop: practice.loop, loopStart: practice.loopStart,
     }, theme(appearance.scheme));
     return { canvas: still };
   });
@@ -239,9 +242,15 @@
       {@const collapsed = layout.collapsed.has(row)}
       <button class="row-header" class:collapsed style:top="{top}px" style:height="{height}px" aria-expanded={!collapsed}
         title={collapsed ? `Show ${label.toLowerCase()}` : `Collapse ${label.toLowerCase()} to a thin strip`} onclick={() => toggleTimelineRow(row)}>
-        <span class="chevron"><Icon name={collapsed ? "right" : "down"} size="10px" /></span>{collapsed ? "" : label}
+        <span class="chevron"><Icon name={collapsed ? "right" : "down"} size="10px" /></span>{collapsed || (row === "clip" && trackLanes.length) ? "" : label}
       </button>
     {/each}
+    {#if trackLanes.length && !layout.collapsed.has("clip")}
+      {#each trackLanes as lane, i (lane.track)}
+        {@const [top, height] = clipLaneSpan(layout, i)}
+        <span class="lane-label" style:top="{top}px" style:height="{height}px" style:line-height="{height}px" title="Recorded clips: {lane.label}">{lane.label}</span>
+      {/each}
+    {/if}
   </div>
   <div class="canvas" bind:clientWidth={w}>
     <canvas
@@ -271,6 +280,11 @@
   .row-header:hover { color: var(--text); background: color-mix(in srgb, var(--wash) 3%, transparent); }
   .row-header.collapsed { font-size: 9px; }
   .chevron { font-size: 9px; width: 9px; flex: none; }
+  /* Over the recorded row's header, clear of its chevron; a press goes through to the header. */
+  .lane-label {
+    position: absolute; left: 19px; right: 4px; pointer-events: none; overflow: hidden;
+    color: var(--text-dim); font: 600 10px var(--body); white-space: nowrap; text-overflow: ellipsis;
+  }
   .canvas { min-width: 0; }
   canvas { width: 100%; display: block; touch-action: none; }
   .resize-handle { grid-column: 1 / -1; height: 6px; cursor: row-resize; background: var(--line); touch-action: none; }
