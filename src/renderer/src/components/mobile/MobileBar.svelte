@@ -27,7 +27,7 @@
   <button class="primary play" {...commandButton("play")}>{transport.playing ? "Pause" : "Play"}</button>
   <!-- The rest scrolls sideways when the screen is too narrow for it all (portrait). -->
   <div class="scroll">
-  <BuildBadge />
+  <BuildBadge short />
   <div class="name">{doc.chart.name || "Untitled"}{doc.dirty ? " •" : ""}</div>
   <button class="icon" aria-label="Back to the start" {...commandButton("to-start")}><Icon name="start" /></button>
   <div class="clock" aria-label="Playhead">{clock.time}{#if clock.beat}<small>b{clock.beat}</small>{/if}</div>

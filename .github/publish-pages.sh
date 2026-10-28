@@ -42,7 +42,7 @@ for attempt in 1 2 3 4 5; do
   touch .nojekyll
 
   git_ init -q -b gh-pages && git_ add -A
-  message="${built:+Web build of ${BUILT_FROM:-?} at /${where/live/}}"
+  message="${built:+Web build of ${BUILT_FROM:0:7} at /${where/live/}}"
   git_ commit -q --allow-empty -m "${message:-Took down /$where}"
   if git_ push -q --force-with-lease="gh-pages:$was" "$url" gh-pages; then
     echo "Published: ${message:-took down /$where}"
