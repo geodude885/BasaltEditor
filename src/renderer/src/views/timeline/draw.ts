@@ -1,7 +1,7 @@
 import { peakBetween } from "../../audio/peaks";
 import { endOf, evTime, phaseTime } from "../../model/chart";
 import { STAGE_PACK, stageLookAt, type TimedLookCue } from "../../model/looks";
-import { stageStrip, type StageSparkle } from "../../model/stageFrame";
+import { stageStrip, type StageSparkle, type StageStrip } from "../../model/stageFrame";
 import type { Tempo } from "../../model/tempo";
 import type { LoadedChart } from "../../model/types";
 import type { ClipSpan } from "../../io/files";
@@ -10,11 +10,11 @@ import { shotPaint, stripePath, type ShotColouring } from "../shotColours";
 import { alpha, drawBox, type Box, type Theme } from "../theme";
 import { tOf, xOf, type Marker, type TimelineLayout, type View } from "./geometry";
 
+/** Everything the timeline shows but the playhead, which moves every frame while playing and is drawn over it. */
 export type TimelineScene = {
   chart: LoadedChart;
   tempo: Tempo;
   view: View;
-  time: number;
   snap: number;
   selection: ReadonlySet<number>;
   selectedPhase: number;
@@ -34,6 +34,7 @@ export type TimelineScene = {
   shotColouring: ShotColouring;
 };
 
+/** The timeline but its playhead: drawn once and kept while only the playhead moves. */
 export function drawTimeline(ctx: CanvasRenderingContext2D, w: number, h: number, s: TimelineScene, t: Theme): void {
   const { chart: c, tempo: tp, view } = s, x = (time: number) => xOf(view, time), end = endOf(c, tp);
   const rows = s.layout.rows, collapsed = s.layout.collapsed, rulerBottom = rows.ruler[1];
@@ -87,7 +88,9 @@ export function drawTimeline(ctx: CanvasRenderingContext2D, w: number, h: number
   drawLooks(ctx, w, s, t);
 
   // Events, where the markers put them - smaller, and without names, in a collapsed row.
-  for (const { i, x: mx, y } of s.markers) {
+  for (const { i, x: mx, y, left, right } of s.markers) {
+    // Off screen, telegraph bar and name too: skipped without reading the chart.
+    if (right < 0 || left > w) continue;
     const e = c.events[i], sel = s.selection.has(i);
     if (e.projectile) {
       const r = collapsed.has("shot") ? 4 : 7;
@@ -127,9 +130,12 @@ export function drawTimeline(ctx: CanvasRenderingContext2D, w: number, h: number
     });
   }
 
-  // End and playhead.
+  // The end.
   ctx.fillStyle = t.bad; ctx.fillRect(x(end), rulerBottom, 2, h);
-  ctx.fillStyle = t.text; ctx.fillRect(x(s.time), 0, 2, h);
+}
+
+export function drawPlayhead(ctx: CanvasRenderingContext2D, h: number, view: View, time: number, t: Theme): void {
+  ctx.fillStyle = t.text; ctx.fillRect(xOf(view, time), 0, 2, h);
 }
 
 /** The A-B loop as a shaded span with edges, or just its first point while the second isn't set. */
@@ -168,6 +174,22 @@ function drawWave(ctx: CanvasRenderingContext2D, w: number, s: TimelineScene, t:
 }
 
 const LOOK_STRIP_STEP_PIXELS = 3;
+
+// The strip's samples, kept for each list of cues (a new list when the looks change) at one zoom: working
+// out the look at a moment walks every cue, and a redraw takes hundreds.
+const stripSamples = new WeakMap<TimedLookCue[], { step: number; strips: Map<number, StageStrip | null> }>();
+
+function stripAt(lookCues: TimedLookCue[], stageCues: TimedLookCue[], step: number, k: number): StageStrip | null {
+  let kept = stripSamples.get(lookCues);
+  if (kept?.step !== step) { kept = { step, strips: new Map() }; stripSamples.set(lookCues, kept); }
+  let strip = kept.strips.get(k);
+  if (strip === undefined) {
+    const look = stageLookAt(stageCues, (k + 0.5) * step);
+    strip = look.on ? stageStrip(look) : null;
+    kept.strips.set(k, strip);
+  }
+  return strip;
+}
 // The sky and the arena take most of the strip; the things in the key colour are a thin band, as they are a
 // small part of the screen.
 const LOOK_BAND_SHARES = [0.36, 0.44, 0.2];
@@ -187,9 +209,9 @@ function drawLooks(ctx: CanvasRenderingContext2D, w: number, s: TimelineScene, t
     // Sampled at steady moments of chart time, not at pixels, so scrolling doesn't change what is sampled.
     const step = LOOK_STRIP_STEP_PIXELS / s.view.pps;
     for (let k = Math.floor(tOf(s.view, 0) / step); k * step < tOf(s.view, w); k++) {
-      const look = stageLookAt(stageCues, (k + 0.5) * step);
-      if (!look.on) continue;
-      const strip = stageStrip(look), x = Math.floor(xOf(s.view, k * step)), stepWidth = Math.ceil(xOf(s.view, (k + 1) * step)) - x;
+      const strip = stripAt(s.lookCues, stageCues, step, k);
+      if (!strip) continue;
+      const x = Math.floor(xOf(s.view, k * step)), stepWidth = Math.ceil(xOf(s.view, (k + 1) * step)) - x;
       let y = stripTop;
       (collapsed ? [strip.surroundings] : [strip.sky, strip.surroundings, strip.keyColoured]).forEach((colour, band) => {
         const bandHeight = stripHeight * shares[band];

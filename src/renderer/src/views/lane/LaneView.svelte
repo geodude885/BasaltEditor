@@ -9,7 +9,7 @@
   import { editing } from "../../store/editing.svelte";
   import { transport } from "../../store/transport.svelte";
   import { boxIsAClick, prepare, theme, type Box } from "../theme";
-  import { drawLane } from "./draw";
+  import { drawLane, laneShots } from "./draw";
   import { laneMap } from "./geometry";
   import { moveProjectilePoint, projectilesStartingInBox, whatALanePressHits, type ProjectilePoint } from "./interaction";
   import { Taps } from "../touch";
@@ -21,10 +21,12 @@
   let box = $state<Box | null>(null);
 
   const map = $derived(laneMap(w, h, laneOf(doc.chart)));
+  // Worked out when the chart changes, not every frame: which projectiles are near the playhead is a lookup.
+  const shots = $derived(laneShots(doc.chart, doc.tempo));
 
   $effect(() => {
     if (!w || !h) return;
-    drawLane(prepare(canvas, w, h), w, h, map, { chart: doc.chart, tempo: doc.tempo, time: transport.time, selection: editing.selection, box, shotColouring: display.shotColouring }, theme(appearance.scheme));
+    drawLane(prepare(canvas, w, h), w, h, map, { chart: doc.chart, tempo: doc.tempo, time: transport.time, selection: editing.selection, box, shotColouring: display.shotColouring, shots }, theme(appearance.scheme));
   });
 
   const pointerAt = (ev: PointerEvent): [number, number] => { const r = canvas.getBoundingClientRect(); return [ev.clientX - r.left, ev.clientY - r.top]; };

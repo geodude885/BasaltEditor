@@ -21,8 +21,8 @@
   import { practice } from "../../store/practice.svelte";
   import { untrack } from "svelte";
   import { boxIsAClick, prepare, theme, type Box } from "../theme";
-  import { drawTimeline } from "./draw";
-  import { COLLAPSIBLE_ROWS, layoutTimeline, markers, tOf } from "./geometry";
+  import { drawPlayhead, drawTimeline } from "./draw";
+  import { COLLAPSIBLE_ROWS, eventSpots, layoutTimeline, placeMarkers, tOf } from "./geometry";
   import { markersInBox, pressWaitsOnTouch, touchTapWith, whatATimelinePressHits, whatATouchTapAdds, type TouchTap } from "./interaction";
   import { dragStartsAfterPixels, Fingers, restingFinger, Taps, WaitingPress, type PinchStep } from "../touch";
 
@@ -38,19 +38,32 @@
   let box = $state<Box | null>(null);
 
   const layout = $derived(layoutTimeline(display.collapsedTimelineRows, display.extraTimelineHeightPixels));
-  const placed = $derived(markers(doc.chart, doc.tempo, display.timeline, layout));
+  // The events' times and rows only when the chart changes; their places as the view moves.
+  const spots = $derived(eventSpots(doc.chart, doc.tempo, layout));
+  const placed = $derived(placeMarkers(spots, display.timeline));
 
   $effect(() => { display.timelineWidth = w; });
   // Showing again (say, after the highway moved the playhead): start where the playhead is.
   $effect(() => { if (w) untrack(keepPlayheadInView); });
 
-  $effect(() => {
-    if (!w) return;
-    drawTimeline(prepare(canvas, w, layout.height), w, layout.height, {
-      chart: doc.chart, tempo: doc.tempo, view: display.timeline, time: transport.time, snap: editing.snap,
+  // Everything but the playhead, drawn off screen and kept until something it shows changes - it reads
+  // no playhead, so playing doesn't redraw it. Each frame then copies it and draws the playhead over it.
+  const still = typeof document === "undefined" ? null : document.createElement("canvas");
+  const stillLayer = $derived.by(() => {
+    if (!w || !still) return null;
+    drawTimeline(prepare(still, w, layout.height), w, layout.height, {
+      chart: doc.chart, tempo: doc.tempo, view: display.timeline, snap: editing.snap,
       selection: editing.selection, selectedPhase: editing.selectedPhase, lookCues: doc.lookCues, selectedLookCue: editing.selectedLookCue, shotColouring: display.shotColouring,
       markers: placed, song: session.song, songStart: songStart(), clips: session.clips, box, layout, loop: practice.loop, loopStart: practice.loopStart,
     }, theme(appearance.scheme));
+    return { canvas: still };
+  });
+
+  $effect(() => {
+    if (!stillLayer) return;
+    const ctx = prepare(canvas, w, layout.height);
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(stillLayer.canvas, 0, 0); ctx.restore();
+    drawPlayhead(ctx, layout.height, display.timeline, transport.time, theme(appearance.scheme));
   });
 
   const secondsAt = (x: number) => tOf(display.timeline, x);

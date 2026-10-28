@@ -43,7 +43,8 @@ export const tOf = (v: View, x: number): number => x / v.pps + v.t0;
 export const inRow = (layout: TimelineLayout, row: TimelineRow, y: number): boolean =>
   y >= layout.rows[row][0] && y < layout.rows[row][0] + layout.rows[row][1];
 
-export type Marker = { i: number; x: number; y: number };
+/** An event's marker: where it is, and how far left and right what is drawn for it reaches (a telegraph bar, a move's name). */
+export type Marker = { i: number; x: number; y: number; left: number; right: number };
 
 // One line per column across the lane (model/columns.ts), so a projectile from the middle of the lane
 // sits on the middle of the row.
@@ -71,22 +72,38 @@ export function columnAtY(layout: TimelineLayout, y: number): number {
  * fanned out sideways, so every one can be seen and clicked.
  */
 export function markers(c: LoadedChart, tp: Tempo, view: View, layout: TimelineLayout): Marker[] {
-  const out: Marker[] = [], taken = new Map<string, number>(), step = 8, width = laneOf(c).width;
-  const [moveTop, moveHeight] = layout.rows.move;
+  return placeMarkers(eventSpots(c, tp, layout), view);
+}
+
+/** An event's time, when a projectile appears (its time for anything else), and the height of its marker: what a marker's place needs from the chart. */
+export type EventSpot = { i: number; t: number; spawn: number; y: number; projectile: boolean };
+
+// How far a move's name can reach right of its marker, and how wide a marker is either side.
+const MOVE_NAME_REACH_PIXELS = 160;
+const MARKER_REACH_PIXELS = 8;
+
+/**
+ * Each event's time and row, in the chart's order - read from the chart once when it changes, so the
+ * markers can follow the view (placeMarkers) without reading every event again.
+ */
+export function eventSpots(c: LoadedChart, tp: Tempo, layout: TimelineLayout): EventSpot[] {
+  const out: EventSpot[] = [], width = laneOf(c).width, [moveTop, moveHeight] = layout.rows.move;
   c.events.forEach((e, i) => {
     const t = evTime(e, tp);
     if (!Number.isFinite(t)) return;
-    const x = xOf(view, t);
-    let y: number;
-    if (e.projectile) {
-      y = yOfColumn(layout, columnOfX(+e.projectile.from?.x || 0, width));
-    } else {
-      y = moveTop + moveHeight / 2;
-    }
-    const key = `${Math.round(x / 3)}:${y}`, n = taken.get(key) ?? 0;
-    taken.set(key, n + 1);
-    out.push({ i, x: x + n * step, y });
+    const p = e.projectile, spawn = p ? t - (p.telegraph ?? 0.5) : t;
+    out.push({ i, t, spawn, y: p ? yOfColumn(layout, columnOfX(+p.from?.x || 0, width)) : moveTop + moveHeight / 2, projectile: !!p });
   });
+  return out;
+}
+
+export function placeMarkers(spots: EventSpot[], view: View): Marker[] {
+  const out: Marker[] = [], taken = new Map<string, number>(), step = 8;
+  for (const { i, t, spawn, y, projectile } of spots) {
+    const x0 = xOf(view, t), key = `${Math.round(x0 / 3)}:${y}`, n = taken.get(key) ?? 0, x = x0 + n * step;
+    taken.set(key, n + 1);
+    out.push({ i, x, y, left: Math.min(xOf(view, spawn), x) - MARKER_REACH_PIXELS, right: x + (projectile ? MARKER_REACH_PIXELS : MOVE_NAME_REACH_PIXELS) });
+  }
   return out;
 }
 
