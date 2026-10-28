@@ -14,7 +14,7 @@
   import { practice } from "../../store/practice.svelte";
   import { seek, songStart } from "../../store/playback";
   import { boxIsAClick, prepare, theme, type Box } from "../theme";
-  import { dragStartsAfterPixels, Pinch, TwoFingerTap, WaitingPress } from "../touch";
+  import { dragStartsAfterPixels, Fingers, restingFinger, WaitingPress } from "../touch";
   import { drawHighway } from "./draw";
   import { highwayColumns, HIT_LINE_FROM_TOP, LARGEST_HIGHWAY_PPS, SMALLEST_HIGHWAY_PPS, tiles, tilesInBox, type HighwayView } from "./geometry";
   import { scrubbedTime, shiftedColumn, tileDrag, whatAHighwayPressHits, whatAHighwayTapDoes } from "./interaction";
@@ -44,8 +44,8 @@
     // `hold`: a finger resting on the tiles opens quick actions for them.
     | { kind: "tiles"; x0: number; y0: number; textBefore: string; moved: boolean; slop: number; starts: [ChartEvent, number, number][]; hold?: WaitingPress };
   let drag: Drag | null = null;
-  const pinch = new Pinch(), twoTap = new TwoFingerTap();
-
+  // Pinches run along the highway: time runs down it.
+  const fingers = new Fingers("y");
 
   const pointerAt = (ev: PointerEvent | WheelEvent): [number, number] => { const r = canvas.getBoundingClientRect(); return [ev.clientX - r.left, ev.clientY - r.top]; };
   const adds = (ev: PointerEvent) => ev.shiftKey || editor.multiSelect;
@@ -77,10 +77,8 @@
   function pointerdown(ev: PointerEvent): void {
     const [x, y] = pointerAt(ev);
     canvas.setPointerCapture(ev.pointerId);
-    if (ev.pointerType === "touch") twoTap.down(ev.pointerId, x, y, ev.timeStamp);
-    // Pinches run along the highway, so the gesture is fed (y, x): its "middle" and "pan" are up and down.
-    if (ev.pointerType === "touch" && pinch.down(ev.pointerId, y, x)) { endDrag(); return; }
-    if (pinch.busy) return;
+    if (fingers.down(ev, x, y)) { endDrag(); return; }
+    if (fingers.busy) return;
     const adding = adds(ev), at = view, press = whatAHighwayPressHits(placed, x, y, ev.pointerType, editor.selectMode);
     if (press.kind === "tiles") {
       if (!editor.selection.has(press.index)) select(press.index, adding);
@@ -89,7 +87,7 @@
         kind: "tiles", x0: x, y0: y, textBefore: doc.text, moved: false, slop: dragStartsAfterPixels(ev.pointerType),
         starts: [...editor.selection].filter(i => events[i]?.projectile).map((i): [ChartEvent, number, number] => [events[i], evTime(events[i], doc.tempo), columnOfX(+events[i].projectile!.from?.x || 0, width)]),
       };
-      if (ev.pointerType === "touch") d.hold = new WaitingPress(x, y, () => { if (drag === d && !d.moved) { drag = null; editor.quickActions = held; } });
+      d.hold = restingFinger(ev, x, y, () => { if (drag === d && !d.moved) { drag = null; editor.quickActions = held; } });
       drag = d;
     } else if (press.kind === "box") {
       startBox(x, y, adding, press.clickAdds, at);
@@ -105,14 +103,11 @@
 
   function pointermove(ev: PointerEvent): void {
     const [x, y] = pointerAt(ev);
-    if (ev.pointerType === "touch") {
-      twoTap.move(ev.pointerId, x, y);
-      const step = pinch.move(ev.pointerId, y, x);
-      if (step) {
-        stretch(step.zoom);
-        seek(Math.max(0, editor.time + step.panX / practice.highwayPps));
-        return;
-      }
+    const step = fingers.move(ev, x, y);
+    if (step) {
+      stretch(step.zoom);
+      seek(Math.max(0, editor.time + step.panX / practice.highwayPps));
+      return;
     }
     if (!drag) return;
     if (drag.kind === "empty") {
@@ -134,9 +129,8 @@
   }
 
   function pointerup(ev: PointerEvent): void {
-    if (ev.pointerType === "touch") pinch.up(ev.pointerId);
     // Two fingers tapped together: undo.
-    if (ev.pointerType === "touch" && twoTap.up(ev.pointerId, ev.timeStamp, ev.type === "pointercancel")) { endDrag(); undoByTouch(); return; }
+    if (fingers.up(ev)) { endDrag(); undoByTouch(); return; }
     if (drag?.kind === "empty" && !drag.press.panning && ev.type === "pointerup") {
       const { press, adding, at } = drag;
       endDrag();

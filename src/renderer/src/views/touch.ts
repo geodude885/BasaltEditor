@@ -1,5 +1,6 @@
-// Touch on the canvases: double taps, two-finger pinch and pan, and presses on empty space that wait
-// to become a tap, a pan or a long press. A mouse never reaches the parts that differ, so the desktop
+// Touch on the canvases: double taps, two-finger pinch and pan, two-finger taps, and presses that wait
+// to become a tap, a pan or a long press. Canvases use Fingers for the two-finger gestures they all
+// share, rather than wiring up Pinch and TwoFingerTap each. A mouse never reaches the parts that differ, so the desktop
 // behaves exactly as before.
 
 type Press = { pointerType: string; detail: number; timeStamp: number; clientX: number; clientY: number };
@@ -152,3 +153,54 @@ export class TwoFingerTap {
     return !this.spoiled && this.count === 2 && at - this.began <= TWO_FINGER_TAP_MS;
   }
 }
+
+/** What Fingers reads from a pointer event. */
+type FingerEvent = { pointerId: number; pointerType: string; timeStamp: number; type: string };
+
+/**
+ * The gestures every canvas has: two fingers pinch and pan, and tap together to undo. Feed it every
+ * pointer event, with the canvas pixel it is at; anything but a finger passes straight through.
+ * `along` is the axis the canvas's time runs on - a pinch zooms and pans along it.
+ */
+export class Fingers {
+  private pinch = new Pinch();
+  private twoTap = new TwoFingerTap();
+
+  constructor(private readonly along: "x" | "y" = "x") {}
+
+  /** While busy (pinching, or a finger left over from a pinch), presses belong to the gesture. */
+  get busy(): boolean { return this.pinch.busy; }
+
+  /** A pointer goes down. True when it starts a pinch: let go of the press in progress. */
+  down(ev: FingerEvent, x: number, y: number): boolean {
+    if (ev.pointerType !== "touch") return false;
+    this.twoTap.down(ev.pointerId, x, y, ev.timeStamp);
+    return this.pinch.down(ev.pointerId, ...this.alongTime(x, y));
+  }
+
+  /** A pointer moves. The pinch step to apply, or null when it isn't pinching. */
+  move(ev: FingerEvent, x: number, y: number): PinchStep | null {
+    if (ev.pointerType !== "touch") return null;
+    this.twoTap.move(ev.pointerId, x, y);
+    return this.pinch.move(ev.pointerId, ...this.alongTime(x, y));
+  }
+
+  /** A pointer lifts (or is cancelled). True when that ends a two-finger tap: undo. */
+  up(ev: FingerEvent): boolean {
+    if (ev.pointerType !== "touch") return false;
+    this.pinch.up(ev.pointerId);
+    return this.twoTap.up(ev.pointerId, ev.timeStamp, ev.type === "pointercancel");
+  }
+
+  /** Pinch measures along x; a canvas whose time runs down feeds it (y, x). */
+  private alongTime(x: number, y: number): [number, number] {
+    return this.along === "x" ? [x, y] : [y, x];
+  }
+}
+
+/**
+ * A finger resting on what it pressed (markers, tiles) becomes a long press - which opens quick
+ * actions - unless it moves first and drags them. Fingers only; anything else gets undefined.
+ */
+export const restingFinger = (ev: { pointerType: string }, x: number, y: number, onHold: () => void): WaitingPress | undefined =>
+  ev.pointerType === "touch" ? new WaitingPress(x, y, onHold) : undefined;
