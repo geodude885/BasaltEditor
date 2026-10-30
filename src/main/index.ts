@@ -1,9 +1,10 @@
 import { app, BrowserWindow, dialog, ipcMain, nativeTheme, shell } from "electron";
 import { cpSync, existsSync, readFileSync } from "node:fs";
-import { cp, mkdir, readdir, readFile, realpath, stat, writeFile } from "node:fs/promises";
+import { cp, mkdir, readdir, readFile, realpath, rename, stat, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import updater from "electron-updater";
+import { chartFolderName, freeNames } from "../shared/folders";
 import { Channels, type ChartFolder, type DuplicatedFolder, type FileKind, type OpenedFile, type OpenedFolder, type UnsavedChoice } from "../shared/api";
 
 /** Chart folders this session opened - the only places saveChart may write. */
@@ -184,6 +185,19 @@ ipcMain.handle(Channels.duplicateFolder, async (_event, folder: string): Promise
   return { folder: copy, text: await readFile(join(copy, "chart.json"), "utf8") };
 });
 
+// Renames a chart folder in the Charts folder after its chart's name and difficulty, keeping it opened and
+// in the recent list under its new name. The game may hold the folder (recording into it), and then the
+// rename fails - the page says so.
+ipcMain.handle(Channels.renameChartFolder, async (_event, folder: string, chartName: string, difficulty?: string): Promise<string> => {
+  const source = await chartFolderIn(folder), target = await freeChartFolder(dirname(source), chartFolderName(chartName, difficulty), source);
+  if (target === source) return source;
+  await rename(source, target);
+  if (openedFolders.delete(source)) openedFolders.add(target);
+  recentFolders = recentFolders.map(f => (f === source ? target : f));
+  saveRecent();
+  return target;
+});
+
 ipcMain.handle(Channels.trashFolder, async (_event, folder: string): Promise<void> => {
   const target = await chartFolderIn(folder);
   await shell.trashItem(target);
@@ -265,17 +279,21 @@ ipcMain.handle(Channels.saveFiles, async (_event, folder: string, files: OpenedF
   await writeChartFiles(openedFolder(folder), files);
 });
 
-/** A folder name from a chart's name: what Windows, macOS and Linux all allow. */
-function folderName(chartName: string): string {
-  return chartName.replace(/[<>:"/\\|?*\0-\x1f]/g, "").replace(/[. ]+$/, "").trim().slice(0, 80) || "My Chart";
+/** The first free candidate for a folder name in the Charts folder; `except` (the folder being renamed) counts as free. */
+async function freeChartFolder(charts: string, wanted: string, except?: string): Promise<string> {
+  const exceptReal = except ? await realpath(except) : null;
+  for (const name of freeNames(wanted)) {
+    const folder = join(charts, name);
+    // A rename that only changes case finds the folder itself: it's free for it.
+    if (!existsSync(folder) || (exceptReal && await realpath(folder) === exceptReal)) return folder;
+  }
+  throw new Error("no free folder name");
 }
 
-ipcMain.handle(Channels.createChartFolder, async (_event, chartName: string, files: OpenedFile[]): Promise<string> => {
+ipcMain.handle(Channels.createChartFolder, async (_event, chartName: string, files: OpenedFile[], difficulty?: string): Promise<string> => {
   const charts = chartsFolder();
   if (!charts) throw new Error("the game's Charts folder isn't here");
-  const base = join(charts, folderName(chartName));
-  let folder = base;
-  for (let n = 2; existsSync(folder); n++) folder = `${base} (${n})`;
+  const folder = await freeChartFolder(charts, chartFolderName(chartName, difficulty));
   await mkdir(folder);
   openedFolders.add(folder);
   await writeChartFiles(folder, files);

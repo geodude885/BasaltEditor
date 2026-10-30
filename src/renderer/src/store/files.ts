@@ -1,5 +1,6 @@
 // Opening and saving: through the desktop app's dialogs, by drag and drop, and the clipboard.
 import { isDesktop, type OpenedFolder } from "../../../shared/api";
+import { folderNamedAfter } from "../../../shared/folders";
 import { clipSpans, findCover, findSong, isCover, isSong, ownFiles, packageContents, packageName, readEntries, type FileEntry } from "../io/files";
 import { setMusic } from "../model/edits";
 import { writeZip } from "../io/zip";
@@ -65,6 +66,7 @@ export async function openEntries(entries: FileEntry[], folder: string | null = 
       loadChart(opened.chart.text, opened.chart.name);
       clearFiles();
       session.folder = folder;
+      session.folderNamedFor = chartNaming();
       onDisk = folder ? new Map(opened.files) : new Map();
       joinLibrary();
     }
@@ -238,6 +240,7 @@ export async function openStored(text: string, name: string, files: Map<string, 
   loadChart(text, name);
   clearFiles();
   session.folder = folder;
+  session.folderNamedFor = chartNaming();
   session.files = new Map(files);
   onDisk = folder ? new Map(files) : new Map();
   if (folder) void refreshRecent();
@@ -279,9 +282,36 @@ export async function save(): Promise<void> {
       for (const f of changed) onDisk.set(f.path, f.bytes);
     }
     doc.markSaved();
-    toast(savedNote("Saved"));
+    toast(savedNote(await followChartName(folder)));
   } catch (e) {
     toast(`Could not save: ${(e as Error).message}`);
+  }
+}
+
+/** What a chart's folder is named from: its name and difficulty. */
+const chartNaming = () => ({ name: doc.chart.name ?? "", difficulty: doc.chart.difficulty });
+const folderOf = (path: string) => path.split(/[\\/]/).pop() ?? path;
+
+/**
+ * After a save into a folder of the game's Charts folder: if the chart's name or difficulty changed since
+ * the folder was opened or last saved, and the folder was named after them, rename it to match. A folder
+ * named by hand stays as it is. Says what happened, for the save's message.
+ */
+async function followChartName(folder: string): Promise<string> {
+  const before = session.folderNamedFor, now = chartNaming();
+  session.folderNamedFor = now;
+  const changed = !!before && (before.name !== now.name || before.difficulty !== now.difficulty);
+  if (!changed || !api().renameChartFolder || !folderNamedAfter(folderOf(folder), before.name, before.difficulty)) return "Saved";
+  try {
+    const moved = await api().renameChartFolder!(folder, now.name, now.difficulty);
+    if (moved === folder) return "Saved";
+    session.folder = moved;
+    void refreshRecent();
+    return `Saved, and its folder is now ${folderOf(moved)}`;
+  } catch {
+    // Try again at the next save; the game may have let go of it by then.
+    session.folderNamedFor = before;
+    return "Saved, but its folder couldn't be renamed (the game may have it open)";
   }
 }
 
@@ -289,8 +319,9 @@ export async function save(): Promise<void> {
 async function saveToCharts(what: string): Promise<void> {
   const own = ownFiles(doc.chart, session.files), name = doc.chart.name || "My Chart";
   try {
-    const folder = await api().createChartFolder!(name, [{ path: "chart.json", bytes: new TextEncoder().encode(doc.text) }, ...own]);
+    const folder = await api().createChartFolder!(name, [{ path: "chart.json", bytes: new TextEncoder().encode(doc.text) }, ...own], doc.chart.difficulty);
     session.folder = folder;
+    session.folderNamedFor = chartNaming();
     onDisk = new Map(own.map(f => [f.path, f.bytes]));
     doc.markSaved();
     void refreshRecent();

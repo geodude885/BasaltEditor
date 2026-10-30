@@ -15,6 +15,11 @@ class Session {
   cover = $state<string | null>(null);
   /** The chart folder on disk, when one was opened - Save writes chart.json back into it. */
   folder = $state<string | null>(null);
+  /**
+   * The chart's name and difficulty when its folder was opened or last saved: a folder named after them
+   * follows the chart when Save finds them changed (shared/folders.ts).
+   */
+  folderNamedFor: { name: string; difficulty?: string } | null = null;
   /** Chart folders opened lately, newest first - the desktop app's File > Open recent. */
   recentFolders = $state.raw<string[]>([]);
   /** Which of your charts (store/library.svelte.ts) this is, once it is kept there. */

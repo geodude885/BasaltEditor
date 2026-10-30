@@ -37,7 +37,9 @@ export interface EditorApi {
   /** Copies a chart folder in the Charts folder beside itself. */
   duplicateFolder?(folder: string): Promise<DuplicatedFolder>;
   /** Makes a chart folder in the Charts folder, named after the chart, with these files (chart.json among them); its path. */
-  createChartFolder?(chartName: string, files: OpenedFile[]): Promise<string>;
+  createChartFolder?(chartName: string, files: OpenedFile[], difficulty?: string): Promise<string>;
+  /** Renames a chart folder in the Charts folder after its chart's name and difficulty (shared/folders.ts); its path now. */
+  renameChartFolder?(folder: string, chartName: string, difficulty?: string): Promise<string>;
   /** Writes a chart's files (beside chart.json, or in clips/) into a folder this session opened. */
   saveFiles?(folder: string, files: OpenedFile[]): Promise<void>;
   /** Moves a chart folder in the Charts folder to the bin. */
@@ -68,6 +70,7 @@ export const Channels = {
   createChartFolder: "editor:create-chart-folder",
   saveFiles: "editor:save-files",
   trashFolder: "editor:trash-folder",
+  renameChartFolder: "editor:rename-chart-folder",
   recentFolders: "editor:recent-folders",
   askUnsaved: "editor:ask-unsaved",
 } as const;
