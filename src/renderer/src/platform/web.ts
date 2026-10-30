@@ -47,7 +47,7 @@ function download(name: string, bytes: Uint8Array): void {
 }
 
 /** What each kind of picker offers. Phones show their music or photo pickers for these. */
-const ACCEPTS: Record<FileKind, string> = { song: "audio/*,.mp3,.ogg,.wav", cover: "image/png,image/jpeg,.png,.jpg,.jpeg" };
+const ACCEPTS: Record<FileKind, string> = { song: "audio/*,.mp3,.ogg", cover: "image/png,image/jpeg,.png,.jpg,.jpeg" };
 
 export const webApi: EditorApi = {
   async openFiles(kind) {

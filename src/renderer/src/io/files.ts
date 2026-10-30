@@ -49,7 +49,7 @@ export function relative(path: string, chartPath?: string): string {
 const sameName = (key: string, name: string) =>
   key.toLowerCase() === name.toLowerCase() || key.split("/").pop()!.toLowerCase() === name.toLowerCase();
 
-export const isSong = (path: string): boolean => /\.(wav|ogg|mp3)$/i.test(path);
+export const isSong = (path: string): boolean => /\.(ogg|mp3)$/i.test(path);
 export const isCover = (path: string): boolean => /\.(png|jpe?g)$/i.test(path);
 
 /**

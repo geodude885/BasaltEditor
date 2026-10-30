@@ -122,7 +122,7 @@ export async function chooseSong(): Promise<void> {
   const [file] = await api().openFiles("song");
   if (!file) return;
   const name = file.path.split(/[\\/]/).pop()!;
-  if (!isSong(name)) { toast("Not a song. Choose an MP3, OGG or WAV file"); return; }
+  if (!isSong(name)) { toast("Not a song. Choose an MP3 or OGG file"); return; }
   session.files = new Map([...session.files, [name, file.bytes]]);
   await useSong(name);
 }

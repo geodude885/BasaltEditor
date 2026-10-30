@@ -60,6 +60,7 @@ describe("opening files", () => {
   it("tells songs and covers from other files", () => {
     expect(isSong("Music/Song.MP3")).toBe(true);
     expect(isSong("song.flac")).toBe(false);
+    expect(isSong("song.wav")).toBe(false);
     expect(isCover("cover.JPEG")).toBe(true);
     expect(isCover("clips/a.json")).toBe(false);
   });

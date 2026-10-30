@@ -58,7 +58,7 @@ export function problems(c: LoadedChart, tp: Tempo): string[] {
   if (c.zone?.length != null && !(c.zone.length > 0 && c.zone.length <= L.length)) out.push(`zone.length must be over 0 and up to the lane's length (${L.length})`);
   if (c.zone?.height != null && c.zone.height < 1) out.push("zone.height must be at least 1 m");
   if (c.rules?.spawn != null && !["all", "discs", "none"].includes(String(c.rules.spawn).toLowerCase())) out.push("rules.spawn must be all, discs or none");
-  if (c.music?.file && !/\.(wav|ogg|mp3)$/i.test(c.music.file)) out.push("music.file must be .wav, .ogg or .mp3");
+  if (c.music?.file && !/\.(ogg|mp3)$/i.test(c.music.file)) out.push("music.file must be .ogg or .mp3");
   (c.visuals ?? []).forEach((cue, i) => out.push(...lookCueProblems(cue, i, tp)));
   return out;
 }

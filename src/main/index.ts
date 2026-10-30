@@ -77,8 +77,8 @@ async function readAll(paths: string[], name: (path: string) => string): Promise
 }
 
 const PICKERS: Record<FileKind | "all", { title: string; name: string; extensions: string[]; several: boolean }> = {
-  all: { title: "Open chart files", name: "Charts, songs, covers and clips", extensions: ["json", "bbchart", "zip", "wav", "ogg", "mp3", "png", "jpg", "jpeg"], several: true },
-  song: { title: "Choose the song", name: "Songs", extensions: ["mp3", "ogg", "wav"], several: false },
+  all: { title: "Open chart files", name: "Charts, songs, covers and clips", extensions: ["json", "bbchart", "zip", "ogg", "mp3", "png", "jpg", "jpeg"], several: true },
+  song: { title: "Choose the song", name: "Songs", extensions: ["mp3", "ogg"], several: false },
   cover: { title: "Choose the cover", name: "Images", extensions: ["png", "jpg", "jpeg"], several: false },
 };
 
