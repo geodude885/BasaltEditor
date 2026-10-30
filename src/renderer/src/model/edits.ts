@@ -132,10 +132,11 @@ export function setZone(c: LoadedChart, lengthMetres: number | undefined, height
   if (Object.keys(zone).length) c.zone = zone; else delete c.zone;
 }
 
-export function setRules(c: LoadedChart, spawn: string, cleanupSeconds: number | undefined): void {
+export function setRules(c: LoadedChart, spawn: string, cleanupSeconds: number | undefined, breakBehind = false): void {
   const rules = { ...(c.rules ?? {}) };
   if (spawn === "all") delete rules.spawn; else rules.spawn = spawn as "discs" | "none";
   if (cleanupSeconds == null) delete rules.cleanup; else rules.cleanup = Math.max(0, cleanupSeconds);
+  if (breakBehind) rules.breakBehind = true; else delete rules.breakBehind;
   if (Object.keys(rules).length) c.rules = rules; else delete c.rules;
 }
 

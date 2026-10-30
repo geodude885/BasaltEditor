@@ -89,12 +89,13 @@
 <div class="grid3">
   <label><span>Zone length m</span><input type="number" step="0.5" min="0.5" value={c.zone?.length ?? ""} placeholder={String(zoneOf(c).length)} onchange={e => doc.change(["zone"], () => setZone(c, optionalNum(e), c.zone?.height))} /></label>
   <label><span>Zone height m</span><input type="number" step="0.5" min="1" value={c.zone?.height ?? ""} placeholder="3.5" onchange={e => doc.change(["zone"], () => setZone(c, c.zone?.length, optionalNum(e)))} /></label>
-  <label><span>Clean up still structures after s</span><input type="number" step="0.5" min="0" value={c.rules?.cleanup ?? ""} placeholder="3 (0 = never)" onchange={e => doc.change(["rules"], () => setRules(c, c.rules?.spawn ?? "all", optionalNum(e)))} /></label>
+  <label><span>Clean up still structures after s</span><input type="number" step="0.5" min="0" value={c.rules?.cleanup ?? ""} placeholder="3 (0 = never)" onchange={e => doc.change(["rules"], () => setRules(c, c.rules?.spawn ?? "all", optionalNum(e), c.rules?.breakBehind))} /></label>
   <label><span>You may spawn</span>
-    <select value={(c.rules?.spawn ?? "all").toLowerCase()} onchange={e => doc.change(["rules"], () => setRules(c, text(e), c.rules?.cleanup))}>
+    <select value={(c.rules?.spawn ?? "all").toLowerCase()} onchange={e => doc.change(["rules"], () => setRules(c, text(e), c.rules?.cleanup, c.rules?.breakBehind))}>
       <option value="all">everything</option><option value="discs">discs only</option><option value="none">nothing (moves only)</option>
     </select>
   </label>
+  <label title="Quietly breaks any structure wholly past the player's end of the lane, including ones they spawn behind themselves"><span>Break structures behind player</span><input type="checkbox" checked={!!c.rules?.breakBehind} onchange={e => doc.change(["rules"], () => setRules(c, c.rules?.spawn ?? "all", c.rules?.cleanup, checked(e)))} /></label>
 </div>
 <div class="note">You cannot go past the zone's line or above its height. Structures and actors pass through both.</div>
 

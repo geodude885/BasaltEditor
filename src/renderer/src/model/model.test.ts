@@ -153,6 +153,8 @@ describe("settings that are more than one field", () => {
     expect(c.zone).toBeUndefined();
     setRules(c, "discs", -2);
     expect(c.rules).toEqual({ spawn: "discs", cleanup: 0 });
+    setRules(c, "all", undefined, true);
+    expect(c.rules).toEqual({ breakBehind: true });
     setRules(c, "all", undefined);
     expect(c.rules).toBeUndefined();
     setArenaSpot(c, 1, undefined, 90);

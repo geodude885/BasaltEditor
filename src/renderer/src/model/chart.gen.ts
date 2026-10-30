@@ -35,7 +35,7 @@ export interface BasaltChart {
     volume?: number;
   };
   /**
-   * A PNG or JPG beside the chart, shown on the picker.
+   * A PNG or JPG beside the chart, shown on the menu.
    */
   cover?: string;
   bpm?:
@@ -169,6 +169,10 @@ export interface BasaltChart {
     fade?: number;
   }[];
   rules?: {
+    /**
+     * Breaks, without a sound, any structure wholly past your end of the lane, so they do not pile up behind you.
+     */
+    breakBehind?: boolean;
     /**
      * Seconds a structure may sit still in a battle before it breaks; 0 never.
      */
