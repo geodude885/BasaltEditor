@@ -2,7 +2,7 @@ import { peakBetween } from "../../audio/peaks";
 import { endOf, evTime, phaseTime } from "../../model/chart";
 import { STAGE_PACK, stageLookAt, type TimedLookCue } from "../../model/looks";
 import { stageStrip, type StageSparkle, type StageStrip } from "../../model/stageFrame";
-import type { Tempo } from "../../model/tempo";
+import { BEATS_PER_BAR, gridLines, type Tempo } from "../../model/tempo";
 import { playedClips, type TrackRow } from "../../model/tracks";
 import type { LoadedChart } from "../../model/types";
 import type { ClipSpan } from "../../io/files";
@@ -49,11 +49,11 @@ export function drawTimeline(ctx: CanvasRenderingContext2D, w: number, h: number
   if (tp.ok) {
     const b0 = Math.floor(tp.beat(Math.max(0, t0))), b1 = Math.ceil(tp.beat(Math.max(0, t1)));
     const sub = s.snap && view.pps * 60 / tp.bpmAt(Math.max(0, t0)) * s.snap > 10 ? s.snap : 1;
-    for (let b = b0; b <= b1; b += sub) {
-      const bx = x(tp.seconds(b)), bar = b % 4 === 0, whole = Number.isInteger(b);
+    for (const { beat: b, whole, bar } of gridLines(b0, b1, sub)) {
+      const bx = x(tp.seconds(b));
       ctx.fillStyle = bar ? t.gridBar : whole ? t.gridBeat : t.grid;
       ctx.fillRect(bx, rulerBottom, 1, h - rulerBottom);
-      if (bar) { ctx.fillStyle = t.textDim; ctx.textAlign = "left"; ctx.fillText(`${b / 4 + 1}`, bx + 3, 14); }
+      if (bar) { ctx.fillStyle = t.textDim; ctx.textAlign = "left"; ctx.fillText(`${b / BEATS_PER_BAR + 1}`, bx + 3, 14); }
     }
   } else {
     for (let sec = Math.max(0, Math.floor(t0)); sec <= t1; sec++) {

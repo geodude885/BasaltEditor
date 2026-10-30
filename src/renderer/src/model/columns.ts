@@ -35,6 +35,33 @@ export function straightProjectile(c: LoadedChart, x: number, by: string): Proje
   };
 }
 
+/** What new projectiles in a column are like: a projectile's settings, who throws it aside. */
+export type ProjectileTemplate = Omit<Projectile, "by">;
+
+/** A projectile as a template for new ones: a copy, without who throws it. */
+export function templateOf(p: Projectile): ProjectileTemplate {
+  const copy = JSON.parse(JSON.stringify(p)) as Projectile;
+  delete copy.by;
+  return copy;
+}
+
+/** A template that is the default projectile (or this one) as a given structure. */
+export function templateAs(c: LoadedChart, template: ProjectileTemplate | null, structure: Projectile["structure"]): ProjectileTemplate {
+  return { ...(template ?? templateOf(straightProjectile(c, 0, ""))), structure };
+}
+
+/**
+ * A new projectile starting at `x` across the lane: like the template, aimed as far across from its start as
+ * the template is, and no further down the lane than a projectile may start - or, without one, straight down the lane.
+ */
+export function projectileAt(c: LoadedChart, x: number, by: string, template: ProjectileTemplate | null): Projectile {
+  if (!template) return straightProjectile(c, x, by);
+  const p = { ...templateOf(template as Projectile), by } as Projectile, dx = x - (+p.from?.x || 0);
+  p.from = { ...p.from, x, z: round(Math.min(+p.from?.z || 0, laneOf(c).length + 6), 1) };
+  if (p.to && p.to !== "player") p.to = { ...p.to, x: round((+p.to.x || 0) + dx, 2) };
+  return p;
+}
+
 /** Moves a projectile to a column, keeping its aim the same way off its start - straight stays straight. */
 export function moveToColumn(p: Projectile, column: number, laneWidth: number, count = PROJECTILE_COLUMNS): void {
   const x = xOfColumn(column, laneWidth, count), dx = x - (+p.from.x || 0);

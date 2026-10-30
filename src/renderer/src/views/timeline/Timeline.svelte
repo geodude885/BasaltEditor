@@ -40,7 +40,7 @@
 
   // The recorded-clips row has a lane per track, labelled with its actor.
   const trackLanes = $derived(trackRows(doc.chart));
-  const layout = $derived(layoutTimeline(display.collapsedTimelineRows, display.extraTimelineHeightPixels, trackLanes.length));
+  const layout = $derived(layoutTimeline(display.collapsedTimelineRows, display.extraTimelineHeightPixels, { tracks: trackLanes.length, shotColumns: display.highwayColumns }));
   // The events' times and rows only when the chart changes; their places as the view moves.
   const spots = $derived(eventSpots(doc.chart, doc.tempo, layout));
   const placed = $derived(placeMarkers(spots, display.timeline));
@@ -82,7 +82,7 @@
     const t = secondsAt(d.press.x0), tap = touchTapWith(d.tap, editing.selection.size > 0, d.adding);
     switch (tap.kind) {
       case "let-go": editing.selection.clear(); return;
-      case "add-projectile": addProjectileInColumn(t, tap.column); return;
+      case "add-projectile": addProjectileInColumn(t, tap.column, layout.shotColumns); return;
       case "add-look-cue": seek(snapped(t)); addStageCueAtPlayhead(); return;
       case "add-move": seek(snapped(t)); addMove(); return;
       case "seek-and-clear-selection":

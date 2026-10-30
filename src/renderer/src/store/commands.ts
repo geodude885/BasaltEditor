@@ -3,7 +3,7 @@
 // this: the desktop's menu bar and the phone's menu sheet. Commands say what they do and when they
 // apply; the menus only lay them out, and the Help tab lists the keys.
 import {
-  addMove, addPhase, addProjectile, addStageCueAtPlayhead, copySelected, fit, mirrorSelected, nudge, paste, redo, removeSelected, selectAll, selectBar,
+  addMove, addPhase, addProjectile, addStageCueAtPlayhead, copySelected, placeLikeSelected, fit, mirrorSelected, nudge, paste, redo, removeSelected, selectAll, selectBar,
   selectToEnd, undo, zoom,
 } from "./actions";
 import { doc } from "./document.svelte";
@@ -113,6 +113,9 @@ export function menus(): Menu[] {
         [
           { id: "add-projectile", label: "Add a projectile", keys: "P", run: () => addProjectile(), help: "Add a projectile at the playhead" },
           { id: "add-move", label: "Add a move", keys: "M", run: addMove, help: "Add a move at the playhead" },
+          { id: "place-like-selected", label: "New projectiles like this one", run: placeLikeSelected,
+            enabled: () => [...editing.selection].filter(i => doc.chart.events[i]?.projectile).length === 1,
+            help: "Projectiles recorded or added in a column copy the selected one: its structure, height, speed, telegraph and aim" },
           { id: "add-look", label: "Add a look", run: addStageCueAtPlayhead },
           { id: "add-phase", label: "Start a phase", run: addPhase },
         ],

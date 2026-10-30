@@ -43,7 +43,20 @@ export type Tile = { i: number; column: number; t: number; x: number; y: number;
 const TILE_HEIGHT_PIXELS = 14;
 const TILE_SIDE_INSET = 0.14;
 
-/** The chart's events as tiles on the highway - only those near enough to be seen. */
+/**
+ * Where across the highway a point across a lane this wide is drawn, in pixels: the outer columns' middles
+ * stand for the lane's sides, so a projectile in one of the columns is in the middle of it, and one placed
+ * with another number of columns falls between them. Off the lane's sides it is at the outer columns.
+ */
+export function highwayXOf(v: HighwayView, count: number, x: number, laneWidth: number): number {
+  const across = Math.min(1, Math.max(0, x / laneWidth + 0.5));
+  return (across * (count - 1) + 0.5) / count * v.w;
+}
+
+/**
+ * The chart's events as tiles on the highway - only those near enough to be seen - each drawn where it starts
+ * across the lane, a column wide; `column` is the column nearest it.
+ */
 export function tiles(c: LoadedChart, tp: Tempo, v: HighwayView, columns: HighwayColumn[]): Tile[] {
   const out: Tile[] = [], width = laneOf(c).width, count = columns.length;
   const earliest = timeOfY(v, v.h + TILE_HEIGHT_PIXELS), latest = timeOfY(v, -TILE_HEIGHT_PIXELS);
@@ -51,10 +64,10 @@ export function tiles(c: LoadedChart, tp: Tempo, v: HighwayView, columns: Highwa
     if (!e.projectile) return;
     const t = evTime(e, tp);
     if (!Number.isFinite(t) || t < earliest || t > latest) return;
-    const index = columns.findIndex(col => col.column === columnOfX(+e.projectile!.from?.x || 0, width, count));
+    const x = +e.projectile!.from?.x || 0, index = columns.findIndex(col => col.column === columnOfX(x, width, count));
     if (index < 0) return;
-    const [cx, cw] = columnSpan(v, count, index), inset = cw * TILE_SIDE_INSET;
-    out.push({ i, column: index, t, x: cx + inset, y: yOfTime(v, t) - TILE_HEIGHT_PIXELS / 2, w: cw - 2 * inset, h: TILE_HEIGHT_PIXELS });
+    const cw = v.w / count, inset = cw * TILE_SIDE_INSET, middle = highwayXOf(v, count, x, width);
+    out.push({ i, column: index, t, x: middle - cw / 2 + inset, y: yOfTime(v, t) - TILE_HEIGHT_PIXELS / 2, w: cw - 2 * inset, h: TILE_HEIGHT_PIXELS });
   });
   return out;
 }

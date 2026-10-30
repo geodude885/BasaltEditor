@@ -6,7 +6,7 @@ import {
 import { parse } from "./jsonc";
 import { density, problems } from "./problems";
 import { SAMPLE, template } from "./samples";
-import { beatText, clockText, Tempo } from "./tempo";
+import { beatText, clockText, gridLines, SNAPS, Tempo } from "./tempo";
 import type { LoadedChart } from "./types";
 
 const load = (text: string) => { const c = parse(text) as LoadedChart; c.events ??= []; return c; };
@@ -173,5 +173,27 @@ describe("clock readouts", () => {
     expect(clockText(119.6, 0)).toBe("2:00");
     expect(beatText(4, 1)).toBe("5.0");
     expect(beatText(4.25, 2)).toBe("5.25");
+  });
+});
+
+describe("triplet snaps", () => {
+  it("snap to thirds, sixths and twelfths of a beat", () => {
+    const tp = new Tempo(120);
+    expect(tp.beat(tp.snap(tp.seconds(0.3), 1 / 3))).toBeCloseTo(1 / 3, 3);
+    expect(tp.beat(tp.snap(tp.seconds(2.9), 1 / 6))).toBeCloseTo(17 / 6, 3);
+    expect(tp.beat(tp.snap(tp.seconds(1.05), 1 / 12))).toBeCloseTo(13 / 12, 3);
+  });
+
+  it("draw grid lines counted in whole steps, so bars still land on bars", () => {
+    const lines = gridLines(0, 8, 1 / 3);
+    expect(lines).toHaveLength(25);
+    expect(lines.at(-1)!.beat).toBe(8);
+    expect(lines.filter(l => l.whole).map(l => l.beat)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8]);
+    expect(lines.filter(l => l.bar).map(l => l.beat)).toEqual([0, 4, 8]);
+    expect(gridLines(2, 3, 1).map(l => l.beat)).toEqual([2, 3]);
+  });
+
+  it("are offered beside the straight ones", () => {
+    expect(SNAPS.flatMap(g => g.snaps.map(([beats]) => beats))).toEqual([1, 1 / 2, 1 / 4, 1 / 8, 1 / 3, 1 / 6, 1 / 12]);
   });
 });

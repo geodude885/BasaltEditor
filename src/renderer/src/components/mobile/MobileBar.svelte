@@ -3,7 +3,7 @@
   import BuildBadge from "../BuildBadge.svelte";
   import Icon from "../Icon.svelte";
   import ViewSwitch from "../ViewSwitch.svelte";
-  import { beatText, clockText } from "../../model/tempo";
+  import { beatText, clockText, SNAPS } from "../../model/tempo";
   import { commandButton } from "../../store/commands";
   import { doc } from "../../store/document.svelte";
   import { editing } from "../../store/editing.svelte";
@@ -32,7 +32,10 @@
   <button class="icon" aria-label="Back to the start" {...commandButton("to-start")}><Icon name="start" /></button>
   <div class="clock" aria-label="Playhead">{clock.time}{#if clock.beat}<small>b{clock.beat}</small>{/if}</div>
   <select aria-label="Snap" value={String(editing.snap)} onchange={e => { editing.snap = num(e); }}>
-    <option value="1">1 beat</option><option value="0.5">1/2</option><option value="0.25">1/4</option><option value="0.125">1/8</option><option value="0">no snap</option>
+    {#each SNAPS as { group, snaps } (group)}
+      <optgroup label={group}>{#each snaps as [beats, label] (beats)}<option value={String(beats)}>{label}</option>{/each}</optgroup>
+    {/each}
+    <option value="0">no snap</option>
   </select>
   <ViewSwitch />
   </div>

@@ -2,7 +2,7 @@
 // moment (snapped). The taps of one play-through are a take, and a take is one undo step. In replace
 // mode a take also clears the projectiles it was recorded over.
 import { evTime, firstActorId, laneOf } from "../model/chart";
-import { straightProjectile, xOfColumn } from "../model/columns";
+import { projectileAt, xOfColumn } from "../model/columns";
 import { newTimed } from "../model/edits";
 import { afterReplacing, sameTap } from "../model/takes";
 import type { ChartEvent, LoadedChart } from "../model/types";
@@ -46,7 +46,7 @@ class Recording {
     const c = doc.chart, ev = newTimed(c, t, doc.tempo, editing.snap), at = evTime(ev, doc.tempo);
     const take = this.#take ??= { chart: c, before: doc.text, from: at, to: at, added: [], taps: [] };
     if (take.taps.some(tap => sameTap(tap, { t: at, column }))) return;
-    ev.projectile = straightProjectile(c, xOfColumn(column, laneOf(c).width, display.highwayColumns), firstActorId(c));
+    ev.projectile = projectileAt(c, xOfColumn(column, laneOf(c).width, display.highwayColumns), firstActorId(c), editing.newProjectile);
     c.events.push(ev);
     take.added.push(c.events.at(-1)!);
     take.taps.push({ t: at, column });

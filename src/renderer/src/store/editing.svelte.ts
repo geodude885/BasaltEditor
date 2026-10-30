@@ -1,5 +1,19 @@
-// What is being edited: the selected events, phase and look, and how presses select and snap.
+// What is being edited: the selected events, phase and look, how presses select and snap, and what new
+// projectiles in a column are like.
 import { SvelteSet } from "svelte/reactivity";
+import type { ProjectileTemplate } from "../model/columns";
+import { STRUCTURES } from "../model/constants";
+import { remember, remembered } from "./remembered";
+
+const NEW_PROJECTILE_KEY = "basalt-new-projectile";
+
+// Kept as JSON; anything that doesn't look like a projectile is forgotten.
+const readTemplate = (text: string): ProjectileTemplate | null | undefined => {
+  const p: unknown = JSON.parse(text);
+  if (p === null) return null;
+  const t = p as ProjectileTemplate;
+  return t && typeof t === "object" && STRUCTURES.includes(t.structure) && t.from && typeof t.from === "object" ? t : undefined;
+};
 
 class Editing {
   /** Indices into chart.events. */
@@ -12,6 +26,16 @@ class Editing {
   selectMode = $state(false);
   /** Snap in beats; 0 is off. */
   snap = $state(0.5);
+  /**
+   * What a projectile added in a column is like - by a recording pad or key, a tap on the highway or the
+   * timeline's projectile row - or null for the default, a disc straight down the lane. Kept between charts.
+   */
+  newProjectile = $state<ProjectileTemplate | null>(remembered(NEW_PROJECTILE_KEY, null, readTemplate));
+
+  placeLike(template: ProjectileTemplate | null): void {
+    this.newProjectile = template;
+    remember(NEW_PROJECTILE_KEY, JSON.stringify(template));
+  }
 
   setSelection(indices: Iterable<number>): void {
     this.selection.clear();

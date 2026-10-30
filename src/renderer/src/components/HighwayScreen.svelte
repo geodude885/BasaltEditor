@@ -4,7 +4,11 @@
   // for more columns - drops a projectile in that column, snapped. Pausing ends the take. While armed, a
   // column's key taps it rather than running its shortcut, so it listens before App does (capture).
   import { grow } from "./motion";
-  import { HIGHWAY_COLUMNS_RANGE } from "../model/columns";
+  import { HIGHWAY_COLUMNS_RANGE, templateAs } from "../model/columns";
+  import { STRUCTURES } from "../model/constants";
+  import type { Structure } from "../model/types";
+  import { doc } from "../store/document.svelte";
+  import { editing } from "../store/editing.svelte";
   import { display } from "../store/display.svelte";
   import Icon from "./Icon.svelte";
   import { untrack } from "svelte";
@@ -77,6 +81,15 @@
     <button {...commandButton("last-play")}><Icon name="back" /> Last play</button>
     <button class:on={practice.loopStart != null} {...commandButton("loop")}>{loopPointLabel()}</button>
     <button {...commandButton("preroll")}>Pre-roll</button>
+    <label class="columns" title="What a pad, key or tap adds: pick a structure, or select a projectile and press Like selected to copy it whole">
+      <span>Places</span>
+      <select value={editing.newProjectile?.structure ?? ""}
+        onchange={ev => { const s = ev.currentTarget.value; editing.placeLike(s ? templateAs(doc.chart, editing.newProjectile, s as Structure) : null); }}>
+        <option value="">Default</option>
+        {#each STRUCTURES as s (s)}<option value={s}>{s}</option>{/each}
+      </select>
+    </label>
+    <button {...commandButton("place-like-selected")}>Like selected</button>
     <label class="columns" title="How many columns the highway has, each with a pad and a key ({HIGHWAY_COLUMNS_RANGE[0]} to {HIGHWAY_COLUMNS_RANGE[1]})">
       <span>Columns</span>
       <input type="number" min={HIGHWAY_COLUMNS_RANGE[0]} max={HIGHWAY_COLUMNS_RANGE[1]} step="1" value={display.highwayColumns}
@@ -110,7 +123,7 @@
   .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
   .pair button { font-size: 12px; }
   .columns { display: grid; gap: 2px; font-size: 12px; color: var(--text-dim); text-align: center; }
-  .columns input { width: 100%; min-width: 0; text-align: center; }
+  .columns input, .columns select { width: 100%; min-width: 0; text-align: center; }
 
   :global(.shell.portrait) .screen { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
   :global(.shell.portrait) .controls { flex-direction: row; flex-wrap: wrap; border-left: 0; border-top: 1px solid var(--line); }

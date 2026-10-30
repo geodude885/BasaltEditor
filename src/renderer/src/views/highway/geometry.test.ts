@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { straightProjectile, xOfColumn } from "../../model/columns";
 import { Tempo } from "../../model/tempo";
 import type { LoadedChart } from "../../model/types";
-import { beatsBetween, columnIndexAtX, highwayColumns, tiles, tilesAt, tilesInBox, timeOfY, yOfTime, type HighwayView } from "./geometry";
+import { beatsBetween, columnIndexAtX, highwayColumns, highwayXOf, tiles, tilesAt, tilesInBox, timeOfY, yOfTime, type HighwayView } from "./geometry";
 
 const view: HighwayView = { w: 500, h: 400, hitY: 320, pps: 100, time: 10 };
 const chart = (): LoadedChart => {
@@ -32,6 +32,19 @@ describe("the highway", () => {
     expect(columns.map(c => c.label)).toEqual(Array.from({ length: 9 }, (_, i) => `Column ${i + 1}`));
     const placed = tiles(chart(), new Tempo(undefined), { ...view, time: 10 }, columns);
     expect(placed.map(t => t.column)).toEqual([0, 8]);
+  });
+
+  it("draws each projectile where it starts across the lane: in its column's middle, or between columns", () => {
+    // A 500 px highway of 5 columns over a 3 m lane: column middles at 50, 150 ... 450.
+    expect([-1.5, -0.75, 0, 0.75, 1.5].map(x => highwayXOf(view, 5, x, 3))).toEqual([50, 150, 250, 350, 450]);
+    expect(highwayXOf(view, 5, -1, 3)).toBeCloseTo(116.67, 1);
+    expect(highwayXOf(view, 5, 9, 3)).toBe(450);
+    expect(highwayXOf(view, 1, 1, 3)).toBe(250);
+    const c = chart();
+    c.events.push({ t: 10, projectile: straightProjectile(c, -1, "a") });
+    const between = tiles(c, new Tempo(undefined), view, highwayColumns()).find(t => t.i === 3)!;
+    expect(between.x + between.w / 2).toBeCloseTo(116.67, 1);
+    expect(between.column).toBe(1);
   });
 
   it("places each projectile in its column at its time, leaving out those far off screen", () => {

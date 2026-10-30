@@ -1,7 +1,7 @@
 // What the toolbar, keys and canvases do. Each edit goes through doc.change, so it can be undone and
 // lands in the chart's text.
 import { actorSpotAt, actorsOf, endOf, evTime, firstActorId, laneOf, setEvTime } from "../model/chart";
-import { straightProjectile, xOfColumn } from "../model/columns";
+import { projectileAt, templateOf, xOfColumn } from "../model/columns";
 import { barAround, projectilesBetween } from "../model/ranges";
 import { addPhaseAt, mirror, newTimed } from "../model/edits";
 import { newStageCue } from "../model/looks";
@@ -95,8 +95,16 @@ export function addProjectile(at?: Point): void {
 /** Adds a projectile flying straight down the lane from a column across it (out of `count`, five unless given), at a time (snapped). */
 export function addProjectileInColumn(seconds: number, column: number, count?: number): void {
   const c = doc.chart, ev = newTimed(c, seconds, doc.tempo, editing.snap);
-  ev.projectile = straightProjectile(c, xOfColumn(column, laneOf(c).width, count), firstActorId(c));
+  ev.projectile = projectileAt(c, xOfColumn(column, laneOf(c).width, count), firstActorId(c), editing.newProjectile);
   insert(ev);
+}
+
+/** New projectiles in a column copy the one selected projectile. */
+export function placeLikeSelected(): void {
+  const selected = chosen().filter(e => e.projectile);
+  if (selected.length !== 1) return;
+  editing.placeLike(templateOf(selected[0].projectile!));
+  toast(`New projectiles are now like this ${selected[0].projectile!.structure}`);
 }
 
 export function addMove(): void {

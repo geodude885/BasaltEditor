@@ -46,7 +46,9 @@
     | { kind: "empty"; press: WaitingPress; at: HighwayView; time0: number; adding: boolean }
     | { kind: "box"; adding: boolean; addsTo: number[]; clickAdds: boolean; at: HighwayView }
     // `hold`: a finger resting on the tiles opens quick actions for them.
-    | { kind: "tiles"; x0: number; y0: number; textBefore: string; moved: boolean; slop: number; starts: [ChartEvent, number, number][]; hold?: WaitingPress };
+    // Each tile's event, time, nearest column, and where it started across the lane and aimed (to put back).
+    | { kind: "tiles"; x0: number; y0: number; textBefore: string; moved: boolean; slop: number; starts: TileStart[]; hold?: WaitingPress };
+  type TileStart = { e: ChartEvent; t: number; column: number; fromX: number; toX: number | null };
   let drag: Drag | null = null;
   // Pinches run along the highway: time runs down it.
   const fingers = new Fingers("y");
@@ -70,7 +72,7 @@
     if (drag.kind === "empty") drag.press.end();
     if (drag.kind === "tiles") drag.hold?.end();
     if (drag.kind === "tiles" && drag.moved) {
-      const moved = drag.starts.map(([e]) => e);
+      const moved = drag.starts.map(start => start.e);
       doc.commit(drag.textBefore, ["events"]);
       editing.setSelection(moved.map(e => doc.chart.events.indexOf(e)).filter(i => i >= 0));
     }
@@ -89,7 +91,10 @@
       const events = doc.chart.events, width = laneOf(doc.chart).width, held = { x: ev.clientX, y: ev.clientY };
       const d: Extract<Drag, { kind: "tiles" }> = {
         kind: "tiles", x0: x, y0: y, textBefore: doc.text, moved: false, slop: dragStartsAfterPixels(ev.pointerType),
-        starts: [...editing.selection].filter(i => events[i]?.projectile).map((i): [ChartEvent, number, number] => [events[i], evTime(events[i], doc.tempo), columnOfX(+events[i].projectile!.from?.x || 0, width)]),
+        starts: [...editing.selection].filter(i => events[i]?.projectile).map((i): TileStart => {
+          const p = events[i].projectile!, fromX = +p.from?.x || 0;
+          return { e: events[i], t: evTime(events[i], doc.tempo), column: columnOfX(fromX, width, columns.length), fromX, toX: p.to && p.to !== "player" ? +p.to.x || 0 : null };
+        }),
       };
       d.hold = restingFinger(ev, x, y, () => { if (drag === d && !d.moved) { drag = null; ui.quickActions = held; } });
       drag = d;
@@ -125,9 +130,13 @@
       if (!drag.moved && Math.hypot(x - drag.x0, y - drag.y0) < drag.slop) return;
       drag.moved = true;
       const by = tileDrag(view, columns.length, drag.x0, drag.y0, x, y), width = laneOf(doc.chart).width;
-      for (const [e, t, column] of drag.starts) {
+      for (const { e, t, column, fromX, toX } of drag.starts) {
         setEvTime(e, snapped(t + by.seconds), doc.tempo);
-        if (e.projectile) moveToColumn(e.projectile, columns[shiftedColumn(column, by.columns, columns.length)].column, width, columns.length);
+        const p = e.projectile;
+        if (!p) continue;
+        // Only a drag across snaps into a column; one back to where it began puts back its own place.
+        if (by.columns) moveToColumn(p, columns[shiftedColumn(column, by.columns, columns.length)].column, width, columns.length);
+        else { p.from.x = fromX; if (toX != null && p.to && p.to !== "player") p.to.x = toX; }
       }
     }
   }

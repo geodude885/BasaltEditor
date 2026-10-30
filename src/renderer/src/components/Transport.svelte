@@ -4,7 +4,7 @@
   import Icon from "./Icon.svelte";
   import TapOffset from "./TapOffset.svelte";
   import ViewSwitch from "./ViewSwitch.svelte";
-  import { beatText, clockText } from "../model/tempo";
+  import { beatText, clockText, SNAPS } from "../model/tempo";
   import { commandButton } from "../store/commands";
   import { doc } from "../store/document.svelte";
   import { display } from "../store/display.svelte";
@@ -34,7 +34,10 @@
   </label>
   <label><span>Snap</span>
     <select value={String(editing.snap)} onchange={e => { editing.snap = num(e); }}>
-      <option value="1">1 beat</option><option value="0.5">1/2</option><option value="0.25">1/4</option><option value="0.125">1/8</option><option value="0">off</option>
+      {#each SNAPS as { group, snaps } (group)}
+        <optgroup label={group}>{#each snaps as [beats, label] (beats)}<option value={String(beats)}>{label}</option>{/each}</optgroup>
+      {/each}
+      <option value="0">off</option>
     </select>
   </label>
   <button {...commandButton("click")}>Click</button>

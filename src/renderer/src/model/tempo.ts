@@ -68,3 +68,21 @@ export function clockText(seconds: number, decimals = 3): string {
 
 /** A beat readout, counting from 1, always to `decimals` places ("5.00", not "5"). */
 export const beatText = (beat: number, decimals = 2): string => (Math.max(0, beat) + 1).toFixed(decimals);
+
+/** The snaps the editor offers, in beats, grouped: straight ones, and triplets' thirds, sixths and twelfths. 0 is off. */
+export const SNAPS: { group: string; snaps: [beats: number, label: string][] }[] = [
+  { group: "Straight", snaps: [[1, "1 beat"], [1 / 2, "1/2"], [1 / 4, "1/4"], [1 / 8, "1/8"]] },
+  { group: "Triplets", snaps: [[1 / 3, "1/3"], [1 / 6, "1/6"], [1 / 12, "1/12"]] },
+];
+
+/**
+ * The lines a grid draws from beat `from` to `to`, every `step` beats: counted in whole steps, so thirds
+ * don't drift (adding 1/3 three times isn't quite 1). Each says whether it is on a beat and on a bar.
+ */
+export function gridLines(from: number, to: number, step: number, beatsPerBar = BEATS_PER_BAR): { beat: number; whole: boolean; bar: boolean }[] {
+  const perBeat = Math.max(1, Math.round(1 / step)), out: { beat: number; whole: boolean; bar: boolean }[] = [];
+  for (let n = Math.ceil(from * perBeat); n <= to * perBeat && out.length < 20000; n++) {
+    out.push({ beat: n / perBeat, whole: n % perBeat === 0, bar: n % (perBeat * beatsPerBar) === 0 });
+  }
+  return out;
+}

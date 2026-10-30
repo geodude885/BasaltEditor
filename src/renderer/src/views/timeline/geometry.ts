@@ -1,6 +1,6 @@
 // The timeline's rows, its time-to-pixel mapping, and where each event's marker sits.
 import { evTime, laneOf } from "../../model/chart";
-import { columnOfX, PROJECTILE_COLUMNS } from "../../model/columns";
+import { PROJECTILE_COLUMNS } from "../../model/columns";
 import type { Tempo } from "../../model/tempo";
 import type { TimedLookCue } from "../../model/looks";
 import type { LoadedChart } from "../../model/types";
@@ -20,13 +20,18 @@ const SHARE_OF_EXTRA_HEIGHT: Partial<Record<TimelineRow, number>> = { wave: 0.35
 export const MOST_EXTRA_TIMELINE_HEIGHT_PIXELS = 400;
 
 export type RowSpan = readonly [top: number, height: number];
-/** The rows' places, and how many lanes the recorded-clips row has: one per track, and one when there are none. */
-export type TimelineLayout = { rows: Record<TimelineRow, RowSpan>; height: number; collapsed: ReadonlySet<TimelineRow>; clipLanes: number };
+/**
+ * The rows' places; how many lanes the recorded-clips row has (one per track, and one when there are none);
+ * and how many columns a tap in the projectile row adds in (the highway's).
+ */
+export type TimelineLayout = { rows: Record<TimelineRow, RowSpan>; height: number; collapsed: ReadonlySet<TimelineRow>; clipLanes: number; shotColumns: number };
 
 // Each track after the first adds a lane this tall to the recorded-clips row.
 const CLIP_LANE_HEIGHT_PIXELS = 24;
 
-export function layoutTimeline(collapsed: ReadonlySet<TimelineRow>, extraHeightPixels: number, tracks = 0): TimelineLayout {
+export function layoutTimeline(
+  collapsed: ReadonlySet<TimelineRow>, extraHeightPixels: number, { tracks = 0, shotColumns = PROJECTILE_COLUMNS }: { tracks?: number; shotColumns?: number } = {},
+): TimelineLayout {
   const clipLanes = Math.max(1, tracks);
   const growing = TIMELINE_ROWS.filter(row => SHARE_OF_EXTRA_HEIGHT[row] && !collapsed.has(row));
   const totalShare = growing.reduce((sum, row) => sum + SHARE_OF_EXTRA_HEIGHT[row]!, 0);
@@ -39,7 +44,7 @@ export function layoutTimeline(collapsed: ReadonlySet<TimelineRow>, extraHeightP
     rows[row] = [top, height];
     top += height;
   }
-  return { rows, height: top, collapsed, clipLanes };
+  return { rows, height: top, collapsed, clipLanes, shotColumns };
 }
 
 /** A lane of the recorded-clips row: its top and height. Collapsed, the lanes share the thin strip. */
@@ -58,22 +63,21 @@ export const inRow = (layout: TimelineLayout, row: TimelineRow, y: number): bool
 /** An event's marker: where it is, and how far left and right what is drawn for it reaches (a telegraph bar, a move's name). */
 export type Marker = { i: number; x: number; y: number; left: number; right: number };
 
-// One line per column across the lane (model/columns.ts), so a projectile from the middle of the lane
-// sits on the middle of the row.
-const PROJECTILE_LINES = PROJECTILE_COLUMNS;
+// The projectile row is the lane's width, top to bottom: a projectile sits as far down it as it starts
+// across the lane - its own x, whatever columns it was placed in - with the middle of the lane in the
+// middle. A tap adds in the nearest of the highway's columns (columnAtY).
 const PROJECTILE_ROW_INSET_PIXELS = 7;
 
-/** How far down the timeline a column's line is drawn, in an expanded projectile row. */
-function yOfColumn(layout: TimelineLayout, column: number): number {
-  const [top, height] = layout.rows.shot, last = PROJECTILE_LINES - 1;
-  return layout.collapsed.has("shot") ? top + height / 2
-    : top + PROJECTILE_ROW_INSET_PIXELS + column * ((height - 2 * PROJECTILE_ROW_INSET_PIXELS) / last);
+/** How far down an expanded projectile row a point across a lane this wide sits; one off the lane's side sits at its edge. */
+function yOfX(layout: TimelineLayout, x: number, laneWidth: number): number {
+  const [top, height] = layout.rows.shot, across = Math.min(1, Math.max(0, x / laneWidth + 0.5));
+  return layout.collapsed.has("shot") ? top + height / 2 : top + PROJECTILE_ROW_INSET_PIXELS + across * (height - 2 * PROJECTILE_ROW_INSET_PIXELS);
 }
 
 /** The column whose line is nearest a point in the projectile row (the middle one when it is collapsed). */
 export function columnAtY(layout: TimelineLayout, y: number): number {
-  const [top, height] = layout.rows.shot, last = PROJECTILE_LINES - 1;
-  if (layout.collapsed.has("shot")) return Math.floor(last / 2);
+  const [top, height] = layout.rows.shot, last = layout.shotColumns - 1;
+  if (layout.collapsed.has("shot") || last < 1) return Math.floor(last / 2);
   const spacing = (height - 2 * PROJECTILE_ROW_INSET_PIXELS) / last;
   return Math.min(last, Math.max(0, Math.round((y - top - PROJECTILE_ROW_INSET_PIXELS) / spacing)));
 }
@@ -104,7 +108,7 @@ export function eventSpots(c: LoadedChart, tp: Tempo, layout: TimelineLayout): E
     const t = evTime(e, tp);
     if (!Number.isFinite(t)) return;
     const p = e.projectile, spawn = p ? t - (p.telegraph ?? 0.5) : t;
-    out.push({ i, t, spawn, y: p ? yOfColumn(layout, columnOfX(+p.from?.x || 0, width)) : moveTop + moveHeight / 2, projectile: !!p });
+    out.push({ i, t, spawn, y: p ? yOfX(layout, +p.from?.x || 0, width) : moveTop + moveHeight / 2, projectile: !!p });
   });
   return out;
 }

@@ -6,7 +6,7 @@ import type { LoadedChart } from "../model/types";
 import { laneMap } from "./lane/geometry";
 import { moveProjectilePoint, projectilesStartingInBox, whatALanePressHits } from "./lane/interaction";
 import { boxIsAClick } from "./theme";
-import { clipLaneSpan, COLLAPSED_ROW_HEIGHT_PIXELS, layoutTimeline, markers, xOf, type TimelineRow } from "./timeline/geometry";
+import { clipLaneSpan, COLLAPSED_ROW_HEIGHT_PIXELS, columnAtY, layoutTimeline, markers, xOf, type TimelineRow } from "./timeline/geometry";
 import { markersInBox, phaseIndexAt, pressWaitsOnTouch, touchTapWith, whatATimelinePressHits, whatATouchTapAdds } from "./timeline/interaction";
 
 const sample = () => { const c = Jsonc.parse(SAMPLE) as LoadedChart; c.events ??= []; return c; };
@@ -163,12 +163,35 @@ describe("touch taps on the timeline", () => {
 
 describe("the recorded row", () => {
   it("has a lane per track, splitting the thin strip when collapsed", () => {
-    const one = layoutTimeline(new Set(), 0, 1), two = layoutTimeline(new Set(), 0, 2);
+    const one = layoutTimeline(new Set(), 0, { tracks: 1 }), two = layoutTimeline(new Set(), 0, { tracks: 2 });
     expect(two.rows.clip[1]).toBeGreaterThan(one.rows.clip[1]);
-    expect(layoutTimeline(new Set(), 0, 0).rows.clip).toEqual(one.rows.clip);
+    expect(layoutTimeline(new Set(), 0).rows.clip).toEqual(one.rows.clip);
     const [top, height] = two.rows.clip;
     expect([clipLaneSpan(two, 0)[0], clipLaneSpan(two, 1)[0] + clipLaneSpan(two, 1)[1]]).toEqual([top, top + height]);
-    const collapsed = layoutTimeline(new Set<TimelineRow>(["clip"]), 0, 3);
+    const collapsed = layoutTimeline(new Set<TimelineRow>(["clip"]), 0, { tracks: 3 });
     expect(clipLaneSpan(collapsed, 2)[1] * 3).toBeCloseTo(collapsed.rows.clip[1]);
+  });
+});
+
+describe("the projectile row with more columns", () => {
+  it("puts each projectile as far down as it starts across the lane, whatever columns placed it", () => {
+    const layout = layoutTimeline(new Set(), 0), c = { events: [], lane: { length: 10, width: 8 } } as unknown as LoadedChart;
+    // Five columns' places and seven's, mixed, and one off the lane's side.
+    const xs = [-4, -2, 0, 2, 4, -2.67, -1.33, 1.33, 2.67, 7];
+    for (const x of xs) c.events.push({ t: 1, projectile: { structure: "Disc", from: { x, y: 1.4, z: 8 }, speed: 11 } });
+    const ys = markers(c, new Tempo(undefined), { t0: 0, pps: 50 }, layout).map(m => m.y), [top, height] = layout.rows.shot;
+    expect(new Set(ys.slice(0, 9)).size).toBe(9);
+    const byX = xs.slice(0, 9).map((x, i) => [x, ys[i]]).sort((a, b) => a[0] - b[0]).map(([, y]) => y);
+    expect(byX).toEqual([...byX].sort((a, b) => a - b));
+    expect(ys[2]).toBeCloseTo(top + height / 2);
+    expect(ys[9]).toBe(ys[4]);
+  });
+
+  it("puts each of seven columns on a line of its own, and finds it again", () => {
+    const layout = layoutTimeline(new Set(), 0, { shotColumns: 7 }), c = { events: [], lane: { length: 10, width: 8 } } as unknown as LoadedChart;
+    for (const x of [-4, -2.67, -1.33, 0, 1.33, 2.67, 4]) c.events.push({ t: 1, projectile: { structure: "Disc", from: { x, y: 1.4, z: 8 }, speed: 11 } });
+    const ys = markers(c, new Tempo(undefined), { t0: 0, pps: 50 }, layout).map(m => m.y);
+    expect(new Set(ys).size).toBe(7);
+    expect(ys.map(y => columnAtY(layout, y))).toEqual([0, 1, 2, 3, 4, 5, 6]);
   });
 });
