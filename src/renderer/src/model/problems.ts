@@ -1,25 +1,23 @@
 // The mod's own checks that a chart maker hits most - the game will not load a chart that fails one.
 import { actorsOf, endOf, evTime, laneOf, phaseTime } from "./chart";
-import { STRUCTURES } from "./constants";
+import { NEWEST_FORMAT, STRUCTURES } from "./constants";
 import { lookCueProblems } from "./looks";
 import { round, type Tempo } from "./tempo";
-import { trackProblems } from "./tracks";
+import { performanceProblems } from "./performances";
 import type { LoadedChart } from "./types";
 
 export function problems(c: LoadedChart, tp: Tempo): string[] {
   const out: string[] = [], L = laneOf(c);
   const ids = new Set(actorsOf(c).map(a => a.id));
-  if ((c.format ?? 1) > 2) out.push(`format ${c.format} is newer than the mod reads (2)`);
+  if ((c.format ?? 1) > NEWEST_FORMAT) out.push(`format ${c.format} is newer than the mod reads (${NEWEST_FORMAT})`);
   if (L.length <= 2) out.push("lane.length must be over 2 m");
   if (L.width <= 0) out.push("lane.width must be over 0");
-  if (c.bpm != null && !tp.ok) out.push("bpm must be a number over 0, or tempo changes");
-  if (Array.isArray(c.bpm)) {
-    const bpm = c.bpm;
-    bpm.forEach((b, i) => {
-      if (i === 0 && b.beat !== 0) out.push("bpm[0].beat must be 0");
-      if (i > 0 && b.beat <= bpm[i - 1].beat) out.push(`bpm[${i}].beat must be after the change before it`);
-    });
-  }
+  if (c.bpm != null && !tp.ok) out.push("bpm must be a number over 0");
+  if (c.bpmChanges?.length && c.bpm == null) out.push("bpmChanges needs a bpm to start from");
+  (c.bpmChanges ?? []).forEach((b, i, all) => {
+    if (!(b.bpm > 0)) out.push(`bpmChanges[${i}].bpm must be over 0`);
+    if (!(b.beat > (all[i - 1]?.beat ?? 0))) out.push(`bpmChanges[${i}].beat must be after the tempo before it`);
+  });
   actorsOf(c).forEach((a, i) => {
     if (a.at && !(a.at.z >= 0 && a.at.z <= L.length)) out.push(`actors[${i}].at.z (${a.at.z}) must be within the lane: 0 to ${L.length}`);
   });
@@ -47,19 +45,17 @@ export function problems(c: LoadedChart, tp: Tempo): string[] {
       if (tel < 0) out.push(`${p}.projectile.telegraph cannot be negative`);
       else if (t - tel < 0) out.push(`${p} would appear before the battle starts`);
       if (s.grounded != null && typeof s.grounded !== "boolean") out.push(`${p}.projectile.grounded must be true or false`);
-      if (s.by != null && !ids.has(s.by)) out.push(`${p}.projectile.by "${s.by}" is not one of the actors`);
     }
     if (e.at && !(e.at.z >= 0 && e.at.z <= L.length)) out.push(`${p}.at.z must be within the lane`);
   });
   const last = Math.max(0, ...c.events.map(e => evTime(e, tp)).filter(Number.isFinite));
   if (c.end != null && c.end < last) out.push(`end (${c.end}) is before the last event (${round(last, 2)})`);
-  if (c.tracks?.length && (c.format ?? 1) < 2) out.push('tracks need "format": 2');
-  out.push(...trackProblems(c, tp));
-  if (c.zone?.length != null && !(c.zone.length > 0 && c.zone.length <= L.length)) out.push(`zone.length must be over 0 and up to the lane's length (${L.length})`);
-  if (c.zone?.height != null && c.zone.height < 1) out.push("zone.height must be at least 1 m");
-  if (c.rules?.spawn != null && !["all", "discs", "none"].includes(String(c.rules.spawn).toLowerCase())) out.push("rules.spawn must be all, discs or none");
+  out.push(...performanceProblems(c, tp));
+  if (c.playerZone?.length != null && !(c.playerZone.length > 0 && c.playerZone.length <= L.length)) out.push(`playerZone.length must be over 0 and up to the lane's length (${L.length})`);
+  if (c.playerZone?.height != null && c.playerZone.height < 1) out.push("playerZone.height must be at least 1 m");
+  if (c.rules?.playerSpawns != null && !["all", "discs", "none"].includes(String(c.rules.playerSpawns).toLowerCase())) out.push("rules.playerSpawns must be all, discs or none");
   if (c.music?.file && !/\.(ogg|mp3)$/i.test(c.music.file)) out.push("music.file must be .ogg or .mp3");
-  (c.visuals ?? []).forEach((cue, i) => out.push(...lookCueProblems(cue, i, tp)));
+  (c.shaders ?? []).forEach((cue, i) => out.push(...lookCueProblems(cue, i, tp)));
   return out;
 }
 

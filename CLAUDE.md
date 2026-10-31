@@ -156,10 +156,9 @@ The format belongs to the mod. `npm run sync` copies `docs/chart.schema.json` fr
 measured structure sizes (`UserData/Basalt/SelfTest/structures.json`, from the mod's `=measure`
 self-test) into `data/`. Both copies are committed so the editor builds without the mod or the game.
 Change the format in the mod first, then sync. Match the mod's behaviour, not the old editor's:
-`ChartRunner` and `ChartLoader` are the reference (e.g. a phase's spot is placed at the phase's start
-on the same timeline as events, so the latest by time wins).
+`ChartRunner` and `ChartLoader` are the reference.
 
-Looks (`visuals` cues) work the same way. `npm run sync` also copies the BossBattles Stage pack's
+Looks (`shaders` cues) work the same way. `npm run sync` also copies the BossBattles Stage pack's
 manifest from `../RumbleBossBattlesShaders` into `data/packs/`; its `group` and `colour` fields lay
 out the Looks tab. `model/looks.ts` ports the mod's `LookTimeline` (how cues fade into one another)
 and the Stage shader's maths for the timeline's preview strip - change it when they change, and keep

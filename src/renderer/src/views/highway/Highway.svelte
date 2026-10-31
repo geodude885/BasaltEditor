@@ -16,7 +16,7 @@
   import { transport } from "../../store/transport.svelte";
   import { ui } from "../../store/ui.svelte";
   import { practice } from "../../store/practice.svelte";
-  import { seek, songStart } from "../../store/playback";
+  import { seek, songOffset } from "../../store/playback";
   import { boxIsAClick, prepare, theme, type Box } from "../theme";
   import { dragStartsAfterPixels, Fingers, restingFinger, WaitingPress } from "../touch";
   import { drawHighway } from "./draw";
@@ -37,7 +37,7 @@
     if (!w || !h) return;
     drawHighway(prepare(canvas, w, h), {
       chart: doc.chart, tempo: doc.tempo, view, columns, tiles: placed, selection: editing.selection,
-      song: session.song, songStart: songStart(), box, loop, shotColouring: display.shotColouring,
+      song: session.song, songOffset: songOffset(), box, loop, shotColouring: display.shotColouring,
     }, theme(appearance.scheme));
   });
 
@@ -93,7 +93,7 @@
         kind: "tiles", x0: x, y0: y, textBefore: doc.text, moved: false, slop: dragStartsAfterPixels(ev.pointerType),
         starts: [...editing.selection].filter(i => events[i]?.projectile).map((i): TileStart => {
           const p = events[i].projectile!, fromX = +p.from?.x || 0;
-          return { e: events[i], t: evTime(events[i], doc.tempo), column: columnOfX(fromX, width, columns.length), fromX, toX: p.to && p.to !== "player" ? +p.to.x || 0 : null };
+          return { e: events[i], t: evTime(events[i], doc.tempo), column: columnOfX(fromX, width, columns.length), fromX, toX: p.to ? +p.to.x || 0 : null };
         }),
       };
       d.hold = restingFinger(ev, x, y, () => { if (drag === d && !d.moved) { drag = null; ui.quickActions = held; } });
@@ -136,7 +136,7 @@
         if (!p) continue;
         // Only a drag across snaps into a column; one back to where it began puts back its own place.
         if (by.columns) moveToColumn(p, columns[shiftedColumn(column, by.columns, columns.length)].column, width, columns.length);
-        else { p.from.x = fromX; if (toX != null && p.to && p.to !== "player") p.to.x = toX; }
+        else { p.from.x = fromX; if (toX != null && p.to) p.to.x = toX; }
       }
     }
   }

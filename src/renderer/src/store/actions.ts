@@ -1,6 +1,6 @@
 // What the toolbar, keys and canvases do. Each edit goes through doc.change, so it can be undone and
 // lands in the chart's text.
-import { actorSpotAt, actorsOf, endOf, evTime, firstActorId, laneOf, setEvTime } from "../model/chart";
+import { actorSpotAt, actorsOf, endOf, evTime, laneOf, setEvTime } from "../model/chart";
 import { projectileAt, templateOf, xOfColumn } from "../model/columns";
 import { barAround, projectilesBetween } from "../model/ranges";
 import { addPhaseAt, mirror, newTimed } from "../model/edits";
@@ -87,7 +87,7 @@ export function addProjectile(at?: Point): void {
   ev.projectile = {
     structure: "Disc",
     from: { x: round(base.x, 1), y: 0, z: round(Math.max(0.5, Math.min(L.length, base.z - (at ? 0 : 1))), 1) },
-    to: "player", speed: 10, telegraph: 0.2, by: first.id,
+    speed: 10, telegraph: 0.2,
   };
   insert(ev);
 }
@@ -95,7 +95,7 @@ export function addProjectile(at?: Point): void {
 /** Adds a projectile flying straight down the lane from a column across it (out of `count`, five unless given), at a time (snapped). */
 export function addProjectileInColumn(seconds: number, column: number, count?: number): void {
   const c = doc.chart, ev = newTimed(c, seconds, doc.tempo, editing.snap);
-  ev.projectile = projectileAt(c, xOfColumn(column, laneOf(c).width, count), firstActorId(c), editing.newProjectile);
+  ev.projectile = projectileAt(c, xOfColumn(column, laneOf(c).width, count), editing.newProjectile);
   insert(ev);
 }
 
@@ -129,13 +129,16 @@ export function editSelected(mutate: (e: ChartEvent) => void): void {
   reselect([e]);
 }
 
-/** Edits every selected projectile at once - one undo step - keeping them selected. */
-export function editSelectedProjectiles(mutate: (p: Projectile) => void): void {
+/** Edits every selected projectile's event at once - one undo step - keeping them selected. */
+export function editSelectedProjectileEvents(mutate: (e: ChartEvent) => void): void {
   const events = chosen().filter(e => e.projectile);
   if (!events.length) return;
-  doc.change(["events"], () => events.forEach(e => mutate(e.projectile!)));
+  doc.change(["events"], () => events.forEach(mutate));
   reselect(events);
 }
+
+/** Edits every selected projectile at once. */
+export const editSelectedProjectiles = (mutate: (p: Projectile) => void): void => editSelectedProjectileEvents(e => mutate(e.projectile!));
 
 export function removeSelected(): void {
   if (!editing.selection.size) return;
@@ -165,7 +168,7 @@ export function nudge(dir: -1 | 1, bar: boolean): void {
 export function throwFromActor(): void {
   const e = chosen()[0], s = e?.projectile;
   if (!s) return;
-  const actor = actorsOf(doc.chart).find(a => a.id === s.by) ?? actorsOf(doc.chart)[0];
+  const actor = actorsOf(doc.chart).find(a => a.id === e.actor) ?? actorsOf(doc.chart)[0];
   const at = actorSpotAt(doc.chart, actor, evTime(e, doc.tempo), doc.tempo);
   editSelected(() => { s.from.x = at.x; s.from.z = round(Math.max(0.5, at.z - 1), 1); });
 }
@@ -259,18 +262,18 @@ export function selectLookCue(index: number): void {
 export function addStageCueAtPlayhead(): void {
   const time = doc.tempo.snap(transport.time, editing.snap);
   let index = -1;
-  doc.change(["visuals"], () => {
-    doc.chart.visuals ??= [];
-    doc.chart.visuals.push(newStageCue(doc.chart, time, doc.tempo));
-    index = doc.chart.visuals.length - 1;
+  doc.change(["shaders"], () => {
+    doc.chart.shaders ??= [];
+    doc.chart.shaders.push(newStageCue(doc.chart, time, doc.tempo));
+    index = doc.chart.shaders.length - 1;
   });
   selectLookCue(index);
 }
 
 export function removeLookCue(index: number): void {
-  doc.change(["visuals"], () => {
-    doc.chart.visuals?.splice(index, 1);
-    if (!doc.chart.visuals?.length) delete doc.chart.visuals;
+  doc.change(["shaders"], () => {
+    doc.chart.shaders?.splice(index, 1);
+    if (!doc.chart.shaders?.length) delete doc.chart.shaders;
   });
   editing.selectedLookCue = -1;
 }

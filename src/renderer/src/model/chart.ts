@@ -17,11 +17,11 @@ export const firstActorId = (c: Chart): string => actorsOf(c)[0].id ?? "actor";
 
 /** Your zone: how far down the lane you may go and how high - 2 m short of the far end and 3.5 m without one. */
 export function zoneOf(c: Chart): Zone {
-  const L = laneOf(c), z = c.zone ?? {};
+  const L = laneOf(c), z = c.playerZone ?? {};
   return { length: +(z.length ?? (L.length > 4 ? L.length - 2 : L.length / 2)), height: +(z.height ?? 3.5) };
 }
 
-export const coloursOf = (c: Chart): LaneColours => c.colours ?? c.colors ?? {};
+export const coloursOf = (c: Chart): LaneColours => c.colours ?? {};
 
 // Anything placed in time by "t" (seconds) or "beat": events, look cues.
 export function evTime(ev: { t?: number; beat?: number }, tp: Tempo): number {
@@ -37,8 +37,8 @@ export function setEvTime(ev: ChartEvent, seconds: number, tp: Tempo): void {
 }
 
 export function phaseTime(p: Phase, tp: Tempo): number {
-  if (p.start != null) return +p.start;
-  return p.startBeat != null && tp.ok ? tp.seconds(+p.startBeat) : 0;
+  if (p.t != null) return +p.t;
+  return p.beat != null && tp.ok ? tp.seconds(+p.beat) : 0;
 }
 
 /** When the battle ends: the chart's end, else 3 s after its last event. */
@@ -54,19 +54,14 @@ export const isGrounded = (s: Projectile): boolean => s.grounded ?? GROUNDED_STA
 /** Sits on the floor: grounded, or a structure that always rises out of it. */
 export const onFloor = (s: Projectile): boolean => isGrounded(s) || GROUNDED.includes(s.structure);
 
-/**
- * Where an actor stands at a time: its spot, then the latest phase or "at" event that moved it. The
- * mod runs a phase's spot as a placement at the phase's start, on the same timeline as events
- * (ChartRunner), so whichever came last wins.
- */
+/** Where an actor stands at a time: its spot, then the latest "at" event that moved it. */
 export function actorSpotAt(c: LoadedChart, actor: Actor, t: number, tp: Tempo): Point {
   let at: Point = actor.at ?? { x: 0, z: laneOf(c).length }, when = -Infinity;
   const first = firstActorId(c);
-  const consider = (spot: Point | undefined, who: string | undefined, time: number) => {
-    if (spot && (who ?? first) === actor.id && time <= t && time >= when) { at = spot; when = time; }
-  };
-  for (const p of c.phases ?? []) consider(p.at, p.actor, phaseTime(p, tp));
-  for (const e of c.events) consider(e.at, e.actor, evTime(e, tp));
+  for (const e of c.events) {
+    const time = evTime(e, tp);
+    if (e.at && (e.actor ?? first) === actor.id && time <= t && time >= when) { at = e.at; when = time; }
+  }
   return { x: +at.x || 0, z: +at.z || 0 };
 }
 

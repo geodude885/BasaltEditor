@@ -24,7 +24,7 @@
   /** A projectile's timings, as a sentence. */
   function timings(ev: ChartEvent, s: Projectile): string {
     const tp = doc.tempo, t = evTime(ev, tp), tel = s.telegraph ?? 0.5;
-    const aimX = s.to && s.to !== "player" ? s.to.x : 0;
+    const aimX = s.to?.x ?? 0;
     const air = Math.hypot(s.from?.z || 0, (s.from?.x || 0) - aimX) / Math.max(0.1, s.speed || 1);
     return `Appears ${round(t - tel, 2)} s, flies ${round(t, 2)} s${tp.ok ? ` (beat ${round(tp.beat(t), 2)})` : ""}, ${round(air, 2)} s in the air.`;
   }
@@ -53,8 +53,8 @@
       {/if}
     {/snippet}
 
-    {#snippet actorField(ev: ChartEvent)}
-      <label><span>Actor</span>
+    {#snippet actorField(ev: ChartEvent, label: string)}
+      <label><span>{label}</span>
         <select value={ev.actor ?? first} onchange={x => edit(ev => { const v = text(x); if (v === first) delete ev.actor; else ev.actor = v; })}>
           {#each actors as a (a.id)}<option value={a.id}>{a.name || a.id}</option>{/each}
         </select>
@@ -63,7 +63,7 @@
 
     {#if kind === "projectile" && e.projectile}
       {@const s = e.projectile}
-      {@const aimPoint = s.to && s.to !== "player" ? s.to : null}
+      {@const aimPoint = s.to ?? null}
       <div class="grid2">
         {@render timeField(e)}
         <label><span>Structure</span>
@@ -96,26 +96,21 @@
       </label>
       <div class="grid3">
         <label><span>Aim</span>
-          <select value={aimPoint ? "point" : "player"} onchange={x => shot(s => { s.to = text(x) === "player" ? "player" : { x: 0, y: 1.3 }; })}>
+          <select value={aimPoint ? "point" : "player"} onchange={x => shot(s => { if (text(x) === "player") delete s.to; else s.to = { x: 0, y: 1.3 }; })}>
             <option value="player">at the player</option><option value="point">at a point</option>
           </select>
         </label>
         {#if aimPoint}
-          <label><span>Aim x</span><input type="number" step="0.1" value={aimPoint.x} onchange={x => shot(s => { if (s.to && s.to !== "player") s.to.x = num(x); })} /></label>
+          <label><span>Aim x</span><input type="number" step="0.1" value={aimPoint.x} onchange={x => shot(s => { if (s.to) s.to.x = num(x); })} /></label>
           {#if isGrounded(s)}<span></span>{:else}
-            <label><span>Aim y</span><input type="number" step="0.1" value={aimPoint.y} onchange={x => shot(s => { if (s.to && s.to !== "player") s.to.y = num(x); })} /></label>
+            <label><span>Aim y</span><input type="number" step="0.1" value={aimPoint.y} onchange={x => shot(s => { if (s.to) s.to.y = num(x); })} /></label>
           {/if}
         {:else}<span></span><span></span>{/if}
       </div>
       <div class="grid3">
         <label><span>Speed m/s</span><input type="number" step="0.5" min="0.5" value={s.speed} onchange={x => shot(s => { s.speed = Math.max(0.5, num(x) || 0); })} /></label>
         <label><span>Spawned s before</span><input type="number" step="0.1" min="0" value={s.telegraph ?? 0.5} onchange={x => shot(s => { s.telegraph = Math.max(0, num(x) || 0); })} /></label>
-        <label><span>Thrown by</span>
-          <select value={s.by ?? ""} onchange={x => shot(s => { const v = text(x); if (v) s.by = v; else delete s.by; })}>
-            <option value="">nobody</option>
-            {#each actors as a (a.id)}<option value={a.id}>{a.name || a.id}</option>{/each}
-          </select>
-        </label>
+        {@render actorField(e, "Thrown by")}
       </div>
       <div class="note">{timings(e, s)}</div>
     {:else if kind === "move"}
@@ -127,14 +122,14 @@
           </select>
         </label>
       </div>
-      {@render actorField(e)}
+      {@render actorField(e, "Actor")}
     {:else if kind === "at" && e.at}
       <div class="grid3">
         {@render timeField(e)}
         <label><span>To x</span><input type="number" step="0.1" value={e.at.x} onchange={x => edit(ev => { ev.at!.x = num(x); })} /></label>
         <label><span>To z</span><input type="number" step="0.1" value={e.at.z} onchange={x => edit(ev => { ev.at!.z = num(x); })} /></label>
       </div>
-      {@render actorField(e)}
+      {@render actorField(e, "Actor")}
     {/if}
 
     <div class="row">

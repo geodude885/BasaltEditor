@@ -23,19 +23,18 @@ export function findPackParameter(pack: PackManifest, name: string): PackParamet
 export const isCueForPack = (cue: LookCue, pack: PackManifest): boolean => (cue.pack ?? "").trim().toLowerCase() === pack.name.toLowerCase();
 
 export const settingsWrittenIn = (cue: LookCue): [string, number][] =>
-  Object.entries(cue.set ?? {}).filter((entry): entry is [string, number] => typeof entry[1] === "number");
+  Object.entries(cue.values ?? {}).filter((entry): entry is [string, number] => typeof entry[1] === "number");
 
-// The same refusals as the mod's ChartLoader.ReadVisuals: a cue with any of these is not run.
+// The same refusals as the mod's ChartLoader.ReadShaders: a cue with any of these is not run.
 export function lookCueProblems(cue: LookCue, index: number, tempo: Tempo): string[] {
-  const path = `visuals[${index}]`, problems: string[] = [];
+  const path = `shaders[${index}]`, problems: string[] = [];
   if (cue.t != null && cue.beat != null) problems.push(`${path} has both t and beat, use one`);
   else if (cue.beat != null && !tempo.ok) problems.push(`${path}.beat needs the chart's bpm`);
   else if (cue.t == null && cue.beat == null) problems.push(`${path} needs a time: t (seconds) or beat`);
   else if (evTime(cue, tempo) < 0) problems.push(`${path}.t cannot be negative (got ${round(evTime(cue, tempo), 3)})`);
   if (!cue.pack?.trim()) problems.push(`${path} needs a pack name, e.g. "UltraShade"`);
   const off = cue.off ?? false, setsSomething = settingsWrittenIn(cue).length > 0;
-  if (off && setsSomething) problems.push(`${path} has both "off" and "set", use one`);
-  if (!off && !setsSomething && cue.on !== true) problems.push(`${path} needs "set" (parameter values), "on": true or "off": true`);
+  if (off && setsSomething) problems.push(`${path} has both "off" and "values", use one`);
   if ((cue.fade ?? 0) < 0) problems.push(`${path}.fade cannot be negative (got ${cue.fade})`);
   return problems;
 }
@@ -57,14 +56,14 @@ export function lookCueTimeLabel(cue: LookCue): string {
   return cue.t != null ? `${cue.t} s` : "no time";
 }
 
-export type TimedLookCue = { index: number; time: number; pack: string; set: [string, number][]; off: boolean; fade: number };
+export type TimedLookCue = { index: number; time: number; pack: string; values: [string, number][]; off: boolean; fade: number };
 
 export function timedLookCues(chart: LoadedChart, tempo: Tempo): TimedLookCue[] {
-  return (chart.visuals ?? [])
+  return (chart.shaders ?? [])
     .map((cue, index) => ({ cue, index }))
     .filter(({ cue, index }) => lookCueProblems(cue, index, tempo).length === 0)
     .map(({ cue, index }) => ({
-      index, time: evTime(cue, tempo), pack: cue.pack.trim(), set: settingsWrittenIn(cue), off: cue.off ?? false, fade: cue.fade ?? 0,
+      index, time: evTime(cue, tempo), pack: cue.pack.trim(), values: settingsWrittenIn(cue), off: cue.off ?? false, fade: cue.fade ?? 0,
     }))
     .sort((a, b) => a.time - b.time || a.index - b.index);
 }
@@ -90,7 +89,7 @@ export function evaluateLooksAt(cues: TimedLookCue[], time: number, playerValue:
     packCues.forEach((cue, i) => {
       const cueEnd = i + 1 < packCues.length ? packCues[i + 1].time : time;
       const progress = cue.fade <= 0 ? 1 : clamp((cueEnd - cue.time) / cue.fade, 0, 1);
-      const targets: [string, number][] = cue.off ? [...values.values()].map(v => [v.name, playerValue(packName, v.name)]) : cue.set;
+      const targets: [string, number][] = cue.off ? [...values.values()].map(v => [v.name, playerValue(packName, v.name)]) : cue.values;
       for (const [name, target] of targets) {
         const key = name.toLowerCase(), existing = values.get(key);
         const from = existing?.value ?? playerValue(packName, name);
@@ -205,26 +204,19 @@ export function cssToLinear(hex: string): Rgb {
 
 // ---- Editing Stage cues ---------------------------------------------------------------------------
 
-// A cue in beats when the chart's other cues are, else in seconds; it sets nothing yet, so it is "on".
+// A cue in beats when the chart's other cues are, else in seconds; it sets nothing yet, so it just switches the pack on.
 export function newStageCue(chart: LoadedChart, time: number, tempo: Tempo): LookCue {
-  const visuals = chart.visuals ?? [];
-  const inBeats = tempo.ok && (visuals.length ? visuals.some(v => v.beat != null) : chart.events.some(e => e.beat != null));
+  const shaders = chart.shaders ?? [];
+  const inBeats = tempo.ok && (shaders.length ? shaders.some(v => v.beat != null) : chart.events.some(e => e.beat != null));
   const when = inBeats ? { beat: round(tempo.beat(time), 4) } : { t: round(time, 3) };
-  return { ...when, pack: STAGE_PACK.name, on: true, fade: 1 } as LookCue;
-}
-
-// A cue that sets something is on by setting it; one that sets nothing needs "on": true to load.
-function keepCueLoadable(cue: LookCue): void {
-  if (settingsWrittenIn(cue).length) delete cue.on;
-  else { delete cue.set; if (!cue.off) cue.on = true; }
+  return { ...when, pack: STAGE_PACK.name, fade: 1 } as LookCue;
 }
 
 export function setStageCueSetting(cue: LookCue, parameter: PackParameter, value: number | undefined): void {
-  const set: Record<string, number | undefined> = { ...(cue.set ?? {}) };
-  for (const name of Object.keys(set)) if (findPackParameter(STAGE_PACK, name) === parameter) delete set[name];
-  if (value !== undefined) set[parameter.label] = round(value, 4);
-  cue.set = set;
-  keepCueLoadable(cue);
+  const values: Record<string, number | undefined> = { ...(cue.values ?? {}) };
+  for (const name of Object.keys(values)) if (findPackParameter(STAGE_PACK, name) === parameter) delete values[name];
+  if (value !== undefined) values[parameter.label] = round(value, 4);
+  if (Object.keys(values).length) cue.values = values; else delete cue.values;
 }
 
 export const colourChannels = (colour: string): PackParameter[] => STAGE_PACK.parameters.filter(p => p.colour === colour);

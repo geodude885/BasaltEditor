@@ -96,7 +96,7 @@ async function adopt(paths: string[]): Promise<string | undefined> {
 /** Names the chart's song, keeping where it starts and how loud it is. */
 function nameSong(file: string): void {
   const m = doc.chart.music;
-  doc.change(["music"], () => setMusic(doc.chart, file, m?.start ?? 0, m?.volume ?? 1));
+  doc.change(["music"], () => setMusic(doc.chart, file, m?.offset ?? 0, m?.volume ?? 1));
 }
 
 /** Puts the opened files to use: the song (playing and its waveform), the cover, and recorded clips. */
@@ -107,7 +107,7 @@ async function useFiles(): Promise<void> {
   if (named && songKey && !findSong(session.files, named)) toast(`${named} isn't open, so playing ${songKey}. Change the song in the Chart tab.`);
   if (songKey && session.song?.name !== songKey) {
     if (!await loadSong(songKey, session.files.get(songKey)!)) toastUndecodable(songKey);
-    if (!named) doc.change(["music"], () => { doc.chart.music = { file: songKey, start: 0, volume: 1 }; });
+    if (!named) doc.change(["music"], () => { doc.chart.music = { file: songKey, offset: 0, volume: 1 }; });
   }
   const coverKey = findCover(session.files, doc.chart.cover);
   if (coverKey) {

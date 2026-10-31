@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { actorSpotAt, actorsOf, endOf, evTime, setEvTime, zoneOf } from "./chart";
 import {
-  addPhaseAt, addTempoChange, mirror, newTimed, resizeLane, setArenaSpot, setLaneColour, setMusic, setRules, setTopLevelValueOrRemoveIfEmpty, setWallsShown, setZone,
+  addPhaseAt, addTempoChange, mirror, newTimed, resizeLane, setArenaSpot, setLaneColour, setMusic, setRules, setTempo, setTopLevelValueOrRemoveIfEmpty, setWallsShown, setZone, tempoList,
 } from "./edits";
 import { parse } from "./jsonc";
 import { density, problems } from "./problems";
@@ -19,11 +19,15 @@ describe("Tempo", () => {
   });
 
   it("follows tempo changes", () => {
-    const tp = new Tempo([{ beat: 0, bpm: 120 }, { beat: 4, bpm: 60 }]);
+    const tp = new Tempo(120, [{ beat: 4, bpm: 60 }]);
     expect(tp.seconds(4)).toBe(2);
     expect(tp.seconds(5)).toBe(3);
     expect(tp.beat(3)).toBe(5);
     expect(tp.bpmAt(2.5)).toBe(60);
+  });
+
+  it("needs a bpm to start from", () => {
+    expect(new Tempo(undefined, [{ beat: 4, bpm: 60 }]).ok).toBe(false);
   });
 
   it("snaps to the beat, or to the millisecond without a tempo", () => {
@@ -38,7 +42,29 @@ describe("the sample and template", () => {
     for (const text of [SAMPLE, template("Mine", "me")]) {
       const c = load(text);
       expect(problems(c, new Tempo(c.bpm))).toEqual([]);
+      expect(c.format).toBe(3);
     }
+  });
+
+  it("aim at the player by leaving `to` out, and leave the first actor unnamed", () => {
+    expect(SAMPLE).not.toContain('"player"');
+    expect(SAMPLE).not.toContain('"by"');
+  });
+});
+
+describe("the mod's new, empty chart", () => {
+  const c = load(`{
+    "format": 3, "name": "My chart", "author": "me",
+    "arena": { "map": "ring", "at": { "x": 0, "z": -6, "facing": 0 } },
+    "lane": { "length": 12, "width": 3 },
+    "actors": [ { "id": "boss", "name": "Boss", "at": { "x": 0, "z": 12 }, "look": "you", "shiftstones": [] } ],
+    "events": []
+  }`), tp = new Tempo(c.bpm, c.bpmChanges);
+
+  it("has no problems, and ends 3 s after the start", () => {
+    expect(problems(c, tp)).toEqual([]);
+    expect(endOf(c, tp)).toBe(3);
+    expect(tp.ok).toBe(false);
   });
 });
 
@@ -48,13 +74,28 @@ describe("problems", () => {
     c.events.push({ t: 0.1, projectile: { structure: "Disc", from: { x: 0, y: 1, z: 99 }, speed: 0 } });
     c.events.push({ t: 2, move: "Kick", actor: "nobody" });
     c.end = 1;
+    c.format = 4;
     expect(problems(c, new Tempo(c.bpm))).toEqual([
+      "format 4 is newer than the mod reads (3)",
       "events[0].projectile.from.z must be over 0 and up to 18 (the lane, or 6 m past it)",
       "events[0].projectile.speed must be over 0",
       "events[0] would appear before the battle starts",
       'events[1].actor "nobody" is not one of the actors',
       "end (1) is before the last event (2)",
     ]);
+  });
+
+  it("checks tempo changes as the mod does", () => {
+    const c = load(template("x"));
+    c.bpmChanges = [{ beat: 0, bpm: 90 }, { beat: 8, bpm: 0 }, { beat: 4, bpm: 90 }];
+    expect(problems(c, new Tempo(c.bpm, c.bpmChanges))).toEqual([
+      "bpmChanges[0].beat must be after the tempo before it",
+      "bpmChanges[1].bpm must be over 0",
+      "bpmChanges[2].beat must be after the tempo before it",
+    ]);
+    delete c.bpm;
+    c.bpmChanges = [{ beat: 8, bpm: 90 }];
+    expect(problems(c, new Tempo(c.bpm, c.bpmChanges))).toEqual(["bpmChanges needs a bpm to start from"]);
   });
 });
 
@@ -68,7 +109,7 @@ describe("reading a chart", () => {
     expect(e).toEqual({ beat: 6 });
   });
 
-  it("follows an actor through phases and spot events", () => {
+  it('follows an actor through its "at" events', () => {
     const gunner = actorsOf(c)[0];
     expect(actorSpotAt(c, gunner, 0, tp)).toEqual({ x: 0, z: 12 });
     expect(actorSpotAt(c, gunner, 10.5, tp)).toEqual({ x: -1.2, z: 11 });
@@ -91,11 +132,10 @@ describe("reading a chart", () => {
 describe("edits", () => {
   it("scales everything along the lane when it is resized", () => {
     const c = load(SAMPLE);
-    expect(resizeLane(c, 6)).toEqual(["lane", "events", "phases", "actors"]);
+    expect(resizeLane(c, 6)).toEqual(["lane", "events", "actors"]);
     expect(c.lane).toEqual({ length: 6, width: 3 });
     expect(c.events[0].projectile!.from.z).toBe(5);
     expect(c.actors![0].at!.z).toBe(6);
-    expect(c.phases![1].at!.z).toBe(5);
     expect(resizeLane(c, 6)).toEqual([]);
   });
 
@@ -118,9 +158,22 @@ describe("edits", () => {
     const c = load(template("x")), tp = new Tempo(c.bpm);
     expect(addPhaseAt(c, 4, tp)).toBe(1);
     expect(addPhaseAt(c, 2, tp)).toBe(1);
-    expect(c.phases!.map(p => p.start)).toEqual([0, 2, 4]);
+    expect(c.phases!.map(p => p.t)).toEqual([0, 2, 4]);
     addTempoChange(c, 2, tp);
-    expect(c.bpm).toEqual([{ beat: 0, bpm: 120 }, { beat: 4, bpm: 120 }]);
+    expect(c.bpm).toBe(120);
+    expect(c.bpmChanges).toEqual([{ beat: 4, bpm: 120 }]);
+  });
+
+  it("splits a tempo list into bpm and bpmChanges, without a beat 0 change", () => {
+    const c = load(template("x"));
+    expect(tempoList(c)).toEqual([{ beat: 0, bpm: 120 }]);
+    setTempo(c, [{ beat: 8, bpm: 90 }, { beat: 0, bpm: 140 }]);
+    expect(c.bpm).toBe(140);
+    expect(c.bpmChanges).toEqual([{ beat: 8, bpm: 90 }]);
+    expect(tempoList(c)).toEqual([{ beat: 0, bpm: 140 }, { beat: 8, bpm: 90 }]);
+    setTempo(c, [{ beat: 0, bpm: 100 }]);
+    expect(c.bpm).toBe(100);
+    expect(c).not.toHaveProperty("bpmChanges");
   });
 });
 
@@ -133,34 +186,35 @@ describe("settings that are more than one field", () => {
     expect(c.description).toBeUndefined();
   });
 
-  it("writes lane colours as colours, dropping colors", () => {
+  it("writes lane colours, and removes them when none are left", () => {
     const c = load(SAMPLE);
-    c.colors = { edges: "#ffffff" };
-    setLaneColour(c, "ends", "#00ff00");
-    expect(c.colors).toBeUndefined();
-    expect(c.colours).toEqual({ edges: "#ffffff", ends: "#00ff00" });
+    setLaneColour(c, "sideLines", "#ffffff");
+    setLaneColour(c, "endLines", "#00ff00");
+    expect(c.colours).toEqual({ sideLines: "#ffffff", endLines: "#00ff00" });
     setWallsShown(c, true, "#66ccff", 0.5);
     expect(c.colours?.walls).toBe("#66ccff80");
-    setLaneColour(c, "edges", undefined); setLaneColour(c, "ends", undefined); setWallsShown(c, false, "#000000", 0);
+    setLaneColour(c, "sideLines", undefined); setLaneColour(c, "endLines", undefined); setWallsShown(c, false, "#000000", 0);
     expect(c.colours).toBeUndefined();
   });
 
   it("keeps zone, rules, arena spot and music tidy", () => {
     const c = load(SAMPLE);
     setZone(c, 8, undefined);
-    expect(c.zone).toEqual({ length: 8 });
+    expect(c.playerZone).toEqual({ length: 8 });
     setZone(c, undefined, undefined);
-    expect(c.zone).toBeUndefined();
+    expect(c.playerZone).toBeUndefined();
     setRules(c, "discs", -2);
-    expect(c.rules).toEqual({ spawn: "discs", cleanup: 0 });
+    expect(c.rules).toEqual({ playerSpawns: "discs", breakStillAfter: 0 });
     setRules(c, "all", undefined, true);
     expect(c.rules).toEqual({ breakBehind: true });
     setRules(c, "all", undefined);
     expect(c.rules).toBeUndefined();
     setArenaSpot(c, 1, undefined, 90);
-    expect(c.arena).toEqual({ map: "pit", facing: 90 });
+    expect(c.arena).toEqual({ map: "pit", at: { x: 1, z: 0, facing: 90 } });
+    setArenaSpot(c, undefined, undefined, undefined);
+    expect(c.arena).toEqual({ map: "pit" });
     setMusic(c, "  song.ogg ", Number.NaN, 4);
-    expect(c.music).toEqual({ file: "song.ogg", start: 0, volume: 1 });
+    expect(c.music).toEqual({ file: "song.ogg", offset: 0, volume: 1 });
     setMusic(c, "", 0, 1);
     expect(c.music).toBeUndefined();
   });

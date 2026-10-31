@@ -19,7 +19,7 @@
 
   const c = $derived(doc.chart);
   const lane = $derived(laneOf(c));
-  const arena = $derived(c.arena ?? { map: "ring" as const, at: { x: 0, z: -6 }, facing: 0 });
+  const arena = $derived(c.arena ?? { map: "ring" as const, at: { x: 0, z: -6, facing: 0 } });
   const stats = $derived(density(c, doc.tempo));
   const end = $derived(endOf(c, doc.tempo));
   const colours = $derived(coloursOf(c));
@@ -29,7 +29,7 @@
 
   const set = <K extends keyof LoadedChart>(key: K, value: LoadedChart[K] | undefined | "") =>
     doc.change([key], () => setTopLevelValueOrRemoveIfEmpty(c, key, value));
-  const changeColours = (mutate: () => void) => doc.change(["colours", "colors"], mutate);
+  const changeColours = (mutate: () => void) => doc.change(["colours"], mutate);
 
   function setLength(length: number): void {
     if (!(length > 2) || Math.abs(length - lane.length) < 0.001) return;
@@ -79,23 +79,23 @@
   <label><span>Width m</span><input type="number" step="0.5" min="1" value={lane.width} onchange={e => doc.change(["lane"], () => { c.lane = { length: lane.length, width: num(e) }; })} /></label>
 </div>
 <div class="grid3">
-  <label><span>Start x</span><input type="number" step="0.1" value={arena.at?.x ?? ""} placeholder="0 (the map's centre)" onchange={e => doc.change(["arena"], () => setArenaSpot(c, optionalNum(e), arena.at?.z, arena.facing))} /></label>
-  <label><span>Start z</span><input type="number" step="0.1" value={arena.at?.z ?? ""} placeholder="0" onchange={e => doc.change(["arena"], () => setArenaSpot(c, arena.at?.x, optionalNum(e), arena.facing))} /></label>
-  <label><span>Facing °</span><input type="number" step="5" value={arena.facing ?? ""} placeholder="0 (north)" onchange={e => doc.change(["arena"], () => setArenaSpot(c, arena.at?.x, arena.at?.z, optionalNum(e)))} /></label>
+  <label><span>Start x</span><input type="number" step="0.1" value={arena.at?.x ?? ""} placeholder="0 (the map's centre)" onchange={e => doc.change(["arena"], () => setArenaSpot(c, optionalNum(e), arena.at?.z, arena.at?.facing))} /></label>
+  <label><span>Start z</span><input type="number" step="0.1" value={arena.at?.z ?? ""} placeholder="0" onchange={e => doc.change(["arena"], () => setArenaSpot(c, arena.at?.x, optionalNum(e), arena.at?.facing))} /></label>
+  <label><span>Facing °</span><input type="number" step="5" value={arena.at?.facing ?? ""} placeholder="0 (north)" onchange={e => doc.change(["arena"], () => setArenaSpot(c, arena.at?.x, arena.at?.z, optionalNum(e)))} /></label>
 </div>
 <div class="note">Easiest in game: turn on Chart editing, press SETUP on the picker, walk the lane, then SAVE.</div>
 
 <h3>Your zone and rules</h3>
 <div class="grid3">
-  <label><span>Zone length m</span><input type="number" step="0.5" min="0.5" value={c.zone?.length ?? ""} placeholder={String(zoneOf(c).length)} onchange={e => doc.change(["zone"], () => setZone(c, optionalNum(e), c.zone?.height))} /></label>
-  <label><span>Zone height m</span><input type="number" step="0.5" min="1" value={c.zone?.height ?? ""} placeholder="3.5" onchange={e => doc.change(["zone"], () => setZone(c, c.zone?.length, optionalNum(e)))} /></label>
-  <label><span>Clean up still structures after s</span><input type="number" step="0.5" min="0" value={c.rules?.cleanup ?? ""} placeholder="3 (0 = never)" onchange={e => doc.change(["rules"], () => setRules(c, c.rules?.spawn ?? "all", optionalNum(e), c.rules?.breakBehind))} /></label>
+  <label><span>Zone length m</span><input type="number" step="0.5" min="0.5" value={c.playerZone?.length ?? ""} placeholder={String(zoneOf(c).length)} onchange={e => doc.change(["playerZone"], () => setZone(c, optionalNum(e), c.playerZone?.height))} /></label>
+  <label><span>Zone height m</span><input type="number" step="0.5" min="1" value={c.playerZone?.height ?? ""} placeholder="3.5" onchange={e => doc.change(["playerZone"], () => setZone(c, c.playerZone?.length, optionalNum(e)))} /></label>
+  <label><span>Clean up still structures after s</span><input type="number" step="0.5" min="0" value={c.rules?.breakStillAfter ?? ""} placeholder="3 (0 = never)" onchange={e => doc.change(["rules"], () => setRules(c, c.rules?.playerSpawns ?? "all", optionalNum(e), c.rules?.breakBehind))} /></label>
   <label><span>You may spawn</span>
-    <select value={(c.rules?.spawn ?? "all").toLowerCase()} onchange={e => doc.change(["rules"], () => setRules(c, text(e), c.rules?.cleanup, c.rules?.breakBehind))}>
+    <select value={(c.rules?.playerSpawns ?? "all").toLowerCase()} onchange={e => doc.change(["rules"], () => setRules(c, text(e), c.rules?.breakStillAfter, c.rules?.breakBehind))}>
       <option value="all">everything</option><option value="discs">discs only</option><option value="none">nothing (moves only)</option>
     </select>
   </label>
-  <label title="Quietly breaks any structure wholly past the player's end of the lane, including ones they spawn behind themselves"><span>Break structures behind player</span><input type="checkbox" checked={!!c.rules?.breakBehind} onchange={e => doc.change(["rules"], () => setRules(c, c.rules?.spawn ?? "all", c.rules?.cleanup, checked(e)))} /></label>
+  <label title="Quietly breaks any structure wholly past the player's end of the lane, including ones they spawn behind themselves"><span>Break structures behind player</span><input type="checkbox" checked={!!c.rules?.breakBehind} onchange={e => doc.change(["rules"], () => setRules(c, c.rules?.playerSpawns ?? "all", c.rules?.breakStillAfter, checked(e)))} /></label>
 </div>
 <div class="note">You cannot go past the zone's line or above its height. Structures and actors pass through both.</div>
 
@@ -120,12 +120,12 @@
 <h3>Song and cover</h3>
 <SongPicker />
 <div class="grid2">
-  <label><span>Chart starts at song s</span><input type="number" step="0.01" value={m?.start ?? 0} onchange={e => doc.change(["music"], () => setMusic(c, m?.file ?? "", num(e), m?.volume ?? 1))} /></label>
-  <label><span>Volume</span><input type="number" step="0.05" min="0" max="1" value={m?.volume ?? 1} onchange={e => doc.change(["music"], () => setMusic(c, m?.file ?? "", m?.start ?? 0, num(e)))} /></label>
+  <label><span>Chart starts at song s</span><input type="number" step="0.01" value={m?.offset ?? 0} onchange={e => doc.change(["music"], () => setMusic(c, m?.file ?? "", num(e), m?.volume ?? 1))} /></label>
+  <label><span>Volume</span><input type="number" step="0.05" min="0" max="1" value={m?.volume ?? 1} onchange={e => doc.change(["music"], () => setMusic(c, m?.file ?? "", m?.offset ?? 0, num(e)))} /></label>
 </div>
 <div class="note">
-  {#if (m?.start ?? 0) < 0}
-    Silence first: the song starts {round(-(m?.start ?? 0), 2)} s into the chart.
+  {#if (m?.offset ?? 0) < 0}
+    Silence first: the song starts {round(-(m?.offset ?? 0), 2)} s into the chart.
   {:else}
     Skip an intro, or line beat 1 up with the first downbeat. A negative start adds silence before the song.
   {/if}

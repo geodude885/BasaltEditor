@@ -63,8 +63,8 @@ describe("BossBattles Stage", () => {
   });
 });
 
-const cue = (time: number, set: Record<string, number>, fade = 0, extra: Partial<TimedLookCue> = {}): TimedLookCue =>
-  ({ index: 0, time, pack: "BossBattles Stage", set: Object.entries(set), off: false, fade, ...extra });
+const cue = (time: number, values: Record<string, number>, fade = 0, extra: Partial<TimedLookCue> = {}): TimedLookCue =>
+  ({ index: 0, time, pack: "BossBattles Stage", values: Object.entries(values), off: false, fade, ...extra });
 const defaultsOf = (_pack: string, name: string) => findPackParameter(STAGE_PACK, name)?.default ?? 0;
 
 describe("blending cues as the mod does", () => {
@@ -107,19 +107,18 @@ describe("checking cues", () => {
   const tempo = new Tempo(120);
 
   it("refuses what the mod refuses", () => {
-    expect(lookCueProblems({ pack: "x", t: 1, beat: 2, on: true }, 0, tempo)).toEqual(["visuals[0] has both t and beat, use one"]);
-    expect(lookCueProblems({ pack: "x", beat: 2, on: true }, 1, new Tempo(undefined))).toEqual(["visuals[1].beat needs the chart's bpm"]);
-    expect(lookCueProblems({ pack: " ", t: 0, off: true, set: { a: 1 } }, 2, tempo)).toEqual([
-      'visuals[2] needs a pack name, e.g. "UltraShade"',
-      'visuals[2] has both "off" and "set", use one',
+    expect(lookCueProblems({ pack: "x", t: 1, beat: 2 }, 0, tempo)).toEqual(["shaders[0] has both t and beat, use one"]);
+    expect(lookCueProblems({ pack: "x", beat: 2 }, 1, new Tempo(undefined))).toEqual(["shaders[1].beat needs the chart's bpm"]);
+    expect(lookCueProblems({ pack: " ", t: 0, off: true, values: { a: 1 } }, 2, tempo)).toEqual([
+      'shaders[2] needs a pack name, e.g. "UltraShade"',
+      'shaders[2] has both "off" and "values", use one',
     ]);
-    expect(lookCueProblems({ pack: "x", t: 0, fade: -1 }, 3, tempo)).toEqual([
-      'visuals[3] needs "set" (parameter values), "on": true or "off": true', "visuals[3].fade cannot be negative (got -1)",
-    ]);
+    expect(lookCueProblems({ pack: "x", t: 0, fade: -1 }, 3, tempo)).toEqual(["shaders[3].fade cannot be negative (got -1)"]);
+    expect(lookCueProblems({ pack: "x", t: 0 }, 4, tempo)).toEqual([]);
   });
 
   it("warns about Stage settings that do nothing or get clamped", () => {
-    expect(stageCueWarnings({ pack: "BossBattles Stage", t: 0, set: { "Red glow": 1, "fog_density": 0.5, "_KeyHue": 90 } })).toEqual([
+    expect(stageCueWarnings({ pack: "BossBattles Stage", t: 0, values: { "Red glow": 1, "fog_density": 0.5, "_KeyHue": 90 } })).toEqual([
       '"Red glow" is not a BossBattles Stage setting', "Fog density 0.5 is outside 0 to 0.3, so it is clamped",
     ]);
   });

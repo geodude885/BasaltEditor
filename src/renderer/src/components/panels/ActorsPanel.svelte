@@ -2,7 +2,7 @@
   import { actorsOf, laneOf, stoneName } from "../../model/chart";
   import { LOOKS, STONES } from "../../model/constants";
   import { addActor, renameActor } from "../../model/edits";
-  import { trackOfActor, trackRows } from "../../model/tracks";
+  import { performanceOfActor, performanceRows } from "../../model/performances";
   import type { Actor } from "../../model/types";
   import { doc } from "../../store/document.svelte";
   import { num, text } from "../fields";
@@ -22,22 +22,19 @@
     edit(i, a => { a.at = { x: a.at?.x ?? 0, z: a.at?.z ?? laneOf(doc.chart).length, ...a.at, [axis]: value }; });
   }
 
-  /** Slot 0 may be "you" - whoever plays's stones; otherwise up to two stone names. */
+  /** Up to two stone names, or none: an actor wears only what's written here. */
   function setStone(i: number, slot: 0 | 1, value: string): void {
     edit(i, a => {
-      if (slot === 0 && value === "you") { delete a.shiftstones; return; }
       const now = Array.isArray(a.shiftstones) ? [...a.shiftstones] as string[] : [];
       now[slot] = value;
-      a.shiftstones = now.filter(Boolean).map(s => s.endsWith("Stone") ? s : s + "Stone") as Actor["shiftstones"];
+      const worn = now.filter(Boolean).map(s => s.endsWith("Stone") ? s : s + "Stone");
+      if (worn.length) a.shiftstones = worn as Actor["shiftstones"]; else delete a.shiftstones;
     });
   }
 
   const lookKept = (look: string) => !LOOKS.some(([v]) => v.toLowerCase() === look.toLowerCase());
-  const stonesOf = (a: Actor): string[] | null => Array.isArray(a.shiftstones) ? a.shiftstones.map(stoneName) : null;
-  const stoneValue = (stones: string[] | null, slot: number): string => {
-    if (!stones) return slot === 0 ? "you" : "";
-    return STONES.find(s => s.toLowerCase() === stones[slot]?.toLowerCase()) ?? "";
-  };
+  const stonesOf = (a: Actor): string[] => Array.isArray(a.shiftstones) ? a.shiftstones.map(stoneName) : [];
+  const stoneValue = (stones: string[], slot: number): string => STONES.find(s => s.toLowerCase() === stones[slot]?.toLowerCase()) ?? "";
 </script>
 
 <div class="note">
@@ -47,7 +44,7 @@
   {#each actors as a, i (i)}
     {@const look = a.look ?? "you"}
     {@const stones = stonesOf(a)}
-    {@const recorded = trackOfActor(doc.chart, a.id ?? "") >= 0}
+    {@const recorded = performanceOfActor(doc.chart, a.id ?? "") >= 0}
     <div class="item">
       <label><span>Id</span><input value={a.id ?? ""} onchange={e => { const id = text(e); doc.change(["actors"], () => renameActor(doc.chart, i, id)); }} /></label>
       <label><span>Name</span><input value={a.name ?? ""} onchange={e => edit(i, a => { a.name = text(e); })} /></label>
@@ -64,29 +61,28 @@
       </label>
       <label><span>Shiftstones</span>
         <select value={stoneValue(stones, 0)} onchange={e => setStone(i, 0, text(e))}>
-          <option value="you">whoever plays's</option>
           <option value="">none</option>
           {#each STONES as s (s)}<option>{s}</option>{/each}
         </select>
       </label>
       <label><span>&nbsp;</span>
-        <select value={stoneValue(stones, 1)} disabled={!stones} onchange={e => setStone(i, 1, text(e))}>
+        <select value={stoneValue(stones, 1)} disabled={!stones.length} onchange={e => setStone(i, 1, text(e))}>
           <option value="">none</option>
           {#each STONES as s (s)}<option>{s}</option>{/each}
         </select>
       </label>
-      <button disabled={actors.length < 2 || recorded} title={recorded ? "This actor has recorded clips. Remove its track in game first." : null}
+      <button disabled={actors.length < 2 || recorded} title={recorded ? "This actor has recorded clips. Remove its performance in game first." : null}
         onclick={() => doc.change(["actors"], () => { doc.chart.actors = actorsOf(doc.chart).filter((_, j) => j !== i); })}>Remove</button>
     </div>
   {/each}
 </div>
 <div class="note">
-  A chart made in game dresses its boss as its maker, stones and all, so everyone fights the boss you made. "Whoever plays" dresses it as each
-  player instead. Paste a look copies a look made in game from another chart.
+  A chart made in game dresses its boss as its maker, stones and all, so everyone fights the boss you made. The look "whoever plays" dresses it as
+  each player instead; its stones stay as set here. Paste a look copies a look made in game from another chart.
 </div>
 <div class="row"><button onclick={() => doc.change(["actors"], () => addActor(doc.chart))}>Add an actor</button></div>
-{#if doc.chart.tracks?.length}
+{#if doc.chart.performances?.length}
   <div class="note">
-    Recorded clips for {trackRows(doc.chart).map(row => row.label).join(", ")}, each in a row of its own on the timeline. Record or re-record them in game.
+    Recorded clips for {performanceRows(doc.chart).map(row => row.label).join(", ")}, each in a row of its own on the timeline. Record or re-record them in game.
   </div>
 {/if}

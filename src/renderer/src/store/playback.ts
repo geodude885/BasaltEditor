@@ -1,5 +1,5 @@
 // Playing the chart: the song through an <audio> element (it keeps pitch at slow speeds), a clock that
-// runs without a song too, and a click on every beat. Chart time = song time - music.start.
+// runs without a song too, and a click on every beat. Chart time = song time - music.offset.
 import { buildPeaks } from "../audio/peaks";
 import { mp3InsideWav } from "../audio/riff";
 import { songType } from "../io/files";
@@ -18,9 +18,9 @@ let context: AudioContext | null = null;
 let startedAt = 0, startTime = 0, lastClickBeat = -1;
 
 /** Where the chart starts in the song, in seconds. */
-export const songStart = (): number => +(doc.chart.music?.start || 0);
+export const songOffset = (): number => +(doc.chart.music?.offset || 0);
 /** How long the song runs in chart time, or null with no song open. */
-export const songLength = (): number | null => session.song?.buffer ? session.song.buffer.duration - songStart() : null;
+export const songLength = (): number | null => session.song?.buffer ? session.song.buffer.duration - songOffset() : null;
 /** The editor's own volume times the chart's song volume. */
 const playbackVolume = (): number => Math.min(1, Math.max(0, transport.volume * +(doc.chart.music?.volume ?? 1)));
 
@@ -37,7 +37,7 @@ export const playheadNow = (): number => now();
 
 function now(): number {
   if (!transport.playing) return transport.time;
-  if (session.song && !songAudio().paused && !unlocking) return songAudio().currentTime - songStart();
+  if (session.song && !songAudio().paused && !unlocking) return songAudio().currentTime - songOffset();
   return startTime + (performance.now() - startedAt) / 1000 * transport.rate;
 }
 
@@ -47,7 +47,7 @@ export function play(): void {
   transport.playing = true;
   startTime = transport.time; startedAt = performance.now(); lastClickBeat = -1;
   if (session.song) {
-    const at = transport.time + songStart(), audio = songAudio();
+    const at = transport.time + songOffset(), audio = songAudio();
     audio.playbackRate = transport.rate; audio.volume = playbackVolume();
     if (at >= 0 && at < (session.song.buffer?.duration ?? Infinity)) {
       audio.currentTime = at;
@@ -80,7 +80,7 @@ export function seek(t: number): void {
   transport.time = t;
   if (!transport.playing) return;
   startTime = t; startedAt = performance.now();
-  if (session.song) songAudio().currentTime = Math.max(0, t + songStart());
+  if (session.song) songAudio().currentTime = Math.max(0, t + songOffset());
 }
 
 export function setRate(rate: number): void {
@@ -98,7 +98,7 @@ export function setVolume(volume: number): void {
 function tick(): void {
   if (!transport.playing) return;
   transport.time = now();
-  const at = transport.time + songStart();
+  const at = transport.time + songOffset();
   // Start the song when the chart reaches it, if the playhead began before it.
   const audio = songAudio();
   if (session.song && (audio.paused || unlocking) && at >= 0 && at < audio.duration) {

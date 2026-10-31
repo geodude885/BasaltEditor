@@ -7,12 +7,16 @@ import { remember, remembered } from "./remembered";
 
 const NEW_PROJECTILE_KEY = "basalt-new-projectile";
 
-// Kept as JSON; anything that doesn't look like a projectile is forgotten.
+// Kept as JSON; anything that doesn't look like a projectile is forgotten. One kept before chart format 3
+// may name who throws it and aim at "player": neither can be written into a chart now.
 const readTemplate = (text: string): ProjectileTemplate | null | undefined => {
   const p: unknown = JSON.parse(text);
   if (p === null) return null;
-  const t = p as ProjectileTemplate;
-  return t && typeof t === "object" && STRUCTURES.includes(t.structure) && t.from && typeof t.from === "object" ? t : undefined;
+  const t = p as ProjectileTemplate & { by?: string };
+  if (!t || typeof t !== "object" || !STRUCTURES.includes(t.structure) || !t.from || typeof t.from !== "object") return undefined;
+  delete t.by;
+  if (typeof t.to !== "object") delete t.to;
+  return t;
 };
 
 class Editing {

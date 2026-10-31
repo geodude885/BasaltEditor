@@ -21,18 +21,18 @@ export const MOST_EXTRA_TIMELINE_HEIGHT_PIXELS = 400;
 
 export type RowSpan = readonly [top: number, height: number];
 /**
- * The rows' places; how many lanes the recorded-clips row has (one per track, and one when there are none);
+ * The rows' places; how many lanes the recorded-clips row has (one per performance, and one when there are none);
  * and how many columns a tap in the projectile row adds in (the highway's).
  */
 export type TimelineLayout = { rows: Record<TimelineRow, RowSpan>; height: number; collapsed: ReadonlySet<TimelineRow>; clipLanes: number; shotColumns: number };
 
-// Each track after the first adds a lane this tall to the recorded-clips row.
+// Each performance after the first adds a lane this tall to the recorded-clips row.
 const CLIP_LANE_HEIGHT_PIXELS = 24;
 
 export function layoutTimeline(
-  collapsed: ReadonlySet<TimelineRow>, extraHeightPixels: number, { tracks = 0, shotColumns = PROJECTILE_COLUMNS }: { tracks?: number; shotColumns?: number } = {},
+  collapsed: ReadonlySet<TimelineRow>, extraHeightPixels: number, { performances = 0, shotColumns = PROJECTILE_COLUMNS }: { performances?: number; shotColumns?: number } = {},
 ): TimelineLayout {
-  const clipLanes = Math.max(1, tracks);
+  const clipLanes = Math.max(1, performances);
   const growing = TIMELINE_ROWS.filter(row => SHARE_OF_EXTRA_HEIGHT[row] && !collapsed.has(row));
   const totalShare = growing.reduce((sum, row) => sum + SHARE_OF_EXTRA_HEIGHT[row]!, 0);
   const rows = {} as Record<TimelineRow, RowSpan>;

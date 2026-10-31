@@ -16,14 +16,14 @@
   import { checked, num, text } from "../fields";
 
   const groups = stageParameterGroups();
-  const visuals = $derived(doc.chart.visuals ?? []);
+  const shaders = $derived(doc.chart.shaders ?? []);
   const index = $derived(editing.selectedLookCue);
-  const cue = $derived<LookCue | undefined>(visuals[index]);
+  const cue = $derived<LookCue | undefined>(shaders[index]);
   const isStageCue = $derived(!!cue && isCueForPack(cue, STAGE_PACK));
   const startsFrom = $derived<StageLook | null>(cue && isStageCue ? stageLookBeforeCue(doc.lookCues, index) : null);
   const fadesTo = $derived<StageLook | null>(cue && startsFrom ? stageLookAfterCue(startsFrom, cue) : null);
 
-  const editSelectedCue = (mutate: (cue: LookCue) => void) => doc.change(["visuals"], () => mutate(doc.chart.visuals![index]));
+  const editSelectedCue = (mutate: (cue: LookCue) => void) => doc.change(["shaders"], () => mutate(doc.chart.shaders![index]));
 
   const shownValue = (parameter: PackParameter): number => cue ? stageCueValue(cue, parameter) ?? startsFrom!.settings[parameter.property] : parameter.default;
   const sliderStep = (parameter: PackParameter) => (parameter.max - parameter.min) / 200;
@@ -39,8 +39,8 @@
 
   function setMode(mode: string): void {
     editSelectedCue(c => {
-      if (mode === "off") { delete c.set; delete c.on; c.off = true; }
-      else { delete c.off; if (!settingsWrittenIn(c).length) c.on = true; }
+      if (mode === "off") { delete c.values; c.off = true; }
+      else delete c.off;
     });
   }
 </script>
@@ -58,9 +58,9 @@
   <button {...commandButton("look-preview")}>Preview</button>
 </div>
 
-{#if visuals.length}
+{#if shaders.length}
   <div class="cues" role="listbox" aria-label="Look cues">
-    {#each visuals as c, i (i)}
+    {#each shaders as c, i (i)}
       <button role="option" aria-selected={i === index} class:stage={isCueForPack(c, STAGE_PACK)}
         onclick={() => { selectLookCue(i); const time = evTime(c, doc.tempo); if (Number.isFinite(time)) seek(time); }}>
         <b>{lookCueTimeLabel(c)}</b><span>{c.pack}</span><span>{cueSummary(c)}{c.fade ? ` · ${c.fade} s fade` : ""}</span>
@@ -100,7 +100,7 @@
       <div class="list">
         {#each settingsWrittenIn(cue) as [name, value] (name)}
           <div class="item">
-            <label><span>{name}</span><input type="number" step="0.05" {value} onchange={e => editSelectedCue(c => { c.set = { ...c.set, [name]: num(e) }; })} /></label>
+            <label><span>{name}</span><input type="number" step="0.05" {value} onchange={e => editSelectedCue(c => { c.values = { ...c.values, [name]: num(e) }; })} /></label>
           </div>
         {/each}
       </div>

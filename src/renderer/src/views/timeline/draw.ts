@@ -3,7 +3,7 @@ import { endOf, evTime, phaseTime } from "../../model/chart";
 import { STAGE_PACK, stageLookAt, type TimedLookCue } from "../../model/looks";
 import { stageStrip, type StageSparkle, type StageStrip } from "../../model/stageFrame";
 import { BEATS_PER_BAR, gridLines, type Tempo } from "../../model/tempo";
-import { playedClips, type TrackRow } from "../../model/tracks";
+import { playedClips, type PerformanceRow } from "../../model/performances";
 import type { LoadedChart } from "../../model/types";
 import type { ClipSpan } from "../../io/files";
 import type { Song } from "../../store/session.svelte";
@@ -24,10 +24,10 @@ export type TimelineScene = {
   markers: Marker[];
   song: Song | null;
   /** Where the chart starts in the song. */
-  songStart: number;
+  songOffset: number;
   clips: Map<string, ClipSpan>;
-  /** The recorded-clips row's lanes, one per track, from trackRows. */
-  trackRows: TrackRow[];
+  /** The recorded-clips row's lanes, one per performance, from performanceRows. */
+  performanceRows: PerformanceRow[];
   box: Box | null;
   layout: TimelineLayout;
   /** The A-B loop, shaded, or null. */
@@ -63,7 +63,7 @@ export function drawTimeline(ctx: CanvasRenderingContext2D, w: number, h: number
     }
   }
   // Tempo changes.
-  if (Array.isArray(c.bpm)) {
+  if (c.bpmChanges?.length) {
     for (const change of tp.changes) {
       const cx = x(tp.seconds(change.beat));
       ctx.fillStyle = t.telegraph; ctx.fillText(`♩${change.bpm}`, cx + 3, 14); ctx.fillRect(cx, 0, 2, 22);
@@ -118,13 +118,13 @@ export function drawTimeline(ctx: CanvasRenderingContext2D, w: number, h: number
 
   if (s.box) drawBox(ctx, s.box, t);
 
-  // Recorded clips (made in game - shown, kept, not edited here): a lane per track, in the order of the
-  // actors. Each clip runs until the next in its own track; mimed ones are faint and hatched.
+  // Recorded clips (made in game - shown, kept, not edited here): a lane per performance, in the order
+  // of the actors. Each clip runs until the next in its own performance; mimed ones are faint and hatched.
   const clipCollapsed = collapsed.has("clip");
-  s.trackRows.forEach((row, lane) => {
+  s.performanceRows.forEach((row, lane) => {
     const [laneTop, laneHeight] = clipLaneSpan(s.layout, lane), inset = clipCollapsed ? 1 : 3;
     if (lane > 0 && !clipCollapsed) { ctx.fillStyle = t.grid; ctx.fillRect(0, Math.round(laneTop), w, 1); }
-    const played = playedClips(c.tracks?.[row.track]?.clips ?? [], tp, end, clip => s.clips.get(clip)?.end);
+    const played = playedClips(c.performances?.[row.performance]?.clips ?? [], tp, end, clip => s.clips.get(clip)?.end);
     for (const k of played) {
       const a = Math.max(-2, x(k.start)), b = Math.min(w + 2, x(k.stop) - 1);
       if (b <= a) continue;
@@ -159,7 +159,7 @@ function drawLoop(ctx: CanvasRenderingContext2D, h: number, s: TimelineScene, t:
   }
 }
 
-/** The song's waveform, lined up with chart time (song time - music.start). */
+/** The song's waveform, lined up with chart time (song time - music.offset). */
 function drawWave(ctx: CanvasRenderingContext2D, w: number, s: TimelineScene, t: Theme): void {
   const [y0, hh] = s.layout.rows.wave, mid = y0 + hh / 2;
   ctx.fillStyle = alpha(t.wash, 0.025); ctx.fillRect(0, y0, w, hh);
@@ -174,7 +174,7 @@ function drawWave(ctx: CanvasRenderingContext2D, w: number, s: TimelineScene, t:
   }
   ctx.fillStyle = t.wave;
   for (let px = 0; px < w; px++) {
-    const a = tOf(s.view, px) + s.songStart, b = tOf(s.view, px + 1) + s.songStart;
+    const a = tOf(s.view, px) + s.songOffset, b = tOf(s.view, px + 1) + s.songOffset;
     if (b < 0 || a > buffer.duration) continue;
     const height = Math.max(1, peakBetween(peaks, a, b) * (hh - 4));
     ctx.fillRect(px, mid - height / 2, 1, height);

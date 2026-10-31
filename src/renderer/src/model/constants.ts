@@ -1,11 +1,14 @@
 import measured from "$data/structures.json";
 import type { Structure } from "./types";
 
+/** The newest chart format the mod reads, and what the editor writes (ChartLoader.NewestFormat). */
+export const NEWEST_FORMAT = 3;
+
 export const STRUCTURES: Structure[] = ["Disc", "Ball", "Pillar", "Wall", "RockCube", "BoulderBall", "SmallRock", "LargeRock"];
 export const MOVES = ["Straight", "Uppercut", "Kick", "Stomp", "Explode", "Flick", "Parry", "Jump", "RockSlide", "Disc", "SpawnBall", "SpawnCube", "SpawnPillar", "SpawnWall", "HoldLeft", "HoldRight"];
 export const MAPS = ["gym", "ring", "pit"] as const;
 export const DIFFICULTIES = ["Easy", "Normal", "Hard", "Expert"];
-/** Where "player" aims, roughly: your chest at your end. */
+/** Where a projectile with no `to` aims, roughly: your chest at your end. */
 export const PLAYER_HEAD = 1.35;
 
 export type Size = { across: number; along: number; up: number };
@@ -26,10 +29,10 @@ export const STONES = ["Adamant", "Charge", "Flow", "Guard", "Stubborn", "Surge"
 /** The looks with names; anything else is a character string kept from the game. */
 export const LOOKS: [value: string, label: string][] = [["you", "whoever plays"], ["default", "default"], ["defaultMale", "default male"], ["defaultFemale", "default female"]];
 
-export type LaneColourKey = "edges" | "ends" | "zone" | "backstop";
+export type LaneColourKey = "sideLines" | "endLines" | "zoneLine" | "backstop";
 /** The lane's parts a chart can colour, with the mod's own colours (LaneVisuals.cs). */
 export const LANE_COLOURS: [key: LaneColourKey, label: string, mine: string][] = [
-  ["edges", "Edge lines", "#ff7319"], ["ends", "End lines", "#ffd933"], ["zone", "Zone line", "#f2f2d9"], ["backstop", "Backstop frame", "#ff7319"],
+  ["sideLines", "Side lines", "#ff7319"], ["endLines", "End lines", "#ffd933"], ["zoneLine", "Zone line", "#f2f2d9"], ["backstop", "Backstop frame", "#ff7319"],
 ];
 export const WALL_COLOUR = "#66ccff";
 export const WALL_DEFAULT = "#66ccff33";

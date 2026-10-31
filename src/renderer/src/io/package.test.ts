@@ -14,8 +14,8 @@ function wrapped(mp3: Uint8Array): Uint8Array {
 }
 
 const bytes = (n: number) => new Uint8Array([n]);
-const text = `{ "name": "Test", "music": { "file": "song.mp3", "start": 0.5 }, "cover": "cover.png", "events": [] }`;
-const chart = { music: { file: "song.mp3", start: 0.5 }, cover: "cover.png" };
+const text = `{ "name": "Test", "music": { "file": "song.mp3", "offset": 0.5 }, "cover": "cover.png", "events": [] }`;
+const chart = { music: { file: "song.mp3", offset: 0.5 }, cover: "cover.png" };
 
 describe("what a package holds", () => {
   it("takes chart.json, the chart's own song and cover, and its clips - nothing else", () => {
@@ -31,14 +31,14 @@ describe("what a package holds", () => {
 
   it("puts in the MP3 inside a WAV wrapper, and names it in chart.json", () => {
     const mp3 = new Uint8Array([0xff, 0xfb, 0x90, 0x44]);
-    const wavChart = { music: { file: "song.wav", start: 0.5 } };
+    const wavChart = { music: { file: "song.wav", offset: 0.5 } };
     const wavText = Jsonc.set(text, "music", wavChart.music);
     const { entries, unwrapped } = packageContents(wavText, wavChart, new Map([["song.wav", wrapped(mp3)]]));
     expect(unwrapped).toBe("song.mp3");
     expect(entries.map(e => e.path)).toEqual(["chart.json", "song.mp3"]);
     expect([...entries[1].bytes]).toEqual([...mp3]);
-    const packaged = Jsonc.parse(new TextDecoder().decode(entries[0].bytes)) as { music: { file: string; start: number } };
-    expect(packaged.music).toEqual({ file: "song.mp3", start: 0.5 });
+    const packaged = Jsonc.parse(new TextDecoder().decode(entries[0].bytes)) as { music: { file: string; offset: number } };
+    expect(packaged.music).toEqual({ file: "song.mp3", offset: 0.5 });
   });
 
   it("leaves out a song and cover the chart doesn't name", () => {

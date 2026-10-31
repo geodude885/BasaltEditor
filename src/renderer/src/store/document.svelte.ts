@@ -28,9 +28,9 @@ class ChartDocument {
   #undo = $state.raw<string[]>([]);
   #redo = $state.raw<string[]>([]);
 
-  readonly tempo = $derived(new Tempo(this.chart.bpm));
+  readonly tempo = $derived(new Tempo(this.chart.bpm, this.chart.bpmChanges));
   readonly dirty = $derived(this.text !== this.saved);
-  /** The looks (visuals cues) in time order, with when each starts and fades. */
+  /** The looks (shader cues) in time order, with when each starts and fades. */
   readonly lookCues = $derived(timedLookCues(this.chart, this.tempo));
   get canUndo(): boolean { return this.#undo.length > 0; }
   get canRedo(): boolean { return this.#redo.length > 0; }

@@ -1,17 +1,14 @@
 import type { TempoChange } from "./types";
 
-/** A chart's tempo: one bpm, or a list of changes by beat. Converts between beats and seconds. */
+/** A chart's tempo: its `bpm`, then any `bpmChanges` after the start. Converts between beats and seconds. */
 export class Tempo {
   readonly changes: TempoChange[];
   /** When each change starts, in seconds. */
   readonly starts: number[] = [];
 
-  constructor(bpm: unknown) {
-    this.changes = Array.isArray(bpm)
-      ? bpm.filter(c => c && c.bpm > 0).map(c => ({ beat: +c.beat || 0, bpm: +c.bpm }))
-      : (typeof bpm === "number" && bpm > 0 ? [{ beat: 0, bpm }] : []);
-    this.changes.sort((a, b) => a.beat - b.beat);
-    if (this.changes.length && this.changes[0].beat !== 0) this.changes.unshift({ beat: 0, bpm: this.changes[0].bpm });
+  constructor(bpm: unknown, bpmChanges?: unknown) {
+    const later: TempoChange[] = Array.isArray(bpmChanges) ? bpmChanges.filter(c => c && c.beat > 0 && c.bpm > 0).map(c => ({ beat: +c.beat, bpm: +c.bpm })) : [];
+    this.changes = typeof bpm === "number" && bpm > 0 ? [{ beat: 0, bpm }, ...later.sort((a, b) => a.beat - b.beat)] : [];
     let s = 0;
     this.changes.forEach((c, i) => {
       if (i > 0) s += (c.beat - this.changes[i - 1].beat) * 60 / this.changes[i - 1].bpm;

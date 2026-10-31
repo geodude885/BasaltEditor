@@ -7,9 +7,9 @@ import { beatsBetween, columnIndexAtX, highwayColumns, highwayXOf, tiles, tilesA
 const view: HighwayView = { w: 500, h: 400, hitY: 320, pps: 100, time: 10 };
 const chart = (): LoadedChart => {
   const c = { events: [], lane: { length: 12, width: 3 } } as unknown as LoadedChart;
-  c.events.push({ t: 10, projectile: straightProjectile(c, xOfColumn(0, 3), "a") });
-  c.events.push({ t: 11, projectile: straightProjectile(c, xOfColumn(4, 3), "a") });
-  c.events.push({ t: 40, projectile: straightProjectile(c, 0, "a") });
+  c.events.push({ t: 10, projectile: straightProjectile(c, xOfColumn(0, 3)) });
+  c.events.push({ t: 11, projectile: straightProjectile(c, xOfColumn(4, 3)) });
+  c.events.push({ t: 40, projectile: straightProjectile(c, 0) });
   return c;
 };
 
@@ -41,7 +41,7 @@ describe("the highway", () => {
     expect(highwayXOf(view, 5, 9, 3)).toBe(450);
     expect(highwayXOf(view, 1, 1, 3)).toBe(250);
     const c = chart();
-    c.events.push({ t: 10, projectile: straightProjectile(c, -1, "a") });
+    c.events.push({ t: 10, projectile: straightProjectile(c, -1) });
     const between = tiles(c, new Tempo(undefined), view, highwayColumns()).find(t => t.i === 3)!;
     expect(between.x + between.w / 2).toBeCloseTo(116.67, 1);
     expect(between.column).toBe(1);

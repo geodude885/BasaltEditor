@@ -86,7 +86,7 @@ export type LaneShot = { i: number; spawn: number; end: number };
 /** The chart's projectiles in the order they appear, and the longest any is on the lane - worked out once per chart. */
 export type LaneShots = { shots: LaneShot[]; longest: number };
 
-const aimOf = (s: Projectile) => s.to === "player" || s.to == null ? { x: 0, y: PLAYER_HEAD } : s.to;
+const aimOf = (s: Projectile) => s.to ?? { x: 0, y: PLAYER_HEAD };
 
 export function laneShots(c: LoadedChart, tp: Tempo): LaneShots {
   const shots: LaneShot[] = [];

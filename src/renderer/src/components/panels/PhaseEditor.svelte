@@ -10,7 +10,7 @@
   let { phase, index }: { phase: Phase; index: number } = $props();
 
   const chartColours = $derived(coloursOf(doc.chart));
-  const own = $derived<PhaseColours>(phase.colours ?? phase.colors ?? {});
+  const own = $derived<PhaseColours>(phase.colours ?? {});
   const walls = $derived(own.walls);
   const wallMode = $derived(walls == null ? "chart" : walls === "none" ? "hide" : "show");
   /** What the wall controls show: the phase's own walls, else the chart's. */
@@ -19,10 +19,7 @@
   const edit = (mutate: (p: Phase) => void) => doc.change(["phases"], () => mutate(doc.chart.phases![index]));
 
   function setColours(next: PhaseColours): void {
-    edit(p => {
-      delete p.colors;
-      if (Object.keys(next).length) p.colours = next; else delete p.colours;
-    });
+    edit(p => { if (Object.keys(next).length) p.colours = next; else delete p.colours; });
   }
 
   function setColour(key: string, value: string | undefined): void {
@@ -54,7 +51,7 @@
   </label>
   <label><span>Starts (s)</span>
     <input type="number" step="0.5" value={phaseTime(phase, doc.tempo)} disabled={index === 0}
-      onchange={e => edit(p => { delete p.startBeat; p.start = Math.max(0, num(e) || 0); })} />
+      onchange={e => edit(p => { delete p.beat; p.t = Math.max(0, num(e) || 0); })} />
   </label>
 </div>
 <div class="row">

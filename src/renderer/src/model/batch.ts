@@ -6,7 +6,7 @@ import type { Projectile } from "./types";
 
 /** The value every one of them has, or `MIXED` where they differ. */
 export const MIXED = Symbol("mixed");
-export function shared<T>(items: readonly Projectile[], read: (p: Projectile) => T): T | typeof MIXED {
+export function shared<I, T>(items: readonly I[], read: (item: I) => T): T | typeof MIXED {
   if (!items.length) return MIXED;
   const first = read(items[0]);
   return items.every(p => read(p) === first) ? first : MIXED;
@@ -15,13 +15,13 @@ export function shared<T>(items: readonly Projectile[], read: (p: Projectile) =>
 /** How a projectile aims: at the player, straight down the lane from where it starts, or at some other point. */
 export type AimKind = "player" | "straight" | "point";
 export function aimOf(p: Projectile): AimKind {
-  if (!p.to || p.to === "player") return "player";
+  if (!p.to) return "player";
   return Math.abs((+p.to.x || 0) - (+p.from.x || 0)) < 0.001 ? "straight" : "point";
 }
 
 /** Aims a projectile at the player, or straight down the lane from where it starts (keeping its aim height). */
 export function setAim(p: Projectile, aim: "player" | "straight"): void {
-  if (aim === "player") { p.to = "player"; return; }
-  const y = p.to && p.to !== "player" ? +p.to.y : 1.3;
+  if (aim === "player") { delete p.to; return; }
+  const y = p.to ? +p.to.y : 1.3;
   p.to = { x: +p.from.x || 0, y: Number.isFinite(y) ? y : 1.3 };
 }

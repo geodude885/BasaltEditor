@@ -31,7 +31,7 @@
   let box: HTMLElement, canvas: HTMLCanvasElement;
 
   const [width, height] = $derived(SIZES[layout.compact ? "small" : size]);
-  const selectedCue = $derived(doc.chart.visuals?.[editing.selectedLookCue]);
+  const selectedCue = $derived(doc.chart.shaders?.[editing.selectedLookCue]);
   const canFollowSelected = $derived(!!selectedCue && isCueForPack(selectedCue, STAGE_PACK));
   const showingSelected = $derived(follow === "selected" && canFollowSelected);
 
@@ -44,7 +44,7 @@
   const caption = $derived.by(() => {
     if (showingSelected) return `Where the look at ${lookCueTimeLabel(selectedCue!)} ends up`;
     if (!now) return "No look yet: the player's own";
-    const at = lookCueTimeLabel(doc.chart.visuals![now.cue.index]), fading = now.progress < 1 ? ` · ${Math.round(now.progress * 100)}% in` : "";
+    const at = lookCueTimeLabel(doc.chart.shaders![now.cue.index]), fading = now.progress < 1 ? ` · ${Math.round(now.progress * 100)}% in` : "";
     if (now.cue.off) return now.progress < 1 ? `Fading back to the player's own${fading}` : "Off: the player's own";
     return `Look at ${at}${fading}`;
   });

@@ -6,25 +6,24 @@ import type { ChartEvent, LaneColours, LoadedChart, TempoChange } from "./types"
 
 /**
  * A longer or shorter lane takes the chart with it, as the game's lane setup does: every distance
- * along the lane - projectile origins, actor spots and moves, phase spots, your zone - is scaled, so
+ * along the lane - projectile origins, actor spots and moves, your zone - is scaled, so
  * nothing is left past the far end (a chart saved without this would not load).
  */
 export function resizeLane(c: LoadedChart, length: number): string[] {
   const old = laneOf(c).length;
   if (!(length > 2) || Math.abs(length - old) < 0.001) return [];
   const k = length / old, scale = (z: number) => round(Math.min(length, Math.max(0, (+z || 0) * k)), 2);
-  const keys = ["lane", "events", "phases", "actors", "zone"].filter(key => key === "lane" || c[key as keyof LoadedChart] != null);
+  const keys = ["lane", "events", "actors", "playerZone"].filter(key => key === "lane" || c[key as keyof LoadedChart] != null);
   c.lane = { length, width: laneOf(c).width };
   for (const e of c.events) {
     if (e.projectile?.from) e.projectile.from.z = scale(e.projectile.from.z);
     if (e.at) e.at.z = scale(e.at.z);
   }
-  for (const p of c.phases ?? []) if (p.at) p.at.z = scale(p.at.z);
   if (Array.isArray(c.actors)) for (const a of c.actors) {
     a.at ??= { x: 0, z: old };
     a.at.z = Math.abs((+a.at.z || 0) - old) < 0.01 ? length : scale(a.at.z);
   }
-  if (c.zone?.length != null) c.zone.length = Math.max(0.5, scale(c.zone.length));
+  if (c.playerZone?.length != null) c.playerZone.length = Math.max(0.5, scale(c.playerZone.length));
   return keys;
 }
 
@@ -33,7 +32,7 @@ export function mirror(events: ChartEvent[]): void {
   for (const e of events) {
     if (e.projectile) {
       e.projectile.from.x = -(+e.projectile.from.x || 0);
-      if (e.projectile.to && e.projectile.to !== "player") e.projectile.to.x = -(+e.projectile.to.x || 0);
+      if (e.projectile.to) e.projectile.to.x = -(+e.projectile.to.x || 0);
     }
     if (e.at) e.at.x = -(+e.at.x || 0);
   }
@@ -48,21 +47,23 @@ export function newTimed(c: LoadedChart, t: number, tp: Tempo, snap: number): Ch
 
 /** Starts a phase at a time (the chart's first phase too, if it had none). Returns its index. */
 export function addPhaseAt(c: LoadedChart, t: number, tp: Tempo): number {
-  c.phases ??= [{ name: "Start", start: 0 }];
+  c.phases ??= [{ name: "Start", t: 0 }];
   const phases = c.phases;
-  if (!phases.some(p => Math.abs(phaseTime(p, tp) - t) < 0.01)) phases.push({ name: `Phase ${phases.length + 1}`, start: t });
+  if (!phases.some(p => Math.abs(phaseTime(p, tp) - t) < 0.01)) phases.push({ name: `Phase ${phases.length + 1}`, t });
   phases.sort((a, b) => phaseTime(a, tp) - phaseTime(b, tp));
   return phases.findIndex(p => Math.abs(phaseTime(p, tp) - t) < 0.01);
 }
 
-/** The chart's tempo as a list of changes - one entry for a single bpm. */
+/** The chart's tempo as a list: `bpm` at beat 0, then its `bpmChanges`. */
 export function tempoList(c: LoadedChart): TempoChange[] {
-  return Array.isArray(c.bpm) ? c.bpm.map(x => ({ ...x })) : (c.bpm ? [{ beat: 0, bpm: +c.bpm }] : []);
+  return c.bpm ? [{ beat: 0, bpm: +c.bpm }, ...(c.bpmChanges ?? []).map(x => ({ ...x }))] : [];
 }
 
-/** Writes a list of tempo changes back: a single bpm when there is only one. */
+/** Writes such a list back: the first as `bpm`, the rest as `bpmChanges`. */
 export function setTempo(c: LoadedChart, list: TempoChange[]): void {
-  c.bpm = list.length === 1 ? list[0].bpm : [...list].sort((a, b) => a.beat - b.beat);
+  const [start, ...later] = [...list].sort((a, b) => a.beat - b.beat);
+  c.bpm = start.bpm;
+  if (later.length) c.bpmChanges = later; else delete c.bpmChanges;
 }
 
 /** A tempo change at the whole beat nearest a time, at the tempo already playing there. */
@@ -80,8 +81,8 @@ export function addActor(c: LoadedChart): void {
 }
 
 /**
- * Changes an actor's id, and every phase, event, projectile and track that names it - those that name no
- * actor keep doing so. Returns the keys it changed besides "actors".
+ * Changes an actor's id, and every event and performance that names it - those that name no actor keep
+ * doing so. Returns the keys it changed besides "actors".
  */
 export function renameActor(c: LoadedChart, index: number, id: string): string[] {
   const list = actorsOf(c).map(a => ({ ...a, at: a.at ? { ...a.at } : undefined })), old = list[index].id;
@@ -89,12 +90,8 @@ export function renameActor(c: LoadedChart, index: number, id: string): string[]
   c.actors = list;
   if (!old || old === id) return [];
   const changed = new Set<string>();
-  for (const p of c.phases ?? []) if (p.actor === old) { p.actor = id; changed.add("phases"); }
-  for (const e of c.events) {
-    if (e.actor === old) { e.actor = id; changed.add("events"); }
-    if (e.projectile?.by === old) { e.projectile.by = id; changed.add("events"); }
-  }
-  for (const track of c.tracks ?? []) if (track.actor === old) { track.actor = id; changed.add("tracks"); }
+  for (const e of c.events) if (e.actor === old) { e.actor = id; changed.add("events"); }
+  for (const performance of c.performances ?? []) if (performance.actor === old) { performance.actor = id; changed.add("performances"); }
   return [...changed];
 }
 
@@ -107,9 +104,7 @@ export function setTopLevelValueOrRemoveIfEmpty<K extends keyof LoadedChart>(c: 
   else c[key] = value as LoadedChart[K];
 }
 
-// Writes "colours", dropping the American "colors" the mod also reads, so only one is left.
 export function setLaneColours(c: LoadedChart, next: LaneColours): void {
-  delete c.colors;
   if (Object.keys(next).length) c.colours = next; else delete c.colours;
 }
 
@@ -129,26 +124,26 @@ export function setZone(c: LoadedChart, lengthMetres: number | undefined, height
   const zone: { length?: number; height?: number } = {};
   if (lengthMetres != null) zone.length = lengthMetres;
   if (heightMetres != null) zone.height = heightMetres;
-  if (Object.keys(zone).length) c.zone = zone; else delete c.zone;
+  if (Object.keys(zone).length) c.playerZone = zone; else delete c.playerZone;
 }
 
-export function setRules(c: LoadedChart, spawn: string, cleanupSeconds: number | undefined, breakBehind = false): void {
+export function setRules(c: LoadedChart, playerSpawns: string, breakStillAfter: number | undefined, breakBehind = false): void {
   const rules = { ...(c.rules ?? {}) };
-  if (spawn === "all") delete rules.spawn; else rules.spawn = spawn as "discs" | "none";
-  if (cleanupSeconds == null) delete rules.cleanup; else rules.cleanup = Math.max(0, cleanupSeconds);
+  if (playerSpawns === "all") delete rules.playerSpawns; else rules.playerSpawns = playerSpawns as "discs" | "none";
+  if (breakStillAfter == null) delete rules.breakStillAfter; else rules.breakStillAfter = Math.max(0, breakStillAfter);
   if (breakBehind) rules.breakBehind = true; else delete rules.breakBehind;
   if (Object.keys(rules).length) c.rules = rules; else delete c.rules;
 }
 
-// A spot needs both x and z; with either missing, the chart starts at the map's centre.
+// A spot needs both x and z: one left out, with the other or a facing given, is written as 0.
 export function setArenaSpot(c: LoadedChart, x: number | undefined, z: number | undefined, facingDegrees: number | undefined): void {
   const arena = { ...(c.arena ?? { map: "ring" as const }) };
-  if (x != null && z != null) arena.at = { x, z }; else delete arena.at;
-  if (facingDegrees != null) arena.facing = facingDegrees; else delete arena.facing;
+  if (x == null && z == null && facingDegrees == null) delete arena.at;
+  else arena.at = { x: x ?? 0, z: z ?? 0, ...(facingDegrees != null ? { facing: facingDegrees } : {}) };
   c.arena = arena;
 }
 
-export function setMusic(c: LoadedChart, file: string, startSeconds: number, volume: number): void {
+export function setMusic(c: LoadedChart, file: string, offsetSeconds: number, volume: number): void {
   if (!file.trim()) { delete c.music; return; }
-  c.music = { file: file.trim(), start: startSeconds || 0, volume: Math.min(1, Math.max(0, Number.isNaN(volume) ? 1 : volume)) };
+  c.music = { file: file.trim(), offset: offsetSeconds || 0, volume: Math.min(1, Math.max(0, Number.isNaN(volume) ? 1 : volume)) };
 }

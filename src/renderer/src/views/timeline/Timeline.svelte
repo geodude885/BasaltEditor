@@ -17,12 +17,12 @@
   import { session } from "../../store/session.svelte";
   import { transport } from "../../store/transport.svelte";
   import { ui } from "../../store/ui.svelte";
-  import { keepPlayheadInView, seek, songStart } from "../../store/playback";
+  import { keepPlayheadInView, seek, songOffset } from "../../store/playback";
   import { practice } from "../../store/practice.svelte";
   import { untrack } from "svelte";
   import { boxIsAClick, prepare, theme, type Box } from "../theme";
   import { drawPlayhead, drawTimeline } from "./draw";
-  import { trackRows } from "../../model/tracks";
+  import { performanceRows } from "../../model/performances";
   import { clipLaneSpan, COLLAPSIBLE_ROWS, eventSpots, layoutTimeline, placeMarkers, tOf } from "./geometry";
   import { markersInBox, pressWaitsOnTouch, touchTapWith, whatATimelinePressHits, whatATouchTapAdds, type TouchTap } from "./interaction";
   import { dragStartsAfterPixels, Fingers, restingFinger, Taps, WaitingPress, type PinchStep } from "../touch";
@@ -38,9 +38,9 @@
   let drag: Drag | null = null;
   let box = $state<Box | null>(null);
 
-  // The recorded-clips row has a lane per track, labelled with its actor.
-  const trackLanes = $derived(trackRows(doc.chart));
-  const layout = $derived(layoutTimeline(display.collapsedTimelineRows, display.extraTimelineHeightPixels, { tracks: trackLanes.length, shotColumns: display.highwayColumns }));
+  // The recorded-clips row has a lane per performance, labelled with its actor.
+  const performanceLanes = $derived(performanceRows(doc.chart));
+  const layout = $derived(layoutTimeline(display.collapsedTimelineRows, display.extraTimelineHeightPixels, { performances: performanceLanes.length, shotColumns: display.highwayColumns }));
   // The events' times and rows only when the chart changes; their places as the view moves.
   const spots = $derived(eventSpots(doc.chart, doc.tempo, layout));
   const placed = $derived(placeMarkers(spots, display.timeline));
@@ -57,7 +57,7 @@
     drawTimeline(prepare(still, w, layout.height), w, layout.height, {
       chart: doc.chart, tempo: doc.tempo, view: display.timeline, snap: editing.snap,
       selection: editing.selection, selectedPhase: editing.selectedPhase, lookCues: doc.lookCues, selectedLookCue: editing.selectedLookCue, shotColouring: display.shotColouring,
-      markers: placed, song: session.song, songStart: songStart(), clips: session.clips, trackRows: trackLanes, box, layout, loop: practice.loop, loopStart: practice.loopStart,
+      markers: placed, song: session.song, songOffset: songOffset(), clips: session.clips, performanceRows: performanceLanes, box, layout, loop: practice.loop, loopStart: practice.loopStart,
     }, theme(appearance.scheme));
     return { canvas: still };
   });
@@ -242,11 +242,11 @@
       {@const collapsed = layout.collapsed.has(row)}
       <button class="row-header" class:collapsed style:top="{top}px" style:height="{height}px" aria-expanded={!collapsed}
         title={collapsed ? `Show ${label.toLowerCase()}` : `Collapse ${label.toLowerCase()} to a thin strip`} onclick={() => toggleTimelineRow(row)}>
-        <span class="chevron"><Icon name={collapsed ? "right" : "down"} size="10px" /></span>{collapsed || (row === "clip" && trackLanes.length) ? "" : label}
+        <span class="chevron"><Icon name={collapsed ? "right" : "down"} size="10px" /></span>{collapsed || (row === "clip" && performanceLanes.length) ? "" : label}
       </button>
     {/each}
-    {#if trackLanes.length && !layout.collapsed.has("clip")}
-      {#each trackLanes as lane, i (lane.track)}
+    {#if performanceLanes.length && !layout.collapsed.has("clip")}
+      {#each performanceLanes as lane, i (lane.performance)}
         {@const [top, height] = clipLaneSpan(layout, i)}
         <span class="lane-label" style:top="{top}px" style:height="{height}px" style:line-height="{height}px" title="Recorded clips: {lane.label}">{lane.label}</span>
       {/each}

@@ -71,7 +71,7 @@ export const findCover = (files: Map<string, Uint8Array>, named?: string): strin
 
 export type ClipSpan = { start: number; end: number };
 
-/** Recorded clips among the files, by name, with when their frames start and end - for drawing them on their tracks. */
+/** Recorded clips among the files, by name, with when their frames start and end - for drawing them on their performances' rows. */
 export function clipSpans(files: Map<string, Uint8Array>): Map<string, ClipSpan> {
   const out = new Map<string, ClipSpan>();
   for (const [k, v] of files) {

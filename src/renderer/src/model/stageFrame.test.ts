@@ -90,7 +90,7 @@ describe("skipping frames that would look the same", () => {
 });
 
 describe("which cue the look is following", () => {
-  const cue = (index: number, time: number, fade: number, pack = "BossBattles Stage"): TimedLookCue => ({ index, time, pack, set: [], off: false, fade });
+  const cue = (index: number, time: number, fade: number, pack = "BossBattles Stage"): TimedLookCue => ({ index, time, pack, values: [], off: false, fade });
 
   it("is the last Stage cue so far, part way through its fade", () => {
     const cues = [cue(0, 2, 4), cue(1, 3, 0, "UltraShade"), cue(2, 10, 2)];

@@ -16,7 +16,7 @@ export type HighwayScene = {
   tiles: Tile[];
   selection: ReadonlySet<number>;
   song: Song | null;
-  songStart: number;
+  songOffset: number;
   box: Box | null;
   /** A loop's start and end in chart time, shaded, or null. */
   loop: readonly [number, number] | null;
@@ -85,7 +85,7 @@ function drawWave(ctx: CanvasRenderingContext2D, s: HighwayScene, t: Theme): voi
   ctx.fillStyle = alpha(t.textDim, 0.12);
   const mid = v.w / 2, step = 3;
   for (let y = 0; y < v.h; y += step) {
-    const a = timeOfY(v, y + step) + s.songStart, b = timeOfY(v, y) + s.songStart;
+    const a = timeOfY(v, y + step) + s.songOffset, b = timeOfY(v, y) + s.songOffset;
     if (b < 0) continue;
     const half = peakBetween(peaks, Math.max(0, a), b) * v.w * 0.45;
     if (half > 0.5) ctx.fillRect(mid - half, y, half * 2, step);

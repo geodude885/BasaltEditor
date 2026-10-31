@@ -2,24 +2,26 @@
   // Several projectiles selected: the fields it makes sense to set for all of them at once. A field
   // they disagree on shows "mixed" until it's set. Times and positions across the lane stay each one's
   // own (model/batch.ts says why). Each change is one undo step for the lot.
-  import { actorsOf, isGrounded } from "../model/chart";
+  import { actorsOf, firstActorId, isGrounded } from "../model/chart";
   import { aimOf, MIXED, setAim, shared } from "../model/batch";
   import { GROUNDED_STATE, STRUCTURES } from "../model/constants";
   import { round } from "../model/tempo";
   import type { Projectile, Structure } from "../model/types";
-  import { editSelectedProjectiles } from "../store/actions";
+  import { editSelectedProjectileEvents, editSelectedProjectiles } from "../store/actions";
   import { doc } from "../store/document.svelte";
   import { editing } from "../store/editing.svelte";
   import { checked, num, text } from "./fields";
 
-  const shots = $derived([...editing.selection].map(i => doc.chart.events[i]?.projectile).filter((p): p is Projectile => !!p));
+  const shotEvents = $derived([...editing.selection].map(i => doc.chart.events[i]).filter(e => e?.projectile));
+  const shots = $derived(shotEvents.map(e => e.projectile!));
   const others = $derived(editing.selection.size - shots.length);
   const actors = $derived(actorsOf(doc.chart));
 
   const structure = $derived(shared(shots, p => p.structure));
   const speed = $derived(shared(shots, p => +p.speed));
   const telegraph = $derived(shared(shots, p => +(p.telegraph ?? 0.5)));
-  const by = $derived(shared(shots, p => p.by ?? ""));
+  const first = $derived(firstActorId(doc.chart));
+  const by = $derived(shared(shotEvents, e => e.actor ?? first));
   const height = $derived(shared(shots, p => +(p.from?.y ?? 0)));
   const distance = $derived(shared(shots, p => +(p.from?.z ?? 10)));
   const grounded = $derived(shared(shots, p => isGrounded(p)));
@@ -66,9 +68,8 @@
         <input type="number" step="0.1" min="0" placeholder="mixed" value={shown(telegraph)} onchange={e => setNumber(e, (p, n) => { p.telegraph = Math.max(0, n); })} />
       </label>
       <label><span>Thrown by</span>
-        <select value={by === MIXED ? MIXED_BY : by} onchange={e => { const v = text(e); if (v === MIXED_BY) return; set(p => { if (v) p.by = v; else delete p.by; }); }}>
+        <select value={by === MIXED ? MIXED_BY : by} onchange={e => { const v = text(e); if (v === MIXED_BY) return; editSelectedProjectileEvents(ev => { if (v === first) delete ev.actor; else ev.actor = v; }); }}>
           {#if by === MIXED}<option value={MIXED_BY} disabled>mixed</option>{/if}
-          <option value="">nobody</option>
           {#each actors as a (a.id)}<option value={a.id}>{a.name || a.id}</option>{/each}
         </select>
       </label>

@@ -27,33 +27,31 @@ describe("projectile columns", () => {
 
   it("makes a projectile that flies straight down the lane", () => {
     const chart: LoadedChart = { events: [], lane: { length: 12, width: 3 } } as LoadedChart;
-    const p = straightProjectile(chart, 0.75, "gunner");
+    const p = straightProjectile(chart, 0.75);
     expect(p.from).toEqual({ x: 0.75, y: 1.4, z: 10 });
     expect(p.to).toEqual({ x: 0.75, y: 1.3 });
-    expect(p.by).toBe("gunner");
   });
 
   it("moves a projectile to another column, keeping its aim alongside", () => {
     const chart: LoadedChart = { events: [], lane: { length: 12, width: 3 } } as LoadedChart;
-    const p = straightProjectile(chart, 0, "gunner");
+    const p = straightProjectile(chart, 0);
     moveToColumn(p, 0, 3);
     expect(p.from.x).toBe(-1.5);
     expect(p.to).toEqual({ x: -1.5, y: 1.3 });
-    const atPlayer = { ...straightProjectile(chart, 0, "gunner"), to: "player" as const };
+    const atPlayer = { ...straightProjectile(chart, 0), to: undefined };
     moveToColumn(atPlayer, 4, 3);
     expect(atPlayer.from.x).toBe(1.5);
-    expect(atPlayer.to).toBe("player");
+    expect(atPlayer.to).toBeUndefined();
   });
 
   it("makes new projectiles like a template, at their own column, aimed as far across as it was", () => {
     const chart = { events: [], lane: { length: 12, width: 3 } } as unknown as LoadedChart;
-    const ball = { structure: "Ball" as const, from: { x: -1, y: 2, z: 30 }, to: { x: -0.5, y: 1 }, speed: 7, telegraph: 1, grounded: false, by: "boss" };
+    const ball = { structure: "Ball" as const, from: { x: -1, y: 2, z: 30 }, to: { x: -0.5, y: 1 }, speed: 7, telegraph: 1, grounded: false };
     const template = templateOf(ball);
-    expect(template).not.toHaveProperty("by");
-    const p = projectileAt(chart, 1, "gunner", template);
-    expect(p).toEqual({ ...ball, from: { x: 1, y: 2, z: 18 }, to: { x: 1.5, y: 1 }, by: "gunner" });
-    expect(projectileAt(chart, 1, "gunner", { ...template, to: "player" }).to).toBe("player");
-    expect(projectileAt(chart, 0.5, "gunner", null)).toEqual(straightProjectile(chart, 0.5, "gunner"));
+    const p = projectileAt(chart, 1, template);
+    expect(p).toEqual({ ...ball, from: { x: 1, y: 2, z: 18 }, to: { x: 1.5, y: 1 } });
+    expect(projectileAt(chart, 1, { ...template, to: undefined }).to).toBeUndefined();
+    expect(projectileAt(chart, 0.5, null)).toEqual(straightProjectile(chart, 0.5));
     expect(templateAs(chart, null, "RockCube")).toMatchObject({ structure: "RockCube", speed: 11 });
     expect(templateAs(chart, template, "Wall")).toMatchObject({ structure: "Wall", speed: 7 });
   });

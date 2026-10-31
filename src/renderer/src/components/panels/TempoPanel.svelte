@@ -7,22 +7,23 @@
   import { ui } from "../../store/ui.svelte";
   import { num } from "../fields";
 
+  const TEMPO_KEYS = ["bpm", "bpmChanges"];
   const list = $derived(tempoList(doc.chart));
   const taps = $derived(ui.tapTimes.length);
 
   function setChange(i: number, field: "beat" | "bpm", value: number): void {
     const next = tempoList(doc.chart);
     next[i] = { ...next[i], [field]: value };
-    doc.change(["bpm"], () => setTempo(doc.chart, next));
+    doc.change(TEMPO_KEYS, () => setTempo(doc.chart, next));
   }
 
   function removeChange(i: number): void {
-    doc.change(["bpm"], () => setTempo(doc.chart, tempoList(doc.chart).filter((_, j) => j !== i)));
+    doc.change(TEMPO_KEYS, () => setTempo(doc.chart, tempoList(doc.chart).filter((_, j) => j !== i)));
   }
 
   function useTapped(): void {
     const bpm = round(tapBpm(), 1);
-    doc.change(["bpm"], () => { doc.chart.bpm = bpm; });
+    doc.change(TEMPO_KEYS, () => setTempo(doc.chart, [{ beat: 0, bpm }]));
     toast(`Tempo set to ${bpm} bpm`);
   }
 </script>
@@ -51,7 +52,7 @@
   {/each}
 </div>
 <div class="row">
-  <button onclick={() => doc.change(["bpm"], () => addTempoChange(doc.chart, transport.time, doc.tempo))}>
+  <button onclick={() => doc.change(TEMPO_KEYS, () => addTempoChange(doc.chart, transport.time, doc.tempo))}>
     {list.length ? "Tempo change at the playhead" : "Add a tempo"}
   </button>
 </div>

@@ -54,7 +54,7 @@ describe("pressing on the lane", () => {
 
 describe("pressing on the timeline", () => {
   const chart = sample(), view = { t0: 0, pps: 50 }, layout = layoutTimeline(new Set(), 0), placed = markers(chart, tempo, view, layout);
-  const look = [{ index: 0, time: 4, pack: "BossBattles Stage", set: [], off: false, fade: 0 }];
+  const look = [{ index: 0, time: 4, pack: "BossBattles Stage", values: [], off: false, fade: 0 }];
   const press = (x: number, y: number, doubleClick = false) => whatATimelinePressHits(chart, tempo, view, layout, placed, look, x, y, doubleClick);
   const middleOf = (row: TimelineRow) => layout.rows[row][0] + layout.rows[row][1] / 2;
 
@@ -162,13 +162,13 @@ describe("touch taps on the timeline", () => {
 });
 
 describe("the recorded row", () => {
-  it("has a lane per track, splitting the thin strip when collapsed", () => {
-    const one = layoutTimeline(new Set(), 0, { tracks: 1 }), two = layoutTimeline(new Set(), 0, { tracks: 2 });
+  it("has a lane per performance, splitting the thin strip when collapsed", () => {
+    const one = layoutTimeline(new Set(), 0, { performances: 1 }), two = layoutTimeline(new Set(), 0, { performances: 2 });
     expect(two.rows.clip[1]).toBeGreaterThan(one.rows.clip[1]);
     expect(layoutTimeline(new Set(), 0).rows.clip).toEqual(one.rows.clip);
     const [top, height] = two.rows.clip;
     expect([clipLaneSpan(two, 0)[0], clipLaneSpan(two, 1)[0] + clipLaneSpan(two, 1)[1]]).toEqual([top, top + height]);
-    const collapsed = layoutTimeline(new Set<TimelineRow>(["clip"]), 0, { tracks: 3 });
+    const collapsed = layoutTimeline(new Set<TimelineRow>(["clip"]), 0, { performances: 3 });
     expect(clipLaneSpan(collapsed, 2)[1] * 3).toBeCloseTo(collapsed.rows.clip[1]);
   });
 });
