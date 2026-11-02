@@ -33,7 +33,7 @@
 </div>
 <div class="note touch">
   With a finger: on empty space, a tap adds there, a drag pans the timeline or scrubs the highway, and a held press draws a
-  selection box; two fingers zoom, and a two-finger tap undoes. Hold a projectile for Copy, Mirror and Delete.
+  selection box; two fingers zoom, and a two-finger tap undoes. Hold a projectile or look for Copy, Mirror and Delete.
   <b>Select</b> draws boxes straight away, and <b>Multi</b> makes taps add to the selection. Swipe in from the left
   edge for the menu; drag the menu, a drawer, the selected card or a message away to close it.
 </div>

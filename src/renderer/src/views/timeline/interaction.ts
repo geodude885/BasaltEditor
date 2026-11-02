@@ -4,13 +4,13 @@ import type { TimedLookCue } from "../../model/looks";
 import type { Tempo } from "../../model/tempo";
 import type { LoadedChart } from "../../model/types";
 import { normalise, type Box } from "../theme";
-import { columnAtY, eventsAt, inRow, lookCueAt, tOf, type Marker, type TimelineLayout, type View } from "./geometry";
+import { columnAtY, eventsAt, inRow, lookCuesAt, tOf, xOf, type Marker, type TimelineLayout, type View } from "./geometry";
 
 export type TimelinePress =
   | { kind: "seek" }
   | { kind: "seek-and-clear-selection" }
   | { kind: "select-phase"; index: number }
-  | { kind: "select-look-cue"; index: number }
+  | { kind: "select-look-cues"; underPointer: number[] }
   | { kind: "add-look-cue" }
   | { kind: "select-events"; underPointer: number[] }
   | { kind: "add-projectile" }
@@ -29,9 +29,9 @@ export function whatATimelinePressHits(
   if (y < layout.rows.phase[0]) return { kind: "seek" };
   if (inRow(layout, "phase", y)) return { kind: "select-phase", index: phaseIndexAt(chart, tempo, tOf(view, x)) };
   if (inRow(layout, "look", y)) {
-    const cue = lookCueAt(lookCues, view, x);
-    if (cue >= 0) return { kind: "select-look-cue", index: cue };
-    return doubleClick ? { kind: "add-look-cue" } : { kind: "seek" };
+    const underPointer = lookCuesAt(lookCues, view, x);
+    if (underPointer.length) return { kind: "select-look-cues", underPointer };
+    return doubleClick ? { kind: "add-look-cue" } : { kind: "box-select" };
   }
   const underPointer = eventsAt(markers, x, y);
   if (underPointer.length) return { kind: "select-events", underPointer };
@@ -45,8 +45,8 @@ export function whatATimelinePressHits(
  * On a touch screen, a press on empty space waits to see what it becomes - a tap adds there, a drag
  * pans, a long press box-selects - instead of acting as soon as the finger lands.
  */
-export const pressWaitsOnTouch = (press: TimelinePress, layout: TimelineLayout, y: number): boolean =>
-  press.kind === "box-select" || press.kind === "seek-and-clear-selection" || (press.kind === "seek" && inRow(layout, "look", y));
+export const pressWaitsOnTouch = (press: TimelinePress): boolean =>
+  press.kind === "box-select" || press.kind === "seek-and-clear-selection";
 
 export type TouchTap =
   | { kind: "add-projectile"; column: number }
@@ -73,4 +73,11 @@ export function touchTapWith(tap: TouchTap, hasSelection: boolean, adding: boole
 export function markersInBox(markers: Marker[], box: Box): number[] {
   const b = normalise(box);
   return markers.filter(m => m.x >= b.x0 && m.x <= b.x1 && m.y >= b.y0 && m.y <= b.y1).map(m => m.i);
+}
+
+/** The looks a box takes in: it needs only to reach their row, where each runs the row's full height. */
+export function lookCuesInBox(cues: TimedLookCue[], view: View, layout: TimelineLayout, box: Box): number[] {
+  const b = normalise(box), [top, height] = layout.rows.look;
+  if (b.y1 < top || b.y0 > top + height) return [];
+  return cues.filter(cue => { const x = xOf(view, cue.time); return x >= b.x0 && x <= b.x1; }).map(cue => cue.index);
 }

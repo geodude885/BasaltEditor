@@ -20,7 +20,7 @@ export type TimelineScene = {
   selection: ReadonlySet<number>;
   selectedPhase: number;
   lookCues: TimedLookCue[];
-  selectedLookCue: number;
+  selectedLooks: ReadonlySet<number>;
   markers: Marker[];
   song: Song | null;
   /** Where the chart starts in the song. */
@@ -233,7 +233,7 @@ function drawLooks(ctx: CanvasRenderingContext2D, w: number, s: TimelineScene, t
 
   ctx.font = `10px ${t.mono}`; ctx.textAlign = "left";
   for (const cue of s.lookCues) {
-    const cx = xOf(s.view, cue.time), selected = cue.index === s.selectedLookCue;
+    const cx = xOf(s.view, cue.time), selected = s.selectedLooks.has(cue.index);
     if (cx < -40 || cx > w + 40) continue;
     if (cue.fade > 0) {
       ctx.strokeStyle = alpha(t.wash, 0.67); ctx.lineWidth = 1;

@@ -30,10 +30,17 @@ export function evTime(ev: { t?: number; beat?: number }, tp: Tempo): number {
 }
 
 /** Moves an event to a time, keeping it in beats if it was written in beats. */
-export function setEvTime(ev: ChartEvent, seconds: number, tp: Tempo): void {
+export function setEvTime(ev: { t?: number; beat?: number }, seconds: number, tp: Tempo): void {
   seconds = Math.max(0, seconds);
-  if (ev.beat != null && tp.ok) ev.beat = round(tp.beat(seconds), 4);
-  else ev.t = round(seconds, 3);
+  if (ev.beat != null && tp.ok) { ev.beat = round(tp.beat(seconds), 4); return; }
+  delete ev.beat;
+  ev.t = round(seconds, 3);
+}
+
+/** Sorts a list by time, in place: ties keep their order, and anything with no time goes last. */
+export function sortByTime<T extends { t?: number; beat?: number }>(items: T[], tp: Tempo): T[] {
+  const when = (item: T) => { const t = evTime(item, tp); return Number.isNaN(t) ? Infinity : t; };
+  return items.sort((a, b) => { const x = when(a), y = when(b); return x < y ? -1 : x > y ? 1 : 0; });
 }
 
 export function phaseTime(p: Phase, tp: Tempo): number {

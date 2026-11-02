@@ -57,7 +57,7 @@
     {#if inspecting}
       <!-- Flick it aside to let go of the selection. -->
       <aside class="float" aria-label="Selected" in:rise={{ from: floatSide }} out:rise={{ from: floatSide }}
-        use:dismissable={{ axis: "x", toward: layout.landscape ? -1 : 0, onClose: () => editing.selection.clear() }}>
+        use:dismissable={{ axis: "x", toward: layout.landscape ? -1 : 0, onClose: () => editing.clearSelection() }}>
         <Inspector />
       </aside>
     {/if}

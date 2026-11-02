@@ -9,7 +9,7 @@
   import { transport } from "../../store/transport.svelte";
   import { practice } from "../../store/practice.svelte";
 
-  const count = $derived(editing.selection.size);
+  const count = $derived(editing.selectedCount);
 </script>
 
 <div class="tools">

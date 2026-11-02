@@ -124,6 +124,7 @@
     } else if (drag.kind === "box") {
       if (!box) return;
       box = { ...box, x1: x, y1: y };
+      editing.selectedLooks.clear();
       editing.setSelection(new Set([...drag.addsTo, ...tilesInBox(placed, box)]));
     } else {
       drag.hold?.pans(x, y);
@@ -154,7 +155,7 @@
       const { clickAdds, adding, at } = drag, [x0, y0] = [box.x0, box.y0];
       endDrag();
       if (clickAdds) tap(at, x0, y0, adding);
-      else if (!adding) editing.selection.clear();
+      else if (!adding) editing.clearSelection();
       return;
     }
     endDrag();
@@ -163,7 +164,7 @@
   /** A tap on empty space: let go of the selection, or add a tile there. */
   function tap(at: HighwayView, x: number, y: number, adding: boolean): void {
     const does = whatAHighwayTapDoes(at, columns.length, x, y, editing.selection.size > 0, adding);
-    if (does.kind === "let-go") editing.selection.clear();
+    if (does.kind === "let-go") editing.clearSelection();
     else addProjectileInColumn(does.seconds, columns[does.column].column, columns.length);
   }
 

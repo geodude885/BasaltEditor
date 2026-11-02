@@ -55,7 +55,8 @@ const SAVE_HELP: Record<ReturnType<typeof saveTarget>, string> = {
 export type MenuId = "file" | "edit" | "view" | "playback";
 export type Menu = { id: MenuId; label: string; groups: Command[][] };
 
-const selection = () => editing.selection.size > 0;
+const selection = () => editing.hasSelection;
+const selectedEvents = () => editing.selection.size > 0;
 
 /**
  * Starts a new chart. The desktop app asks about unsaved changes in its own dialog; elsewhere the
@@ -107,9 +108,9 @@ export function menus(): Menu[] {
         [
           { id: "copy", label: "Copy", keys: "Ctrl C", run: copySelected, enabled: selection, browserDefault: true, help: "Copy the selection" },
           { id: "paste", label: "Paste at the playhead", keys: "Ctrl V", run: paste, browserDefault: true },
-          { id: "mirror", label: "Mirror", keys: "X", run: mirrorSelected, enabled: selection, help: "Mirror the selection left/right" },
+          { id: "mirror", label: "Mirror", keys: "X", run: mirrorSelected, enabled: selectedEvents, help: "Mirror the selection left/right" },
           { id: "delete", label: "Delete", keys: "Delete / Backspace", run: removeSelected, enabled: selection, help: "Delete the selection" },
-          { id: "select-none", label: "Select none", keys: "Escape", run: () => editing.selection.clear(), enabled: selection },
+          { id: "select-none", label: "Select none", keys: "Escape", run: () => editing.clearSelection(), enabled: selection },
         ],
         [
           { id: "add-projectile", label: "Add a projectile", keys: "P", run: () => addProjectile(), help: "Add a projectile at the playhead" },

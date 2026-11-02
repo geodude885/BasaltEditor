@@ -1,13 +1,14 @@
 // What the toolbar, keys and canvases do. Each edit goes through doc.change, so it can be undone and
 // lands in the chart's text.
 import { actorSpotAt, actorsOf, endOf, evTime, laneOf, setEvTime } from "../model/chart";
+import { copyItems, pasteItems, type Copied } from "../model/clipboard";
 import { projectileAt, templateOf, xOfColumn } from "../model/columns";
 import { barAround, projectilesBetween } from "../model/ranges";
 import { addPhaseAt, mirror, newTimed } from "../model/edits";
 import { newStageCue } from "../model/looks";
 import { round } from "../model/tempo";
 import type { Point } from "../model/chart";
-import type { ChartEvent, Projectile } from "../model/types";
+import type { ChartEvent, LookCue, Projectile } from "../model/types";
 import { MOST_EXTRA_TIMELINE_HEIGHT_PIXELS, type TimelineRow } from "../views/timeline/geometry";
 import { doc } from "./document.svelte";
 import { display } from "./display.svelte";
@@ -26,7 +27,7 @@ export function toast(text: string): void {
 // ---- Selection --------------------------------------------------------------------------------
 
 export function select(i: number, add: boolean): void {
-  if (!add) editing.selection.clear();
+  if (!add) editing.clearSelection();
   if (editing.selection.has(i) && add) editing.selection.delete(i);
   else editing.selection.add(i);
   editing.selectedPhase = -1;
@@ -35,6 +36,7 @@ export function select(i: number, add: boolean): void {
 /** Selects the projectiles in a span of time, saying how many; `where` finishes "Selected 4 projectiles …". */
 export function selectProjectilesBetween(from: number, to: number, where: string): void {
   const found = projectilesBetween(doc.chart.events, doc.tempo, from, to);
+  editing.selectedLooks.clear();
   editing.setSelection(found);
   editing.selectedPhase = -1;
   toast(found.length ? `Selected ${found.length} projectile${found.length === 1 ? "" : "s"} ${where}` : `No projectiles ${where}`);
@@ -52,13 +54,23 @@ export const selectAll = (): void => selectProjectilesBetween(-Infinity, Infinit
 const chosen = (): ChartEvent[] => [...editing.selection].map(i => doc.chart.events[i]).filter(Boolean);
 /** Selects these events again wherever sorting has put them. */
 const reselect = (events: ChartEvent[]) => editing.setSelection(events.map(e => doc.chart.events.indexOf(e)).filter(i => i >= 0));
+/** The selected looks themselves, likewise. */
+const chosenLooks = (): LookCue[] => [...editing.selectedLooks].map(i => doc.chart.shaders?.[i]).filter((cue): cue is LookCue => !!cue);
+const reselectLooks = (cues: LookCue[]) => editing.setLookSelection(cues.map(cue => doc.chart.shaders?.indexOf(cue) ?? -1).filter(i => i >= 0));
+/** Selects these events and looks again wherever sorting has put them. */
+export function reselectBoth(events: ChartEvent[], cues: LookCue[]): void {
+  reselect(events);
+  reselectLooks(cues);
+}
+/** The chart's keys that hold what's selected, or these. */
+export const keysOf = (events: readonly unknown[], cues: readonly unknown[]): string[] => [...(events.length ? ["events"] : []), ...(cues.length ? ["shaders"] : [])];
 
 let lastPick: { where: string; x: number; y: number } | null = null;
 /** Of the events under a point, the next one along if the same spot was just clicked - so a stack can be stepped through. */
-export function pickCycled(under: number[], where: string, x: number, y: number): number {
+export function pickCycled(under: number[], where: string, x: number, y: number, selected: ReadonlySet<number> = editing.selection): number {
   let pick = under[0];
-  if (lastPick && lastPick.where === where && Math.hypot(lastPick.x - x, lastPick.y - y) < 4 && editing.selection.size === 1) {
-    const at = under.indexOf([...editing.selection][0]);
+  if (lastPick && lastPick.where === where && Math.hypot(lastPick.x - x, lastPick.y - y) < 4 && selected.size === 1) {
+    const at = under.indexOf([...selected][0]);
     if (at >= 0) pick = under[(at + 1) % under.length];
   }
   lastPick = { where, x, y };
@@ -141,10 +153,15 @@ export function editSelectedProjectileEvents(mutate: (e: ChartEvent) => void): v
 export const editSelectedProjectiles = (mutate: (p: Projectile) => void): void => editSelectedProjectileEvents(e => mutate(e.projectile!));
 
 export function removeSelected(): void {
-  if (!editing.selection.size) return;
-  const gone = new Set(editing.selection);
-  doc.change(["events"], () => { doc.chart.events = doc.chart.events.filter((_, i) => !gone.has(i)); });
-  editing.selection.clear();
+  if (!editing.hasSelection) return;
+  const gone = new Set(editing.selection), goneLooks = new Set(editing.selectedLooks);
+  doc.change(keysOf([...gone], [...goneLooks]), () => {
+    if (gone.size) doc.chart.events = doc.chart.events.filter((_, i) => !gone.has(i));
+    if (!goneLooks.size) return;
+    doc.chart.shaders = doc.chart.shaders?.filter((_, i) => !goneLooks.has(i));
+    if (!doc.chart.shaders?.length) delete doc.chart.shaders;
+  });
+  editing.clearSelection();
 }
 
 export function mirrorSelected(): void {
@@ -158,10 +175,10 @@ export function mirrorSelected(): void {
 export function nudge(dir: -1 | 1, bar: boolean): void {
   const tp = doc.tempo, beats = bar ? 4 : (editing.snap || 1);
   const step = (t: number) => tp.ok ? tp.seconds(tp.beat(t) + dir * beats) - t : dir * (bar ? 2 : 0.5);
-  const events = chosen();
-  if (!events.length) { seek(Math.max(0, tp.snap(transport.time + step(transport.time), editing.snap))); return; }
-  doc.change(["events"], () => events.forEach(e => setEvTime(e, tp.snap(evTime(e, tp) + step(evTime(e, tp)), editing.snap), tp)));
-  reselect(events);
+  const events = chosen(), cues = chosenLooks();
+  if (!events.length && !cues.length) { seek(Math.max(0, tp.snap(transport.time + step(transport.time), editing.snap))); return; }
+  doc.change(keysOf(events, cues), () => [...events, ...cues].forEach(e => setEvTime(e, tp.snap(evTime(e, tp) + step(evTime(e, tp)), editing.snap), tp)));
+  reselectBoth(events, cues);
 }
 
 /** Moves the selected projectile to where its thrower stands when it flies. */
@@ -173,32 +190,34 @@ export function throwFromActor(): void {
   editSelected(() => { s.from.x = at.x; s.from.z = round(Math.max(0.5, at.z - 1), 1); });
 }
 
-let clipboard: { offset: number; event: ChartEvent }[] | null = null;
+let clipboard: Copied[] = [];
 export function copySelected(): void {
-  const events = chosen();
-  if (!events.length) return;
-  const t0 = Math.min(...events.map(e => evTime(e, doc.tempo)));
-  clipboard = events.map(e => ({ offset: evTime(e, doc.tempo) - t0, event: JSON.parse(JSON.stringify(e)) as ChartEvent }));
-  toast(`Copied ${events.length}`);
+  const copied = copyItems(chosen(), chosenLooks(), doc.tempo);
+  if (!copied.length) return;
+  clipboard = copied;
+  toast(`Copied ${copied.length}`);
 }
 
 export function paste(): void {
-  if (!clipboard) return;
-  const at = doc.tempo.snap(transport.time, editing.snap), made: ChartEvent[] = [];
-  doc.change(["events"], () => {
-    for (const c of clipboard!) {
-      const e = structuredClone(c.event);
-      setEvTime(e, at + c.offset, doc.tempo);
+  if (!clipboard.length) return;
+  const { events, cues } = pasteItems(clipboard, doc.tempo.snap(transport.time, editing.snap), doc.tempo);
+  const madeEvents: ChartEvent[] = [], madeCues: LookCue[] = [];
+  doc.change(keysOf(events, cues), () => {
+    for (const e of events) {
       doc.chart.events.push(e);
-      made.push(doc.chart.events.at(-1)!);
+      madeEvents.push(doc.chart.events.at(-1)!);
+    }
+    for (const cue of cues) {
+      (doc.chart.shaders ??= []).push(cue);
+      madeCues.push(doc.chart.shaders.at(-1)!);
     }
   });
-  reselect(made);
+  reselectBoth(madeEvents, madeCues);
 }
 
 // ---- History and the chart as a whole -----------------------------------------------------------
 
-export function undo(): void { if (doc.undo()) editing.selection.clear(); }
+export function undo(): void { if (doc.undo()) editing.clearSelection(); }
 
 /** Two fingers tapped the editor: undo, and say so - a gesture has no button to see go. */
 export function undoByTouch(): void {
@@ -207,12 +226,12 @@ export function undoByTouch(): void {
   toast(could ? "Undone" : "Nothing to undo");
   globalThis.navigator?.vibrate?.(10);
 }
-export function redo(): void { if (doc.redo()) editing.selection.clear(); }
+export function redo(): void { if (doc.redo()) editing.clearSelection(); }
 
 /** Opens a chart's text, fitting the timeline to it. */
 export function loadChart(text: string, name: string): void {
   doc.load(text, name);
-  editing.selection.clear();
+  editing.clearSelection();
   editing.selectedPhase = -1;
   transport.time = 0;
   fit();
@@ -253,21 +272,36 @@ export function tapBpm(): number {
 // ---- Look cues --------------------------------------------------------------------------------
 
 export function selectLookCue(index: number): void {
-  editing.selectedLookCue = index;
-  editing.selection.clear();
+  editing.clearSelection();
+  editing.selectedLooks.add(index);
   editing.selectedPhase = -1;
   ui.revealTab("looks");
 }
 
+/** A press on a look: selects it, or with `add` adds it to the selection or takes it out. */
+export function selectLook(index: number, add: boolean): void {
+  if (!add) { selectLookCue(index); return; }
+  if (!editing.selectedLooks.delete(index)) editing.selectedLooks.add(index);
+  editing.selectedPhase = -1;
+}
+
+/** Edits one look, keeping it selected wherever a new time sorts it to. */
+export function editLookCue(index: number, mutate: (cue: LookCue) => void): void {
+  const cue = doc.chart.shaders?.[index];
+  if (!cue) return;
+  doc.change(["shaders"], () => mutate(cue));
+  reselectLooks([cue]);
+}
+
 export function addStageCueAtPlayhead(): void {
   const time = doc.tempo.snap(transport.time, editing.snap);
-  let index = -1;
+  let made: LookCue | undefined;
   doc.change(["shaders"], () => {
     doc.chart.shaders ??= [];
     doc.chart.shaders.push(newStageCue(doc.chart, time, doc.tempo));
-    index = doc.chart.shaders.length - 1;
+    made = doc.chart.shaders.at(-1);
   });
-  selectLookCue(index);
+  selectLookCue(doc.chart.shaders!.indexOf(made!));
 }
 
 export function removeLookCue(index: number): void {
@@ -275,12 +309,12 @@ export function removeLookCue(index: number): void {
     doc.chart.shaders?.splice(index, 1);
     if (!doc.chart.shaders?.length) delete doc.chart.shaders;
   });
-  editing.selectedLookCue = -1;
+  editing.selectedLooks.clear();
 }
 
 export function selectPhase(index: number): void {
   editing.selectedPhase = index;
-  editing.selection.clear();
+  editing.clearSelection();
   ui.revealTab("phases");
 }
 

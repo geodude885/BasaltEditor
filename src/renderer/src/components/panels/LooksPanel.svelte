@@ -8,7 +8,7 @@
   import { stageStrip } from "../../model/stageFrame";
   import { round } from "../../model/tempo";
   import type { LookCue } from "../../model/types";
-  import { addStageCueAtPlayhead, removeLookCue, selectLookCue } from "../../store/actions";
+  import { addStageCueAtPlayhead, editLookCue, removeLookCue, selectLookCue } from "../../store/actions";
   import { doc } from "../../store/document.svelte";
   import { liveLink } from "../../store/liveLink.svelte";
   import { editing } from "../../store/editing.svelte";
@@ -24,7 +24,7 @@
   const startsFrom = $derived<StageLook | null>(cue && isStageCue ? stageLookBeforeCue(doc.lookCues, index) : null);
   const fadesTo = $derived<StageLook | null>(cue && startsFrom ? stageLookAfterCue(startsFrom, cue) : null);
 
-  const editSelectedCue = (mutate: (cue: LookCue) => void) => doc.change(["shaders"], () => mutate(doc.chart.shaders![index]));
+  const editSelectedCue = (mutate: (cue: LookCue) => void) => editLookCue(index, mutate);
 
   const shownValue = (parameter: PackParameter): number => cue ? stageCueValue(cue, parameter) ?? startsFrom!.settings[parameter.property] : parameter.default;
   const sliderStep = (parameter: PackParameter) => (parameter.max - parameter.min) / 200;
@@ -63,7 +63,7 @@
 {#if shaders.length}
   <div class="cues" role="listbox" aria-label="Look cues">
     {#each shaders as c, i (i)}
-      <button role="option" aria-selected={i === index} class:stage={isCueForPack(c, STAGE_PACK)}
+      <button role="option" aria-selected={editing.selectedLooks.has(i)} class:stage={isCueForPack(c, STAGE_PACK)}
         onclick={() => { selectLookCue(i); const time = evTime(c, doc.tempo); if (Number.isFinite(time)) seek(time); }}>
         <b>{lookCueTimeLabel(c)}</b><span>{c.pack}</span><span>{cueSummary(c)}{c.fade ? ` · ${c.fade} s fade` : ""}</span>
       </button>
@@ -73,6 +73,13 @@
   <div class="note">
     No looks yet. Looks are RumbleReShaded shader settings over time, for players who have it: add one at the playhead, set what it
     changes, and give it a fade. Each look fades from where the last one left off.
+  </div>
+{/if}
+
+{#if editing.selectedLooks.size > 1}
+  <div class="row">
+    <span class="note">{editing.selectedLooks.size} looks selected. Drag them on the timeline to move them together.</span>
+    <button {...commandButton("delete")}>Delete</button>
   </div>
 {/if}
 

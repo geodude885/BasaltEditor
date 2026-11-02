@@ -1,5 +1,5 @@
 <script lang="ts">
-  // A long press on a projectile (the timeline's markers, the highway's tiles) opens these for the
+  // A long press on a projectile or look (the timeline's markers, the highway's tiles) opens these for the
   // selection, just above the finger: what a right-click menu would hold. A tap anywhere else only
   // closes it - it doesn't also reach what was tapped.
   import { commandButton } from "../store/commands";
@@ -9,7 +9,7 @@
 
   let w = $state(0), h = $state(0);
   const ACTIONS: [id: string, label: string][] = [["copy", "Copy"], ["mirror", "Mirror"], ["delete", "Delete"]];
-  const count = $derived(editing.selection.size);
+  const count = $derived(editing.selectedCount);
 
   // Above the finger, so the finger doesn't hide it; below it if there's no room; never off screen.
   const place = $derived.by(() => {

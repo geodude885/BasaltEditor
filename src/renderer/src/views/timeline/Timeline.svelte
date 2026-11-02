@@ -1,13 +1,13 @@
 <script lang="ts">
-  // The chart over time. Click the ruler or waveform to seek, a phase or look to edit it, an event to
-  // select it; drag events to move them, drag empty rows to box-select, double-click a row to add there.
+  // The chart over time. Click the ruler or waveform to seek, a phase to edit it, an event or look to
+  // select it; drag them to move them, drag empty rows to box-select, double-click a row to add there.
   // With a finger, empty space waits to see what a press becomes: a tap adds there (a projectile in
   // the column tapped), a drag pans, a long press box-selects; two fingers pinch and pan.
   import Icon from "../../components/Icon.svelte";
   import { evTime, setEvTime } from "../../model/chart";
-  import type { ChartEvent } from "../../model/types";
+  import type { ChartEvent, LookCue } from "../../model/types";
   import {
-    addMove, addProjectile, addProjectileInColumn, addStageCueAtPlayhead, pickCycled, select, selectLookCue, selectPhase, setExtraTimelineHeight, toggleTimelineRow, zoom,
+    addMove, addProjectile, addProjectileInColumn, addStageCueAtPlayhead, keysOf, pickCycled, reselectBoth, select, selectLook, selectPhase, setExtraTimelineHeight, toggleTimelineRow, zoom,
     undoByTouch,
   } from "../../store/actions";
   import { doc } from "../../store/document.svelte";
@@ -24,16 +24,16 @@
   import { drawPlayhead, drawTimeline } from "./draw";
   import { performanceRows } from "../../model/performances";
   import { clipLaneSpan, COLLAPSIBLE_ROWS, eventSpots, layoutTimeline, placeMarkers, tOf } from "./geometry";
-  import { markersInBox, pressWaitsOnTouch, touchTapWith, whatATimelinePressHits, whatATouchTapAdds, type TouchTap } from "./interaction";
+  import { lookCuesInBox, markersInBox, pressWaitsOnTouch, touchTapWith, whatATimelinePressHits, whatATouchTapAdds, type TouchTap } from "./interaction";
   import { dragStartsAfterPixels, Fingers, restingFinger, Taps, WaitingPress, type PinchStep } from "../touch";
 
   let canvas: HTMLCanvasElement;
   let w = $state(0);
   type Drag =
     | { kind: "seek" }
-    | { kind: "box"; adding: boolean; addsTo: number[] }
+    | { kind: "box"; adding: boolean; addsTo: number[]; addsToLooks: number[] }
     // `hold`: a finger resting on the markers opens quick actions for them.
-    | { kind: "move"; startSeconds: number; textBefore: string; startTimes: [ChartEvent, number][]; moved: boolean; slop: number; hold?: WaitingPress }
+    | { kind: "move"; startSeconds: number; textBefore: string; events: ChartEvent[]; cues: LookCue[]; startTimes: [ChartEvent | LookCue, number][]; moved: boolean; slop: number; hold?: WaitingPress }
     | { kind: "touch"; press: WaitingPress; t0: number; tap: TouchTap; adding: boolean };
   let drag: Drag | null = null;
   let box = $state<Box | null>(null);
@@ -56,7 +56,7 @@
     if (!w || !still) return null;
     drawTimeline(prepare(still, w, layout.height), w, layout.height, {
       chart: doc.chart, tempo: doc.tempo, view: display.timeline, snap: editing.snap,
-      selection: editing.selection, selectedPhase: editing.selectedPhase, lookCues: doc.lookCues, selectedLookCue: editing.selectedLookCue, shotColouring: display.shotColouring,
+      selection: editing.selection, selectedPhase: editing.selectedPhase, lookCues: doc.lookCues, selectedLooks: editing.selectedLooks, shotColouring: display.shotColouring,
       markers: placed, song: session.song, songOffset: songOffset(), clips: session.clips, performanceRows: performanceLanes, box, layout, loop: practice.loop, loopStart: practice.loopStart,
     }, theme(appearance.scheme));
     return { canvas: still };
@@ -77,16 +77,34 @@
   /** Shift, or the touch screens' multi-select button, adds to the selection. */
   const adds = (ev: PointerEvent) => ev.shiftKey || editing.multiSelect;
 
+  /** A box from here, adding to the selection if `adding`. */
+  function startBox(x: number, y: number, adding: boolean): void {
+    drag = { kind: "box", adding, addsTo: adding ? [...editing.selection] : [], addsToLooks: adding ? [...editing.selectedLooks] : [] };
+    box = { x0: x, y0: y, x1: x, y1: y };
+  }
+
+  /** Whatever is selected can now be dragged, events and looks together. */
+  function startMove(ev: PointerEvent, x: number, y: number): void {
+    const { events, shaders = [] } = doc.chart, at = { x: ev.clientX, y: ev.clientY };
+    const moving = [...editing.selection].map(i => events[i]), cues = [...editing.selectedLooks].map(i => shaders[i]);
+    const d: Extract<Drag, { kind: "move" }> = {
+      kind: "move", startSeconds: secondsAt(x), textBefore: doc.text, moved: false, slop: dragStartsAfterPixels(ev.pointerType),
+      events: moving, cues, startTimes: [...moving, ...cues].map(item => [item, evTime(item, doc.tempo)]),
+    };
+    d.hold = restingFinger(ev, x, y, () => { if (drag === d && !d.moved) { drag = null; ui.quickActions = at; } });
+    drag = d;
+  }
+
   /** A finger lifted without moving: do what the tap means there. */
   function touchTap(d: Extract<Drag, { kind: "touch" }>): void {
-    const t = secondsAt(d.press.x0), tap = touchTapWith(d.tap, editing.selection.size > 0, d.adding);
+    const t = secondsAt(d.press.x0), tap = touchTapWith(d.tap, editing.hasSelection, d.adding);
     switch (tap.kind) {
-      case "let-go": editing.selection.clear(); return;
+      case "let-go": editing.clearSelection(); return;
       case "add-projectile": addProjectileInColumn(t, tap.column, layout.shotColumns); return;
       case "add-look-cue": seek(snapped(t)); addStageCueAtPlayhead(); return;
       case "add-move": seek(snapped(t)); addMove(); return;
       case "seek-and-clear-selection":
-        if (!d.adding) editing.selection.clear();
+        if (!d.adding) editing.clearSelection();
         seek(Math.max(0, t));
     }
   }
@@ -108,20 +126,17 @@
     if (fingers.busy) return;
     const press = whatATimelinePressHits(doc.chart, doc.tempo, display.timeline, layout, placed, doc.lookCues, x, y, taps.isDouble(ev));
     // Select mode: empty space boxes straight away, with any pointer.
-    if (editing.selectMode && pressWaitsOnTouch(press, layout, y)) {
-      drag = { kind: "box", adding: adds(ev), addsTo: adds(ev) ? [...editing.selection] : [] };
-      box = { x0: x, y0: y, x1: x, y1: y };
+    if (editing.selectMode && pressWaitsOnTouch(press)) {
+      startBox(x, y, adds(ev));
       return;
     }
-    if (ev.pointerType === "touch" && pressWaitsOnTouch(press, layout, y)) {
+    if (ev.pointerType === "touch" && pressWaitsOnTouch(press)) {
       const adding = adds(ev);
       // Held still: box-select from here.
       const d: Extract<Drag, { kind: "touch" }> = {
         kind: "touch", t0: display.timeline.t0, tap: whatATouchTapAdds(layout, y), adding,
         press: new WaitingPress(x, y, () => {
-          if (drag !== d) return;
-          drag = { kind: "box", adding, addsTo: adding ? [...editing.selection] : [] };
-          box = { x0: x, y0: y, x1: x, y1: y };
+          if (drag === d) startBox(x, y, adding);
         }),
       };
       drag = d;
@@ -129,28 +144,26 @@
     }
     switch (press.kind) {
       case "select-phase": selectPhase(press.index); return;
-      case "select-look-cue": selectLookCue(press.index); return;
+      case "select-look-cues": {
+        const hit = pickCycled(press.underPointer, "timeline-looks", x, y, editing.selectedLooks);
+        if (!editing.selectedLooks.has(hit)) selectLook(hit, adds(ev));
+        startMove(ev, x, y);
+        return;
+      }
       case "add-look-cue": seek(snapped(secondsAt(x))); addStageCueAtPlayhead(); return;
       case "add-projectile": seek(snapped(secondsAt(x))); addProjectile(); return;
       case "add-move": seek(snapped(secondsAt(x))); addMove(); return;
       case "select-events": {
         const hit = pickCycled(press.underPointer, "timeline", x, y);
         if (!editing.selection.has(hit)) select(hit, adds(ev));
-        const events = doc.chart.events, at = { x: ev.clientX, y: ev.clientY };
-        const d: Extract<Drag, { kind: "move" }> = {
-          kind: "move", startSeconds: secondsAt(x), textBefore: doc.text, moved: false, slop: dragStartsAfterPixels(ev.pointerType),
-          startTimes: [...editing.selection].map(i => [events[i], evTime(events[i], doc.tempo)]),
-        };
-        d.hold = restingFinger(ev, x, y, () => { if (drag === d && !d.moved) { drag = null; ui.quickActions = at; } });
-        drag = d;
+        startMove(ev, x, y);
         return;
       }
       case "box-select":
-        drag = { kind: "box", adding: adds(ev), addsTo: adds(ev) ? [...editing.selection] : [] };
-        box = { x0: x, y0: y, x1: x, y1: y };
+        startBox(x, y, adds(ev));
         return;
       case "seek-and-clear-selection":
-        if (!adds(ev)) editing.selection.clear();
+        if (!adds(ev)) editing.clearSelection();
         seek(Math.max(0, secondsAt(x)));
         drag = { kind: "seek" };
         return;
@@ -171,6 +184,7 @@
       if (!box) return;
       box = { ...box, x1: x, y1: y };
       editing.setSelection(new Set([...drag.addsTo, ...markersInBox(placed, box)]));
+      editing.setLookSelection(new Set([...drag.addsToLooks, ...lookCuesInBox(doc.lookCues, display.timeline, layout, box)]));
     } else if (drag.kind === "seek") {
       seek(Math.max(0, secondsAt(x)));
     } else {
@@ -191,14 +205,13 @@
       if (!drag.press.panning && ev?.type === "pointerup") touchTap(drag);
     } else if (drag?.kind === "box" && box) {
       if (boxIsAClick(box)) {
-        if (!drag.adding) editing.selection.clear();
+        if (!drag.adding) editing.clearSelection();
         seek(Math.max(0, secondsAt(box.x0)));
       }
       editing.selectedPhase = -1;
     } else if (drag?.kind === "move" && drag.moved) {
-      const moved = drag.startTimes.map(([e]) => e);
-      doc.commit(drag.textBefore, ["events"]);
-      editing.setSelection(moved.map(e => doc.chart.events.indexOf(e)));
+      doc.commit(drag.textBefore, keysOf(drag.events, drag.cues));
+      reselectBoth(drag.events, drag.cues);
     }
     drag = null;
     box = null;

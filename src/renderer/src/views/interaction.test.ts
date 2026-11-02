@@ -6,8 +6,8 @@ import type { LoadedChart } from "../model/types";
 import { laneMap } from "./lane/geometry";
 import { moveProjectilePoint, projectilesStartingInBox, whatALanePressHits } from "./lane/interaction";
 import { boxIsAClick } from "./theme";
-import { clipLaneSpan, COLLAPSED_ROW_HEIGHT_PIXELS, columnAtY, layoutTimeline, markers, xOf, type TimelineRow } from "./timeline/geometry";
-import { markersInBox, phaseIndexAt, pressWaitsOnTouch, touchTapWith, whatATimelinePressHits, whatATouchTapAdds } from "./timeline/interaction";
+import { clipLaneSpan, COLLAPSED_ROW_HEIGHT_PIXELS, columnAtY, layoutTimeline, lookCuesAt, markers, xOf, type TimelineRow } from "./timeline/geometry";
+import { lookCuesInBox, markersInBox, phaseIndexAt, pressWaitsOnTouch, touchTapWith, whatATimelinePressHits, whatATouchTapAdds } from "./timeline/interaction";
 
 const sample = () => { const c = Jsonc.parse(SAMPLE) as LoadedChart; c.events ??= []; return c; };
 const tempo = new Tempo(120);
@@ -58,6 +58,15 @@ describe("pressing on the timeline", () => {
   const press = (x: number, y: number, doubleClick = false) => whatATimelinePressHits(chart, tempo, view, layout, placed, look, x, y, doubleClick);
   const middleOf = (row: TimelineRow) => layout.rows[row][0] + layout.rows[row][1] / 2;
 
+  it("takes in the looks a box reaches, nearest first under a press", () => {
+    const cues = [...look, { ...look[0], index: 1, time: 4.05 }, { ...look[0], index: 2, time: 9 }];
+    expect(lookCuesAt(cues, view, xOf(view, 4.05))).toEqual([1, 0]);
+    const [top] = layout.rows.look, x0 = xOf(view, 3), x1 = xOf(view, 5);
+    expect(lookCuesInBox(cues, view, layout, { x0, y0: top + 2, x1, y1: top + 4 })).toEqual([0, 1]);
+    expect(lookCuesInBox(cues, view, layout, { x0: x1, y0: middleOf("shot"), x1: x0, y1: middleOf("look") })).toEqual([0, 1]);
+    expect(lookCuesInBox(cues, view, layout, { x0, y0: middleOf("move"), x1, y1: middleOf("move") + 2 })).toEqual([]);
+  });
+
   it("seeks from the ruler and waveform", () => {
     expect(press(100, 5)).toEqual({ kind: "seek" });
     expect(press(100, middleOf("wave"))).toEqual({ kind: "seek" });
@@ -68,10 +77,10 @@ describe("pressing on the timeline", () => {
     expect(phaseIndexAt(chart, tempo, 30)).toBe(2);
   });
 
-  it("selects a look cue near the pointer, else adds one on double-click", () => {
-    expect(press(xOf(view, 4) + 5, middleOf("look"))).toEqual({ kind: "select-look-cue", index: 0 });
+  it("selects look cues near the pointer, else boxes, or adds one on double-click", () => {
+    expect(press(xOf(view, 4) + 5, middleOf("look"))).toEqual({ kind: "select-look-cues", underPointer: [0] });
     expect(press(xOf(view, 9), middleOf("look"), true)).toEqual({ kind: "add-look-cue" });
-    expect(press(xOf(view, 9), middleOf("look"))).toEqual({ kind: "seek" });
+    expect(press(xOf(view, 9), middleOf("look"))).toEqual({ kind: "box-select" });
   });
 
   it("selects events by their markers, and adds or box-selects on empty rows", () => {
@@ -155,9 +164,8 @@ describe("touch taps on the timeline", () => {
   });
 
   it("waits on empty rows but not on the ruler", () => {
-    expect(pressWaitsOnTouch({ kind: "box-select" }, layout, middleOf("shot"))).toBe(true);
-    expect(pressWaitsOnTouch({ kind: "seek" }, layout, middleOf("look"))).toBe(true);
-    expect(pressWaitsOnTouch({ kind: "seek" }, layout, 2)).toBe(false);
+    expect(pressWaitsOnTouch({ kind: "box-select" })).toBe(true);
+    expect(pressWaitsOnTouch({ kind: "seek" })).toBe(false);
   });
 });
 

@@ -130,11 +130,8 @@ export function eventsAt(all: Marker[], x: number, y: number): number[] {
 
 export const LOOK_MARKER_HIT_PIXELS = 7;
 
-export function lookCueAt(cues: TimedLookCue[], view: View, x: number): number {
-  let nearest = -1, nearestDistance = LOOK_MARKER_HIT_PIXELS;
-  for (const cue of cues) {
-    const distance = Math.abs(xOf(view, cue.time) - x);
-    if (distance <= nearestDistance) { nearest = cue.index; nearestDistance = distance; }
-  }
-  return nearest;
+/** The looks under a point across the timeline, nearest first. */
+export function lookCuesAt(cues: TimedLookCue[], view: View, x: number): number[] {
+  return cues.map(cue => ({ index: cue.index, distance: Math.abs(xOf(view, cue.time) - x) }))
+    .filter(cue => cue.distance <= LOOK_MARKER_HIT_PIXELS).sort((a, b) => a.distance - b.distance).map(cue => cue.index);
 }

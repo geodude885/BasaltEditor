@@ -1,7 +1,7 @@
 // The open chart. Its text is the source of truth: an edit mutates the parsed chart, then writes the
 // keys it touched back into the text, so comments and anything the editor does not show survive.
 // Undo keeps texts, not objects.
-import { evTime } from "../model/chart";
+import { evTime, sortByTime } from "../model/chart";
 import * as Jsonc from "../model/jsonc";
 import { timedLookCues } from "../model/looks";
 import { Tempo } from "../model/tempo";
@@ -89,6 +89,7 @@ class ChartDocument {
     let text = this.text;
     for (const key of keys) {
       if (key === "events") this.chart.events.sort((a, b) => evTime(a, this.tempo) - evTime(b, this.tempo));
+      if (key === "shaders" && this.chart.shaders) sortByTime(this.chart.shaders, this.tempo);
       text = Jsonc.set(text, key, $state.snapshot(this.chart[key as keyof LoadedChart]));
     }
     this.text = text;

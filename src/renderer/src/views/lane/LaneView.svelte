@@ -49,6 +49,7 @@
     const [px, py] = pointerAt(ev);
     if (boxDrag && box) {
       box = { ...box, x1: px, y1: py };
+      editing.selectedLooks.clear();
       editing.setSelection(new Set([...boxDrag.addsTo, ...projectilesStartingInBox(doc.chart, map, box)]));
     } else if (pointDrag) {
       moveProjectilePoint(doc.chart, map, pointDrag.index, pointDrag.point, px, py);
@@ -58,7 +59,7 @@
 
   function pointerup(): void {
     if (boxDrag && box) {
-      if (boxIsAClick(box) && !boxDrag.adding) editing.selection.clear();
+      if (boxIsAClick(box) && !boxDrag.adding) editing.clearSelection();
       editing.selectedPhase = -1;
     }
     if (pointDrag?.moved) doc.commit(pointDrag.textBefore, ["events"]);
