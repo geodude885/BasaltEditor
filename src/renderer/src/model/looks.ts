@@ -13,7 +13,7 @@ export const STAGE_PACK: PackManifest = stageManifest;
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
 // RumbleReShaded matches a parameter by its label or shader property, ignoring case, spaces and underscores.
-const comparableParameterName = (name: string) => name.toLowerCase().replace(/[\s_]/g, "");
+export const comparableParameterName = (name: string) => name.toLowerCase().replace(/[\s_]/g, "");
 
 export function findPackParameter(pack: PackManifest, name: string): PackParameter | undefined {
   const wanted = comparableParameterName(name);

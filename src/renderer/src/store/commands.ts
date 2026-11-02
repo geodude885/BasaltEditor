@@ -15,6 +15,7 @@ import { transport } from "./transport.svelte";
 import { ui } from "./ui.svelte";
 import { copyChart, newChart, openFiles, openFolder, openRecent, save, saveChartAs, savePackage, saveTarget } from "./files";
 import { library } from "./library.svelte";
+import { liveLink } from "./liveLink.svelte";
 import { ensureAudio, seek } from "./playback";
 import { recording } from "./recording.svelte";
 import { backToPlayStart, loopPoint, loopPointLabel, playOrPause, practice, rewindBars, rewindSeconds, selectLoop } from "./practice.svelte";
@@ -117,6 +118,9 @@ export function menus(): Menu[] {
             enabled: () => [...editing.selection].filter(i => doc.chart.events[i]?.projectile).length === 1,
             help: "Projectiles recorded or added in a column copy the selected one: its structure, height, speed, telegraph and aim" },
           { id: "add-look", label: "Add a look", run: addStageCueAtPlayhead },
+          { id: "live-link", label: "Link looks to the game", run: () => liveLink.toggle(), shown: () => liveLink.available,
+            enabled: () => liveLink.state !== "connecting", checked: () => liveLink.state === "on",
+            help: "Show looks on the real shaders in the running game. Needs RumbleReShaded's Live link setting on" },
           { id: "add-phase", label: "Start a phase", run: addPhase },
         ],
         [

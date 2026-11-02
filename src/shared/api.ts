@@ -19,6 +19,17 @@ export type UnsavedChoice = "save" | "discard" | "cancel";
 /** What to do with a chart that has no folder when a chart folder already holds one like it. */
 export type SameChartChoice = "there" | "new" | "cancel";
 
+/** A shader pack RumbleReShaded has in the running game; `player` is the player's own value of a slider. */
+export type LiveLinkPack = {
+  id: string;
+  name: string;
+  parameters: { property: string; label: string; min: number; max: number; default: number; player: number }[];
+};
+/** A pack's look to show in the game: sliders left out are the player's. */
+export type LiveLinkLook = { pack: string; on: boolean; values: Record<string, number> };
+/** What changed for the live link: looks to show, and packs to hand back. */
+export type LiveLinkUpdate = { looks: LiveLinkLook[]; released: string[] };
+
 export interface EditorApi {
   /** Picks chart files (chart.json, song, cover, clips, or a package) - or one song or cover. Empty when cancelled. */
   openFiles(kind?: FileKind): Promise<OpenedFile[]>;
@@ -57,6 +68,14 @@ export interface EditorApi {
   askUnsaved?(name: string): Promise<UnsavedChoice>;
   /** Asks where to save a chart with no folder, when this folder already holds one of its name and difficulty. */
   askSameChart?(name: string, folderName: string): Promise<SameChartChoice>;
+  /** Connects to RumbleReShaded in the running game (its Live link setting), and says which packs it has. Rejects if it can't. */
+  connectLiveLink?(): Promise<LiveLinkPack[]>;
+  /** Shows looks in the game, over the live link. */
+  sendLiveLink?(update: LiveLinkUpdate): Promise<void>;
+  /** Ends the live link: the game hands every pack back to the player. */
+  disconnectLiveLink?(): Promise<void>;
+  /** Calls back when the live link drops by itself - the game closed, say. */
+  onLiveLinkClosed?(closed: () => void): void;
 }
 
 /** The API as the desktop app's preload gives it: every call, the desktop's own included. */
@@ -83,4 +102,8 @@ export const Channels = {
   recentFolders: "editor:recent-folders",
   askUnsaved: "editor:ask-unsaved",
   askSameChart: "editor:ask-same-chart",
+  connectLiveLink: "editor:connect-live-link",
+  sendLiveLink: "editor:send-live-link",
+  disconnectLiveLink: "editor:disconnect-live-link",
+  liveLinkClosed: "editor:live-link-closed",
 } as const;

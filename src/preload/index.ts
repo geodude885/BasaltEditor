@@ -19,6 +19,13 @@ const api: DesktopApi = {
   recentFolders: () => ipcRenderer.invoke(Channels.recentFolders),
   askUnsaved: name => ipcRenderer.invoke(Channels.askUnsaved, name),
   askSameChart: (name, folderName) => ipcRenderer.invoke(Channels.askSameChart, name, folderName),
+  connectLiveLink: () => ipcRenderer.invoke(Channels.connectLiveLink),
+  sendLiveLink: update => ipcRenderer.invoke(Channels.sendLiveLink, update),
+  disconnectLiveLink: () => ipcRenderer.invoke(Channels.disconnectLiveLink),
+  onLiveLinkClosed: closed => {
+    ipcRenderer.removeAllListeners(Channels.liveLinkClosed);
+    ipcRenderer.on(Channels.liveLinkClosed, () => closed());
+  },
 };
 
 contextBridge.exposeInMainWorld("editor", api);

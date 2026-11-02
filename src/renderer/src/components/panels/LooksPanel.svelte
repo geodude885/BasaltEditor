@@ -10,6 +10,7 @@
   import type { LookCue } from "../../model/types";
   import { addStageCueAtPlayhead, removeLookCue, selectLookCue } from "../../store/actions";
   import { doc } from "../../store/document.svelte";
+  import { liveLink } from "../../store/liveLink.svelte";
   import { editing } from "../../store/editing.svelte";
   import { seek } from "../../store/playback";
   import { commandButton } from "../../store/commands";
@@ -56,6 +57,7 @@
 <div class="row">
   <button class="primary" title="A BossBattles Stage cue at the playhead (or double-click the timeline's looks row)" onclick={addStageCueAtPlayhead}>+ Look at the playhead</button>
   <button {...commandButton("look-preview")}>Preview</button>
+  {#if liveLink.available}<button {...commandButton("live-link")}>{liveLink.state === "on" ? "Linked to the game" : "Link to the game"}</button>{/if}
 </div>
 
 {#if shaders.length}

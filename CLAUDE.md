@@ -111,6 +111,9 @@ src/renderer/src/
   (`platform/library-desktop.ts`, saving with Ctrl S). The main process only reads, copies or bins
   folders inside the Charts folder; `BASALT_CHARTS_FOLDER` points it at another folder, to try it
   without touching real charts.
+- **The live link** (`store/liveLink.svelte.ts`, `src/main/liveLink.ts`) shows looks in the running game, through
+  RumbleReShaded's Live link setting (its `docs/LIVE_LINK.md`). It is optional at both ends: desktop only, nothing
+  runs until someone connects, it never changes the chart, and nothing else may depend on it.
 - **The web build** (`npm run build:web`, `vite.config.web.ts`) is the same renderer with
   `platform/web.ts` standing in for the preload, published to GitHub Pages (the `gh-pages` branch)
   as several copies: the live site at the root, changed only by publishing a release
