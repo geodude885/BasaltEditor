@@ -1,13 +1,13 @@
 // Reading a chart: the defaults the mod applies, times, and where things are.
-import { GROUNDED, GROUNDED_STATE } from "./constants";
+import { GROUNDED, GROUNDED_STATE, LANE_GUTTER } from "./constants";
 import { round, type Tempo } from "./tempo";
 import type { Actor, Chart, ChartEvent, EventKind, LaneColours, LoadedChart, Phase, Projectile } from "./types";
 
-export type Lane = { length: number; width: number };
+export type Lane = { length: number; width: number; gutter: number };
 export type Zone = { length: number; height: number };
 export type Point = { x: number; z: number };
 
-export const laneOf = (c: Chart): Lane => ({ length: +(c.lane?.length ?? 12), width: +(c.lane?.width ?? 3) });
+export const laneOf = (c: Chart): Lane => ({ length: +(c.lane?.length ?? 12), width: +(c.lane?.width ?? 3), gutter: +(c.lane?.gutter ?? LANE_GUTTER) });
 
 /** The chart's actors, or the one the mod makes when it names none. */
 export function actorsOf(c: Chart): Actor[] {

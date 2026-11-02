@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
-  cssToLinear, evaluateLooksAt, findPackParameter, linearToCss, lookCueProblems,
-  shadeCentrePixelLikeStage, STAGE_PACK, stageCueWarnings, stageDefaults, stageLookAt, stageLookBeforeCue, stageSettingsFrom,
+  cssToLinear, evaluateLooksAt, findPackParameter, linearToCss, lookCueProblems, lookFadeSkipped,
+  shadeCentrePixelLikeStage, STAGE_PACK, stageCueAt, stageCueWarnings, stageDefaults, stageLookAt, stageLookBeforeCue, stageSettingsFrom, timedLookCues,
   type Rgb, type TimedLookCue,
 } from "./looks";
 import { Tempo } from "./tempo";
+import type { LoadedChart } from "./types";
 
 // The retired BossBattles Night pack's fragment shader, transcribed separately from Stage, for the centre
 // of the screen between beats with the glow's blur seeing the same colour all around. Stage reproduces
@@ -68,6 +69,17 @@ const cue = (time: number, values: Record<string, number>, fade = 0, extra: Part
 const defaultsOf = (_pack: string, name: string) => findPackParameter(STAGE_PACK, name)?.default ?? 0;
 
 describe("blending cues as the mod does", () => {
+  it("shows a look at time 0 at once, whatever its fade, and fades any later one", () => {
+    const timed = (cue: object, bpm?: number) => timedLookCues({ events: [], shaders: [cue] } as unknown as LoadedChart, new Tempo(bpm));
+    const first = timed({ t: 0, pack: "BossBattles Stage", fade: 8, values: { "_KeyHue": 90 } });
+    expect(first[0].fade).toBe(0);
+    expect(stageCueAt(first, 0)!.progress).toBe(1);
+    expect(stageLookAt(first, 0).settings._KeyHue).toBe(90);
+    expect(timed({ beat: 0, pack: "x", fade: 1 }, 120)[0].fade).toBe(0);
+    expect(timed({ t: 0.01, pack: "x", fade: 1 })[0].fade).toBe(1);
+    expect(lookFadeSkipped({ t: 0, pack: "x" }, new Tempo(undefined))).toBe(false);
+  });
+
   it("fades from the player's value, part way through a fade", () => {
     const look = evaluateLooksAt([cue(10, { Darkness: 1 }, 4)], 11, defaultsOf).get("bossbattles stage")!;
     expect(look.on).toBe(true);

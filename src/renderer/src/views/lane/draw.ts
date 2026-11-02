@@ -18,6 +18,8 @@ export type LaneScene = {
   shots: LaneShots;
 };
 
+const WALL_PAST_THE_FAR_END_METRES = 0.75;
+
 export function drawLane(ctx: CanvasRenderingContext2D, w: number, h: number, map: LaneMap, scene: LaneScene, t: Theme): void {
   const { chart: c, tempo: tp, time } = scene, L = laneOf(c), P = map.toPx;
   ctx.clearRect(0, 0, w, h);
@@ -33,7 +35,10 @@ export function drawLane(ctx: CanvasRenderingContext2D, w: number, h: number, ma
   ctx.beginPath(); ctx.moveTo(lx0, lz1); ctx.lineTo(lx1, lz1); ctx.moveTo(lx0, lz0); ctx.lineTo(lx1, lz0); ctx.stroke();
   ctx.strokeStyle = alpha(t.accent, 0.4); ctx.setLineDash([4, 4]);
   const [bx0, bz] = P(-L.width / 2 - 1, -0.9), [bx1] = P(L.width / 2 + 1, -0.9);
-  ctx.beginPath(); ctx.moveTo(bx0, bz); ctx.lineTo(bx1, bz); ctx.stroke(); ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(bx0, bz); ctx.lineTo(bx1, bz); ctx.stroke();
+  // The walls beside the lane, a gutter out from its edges.
+  const [wx0, wz0] = P(-L.width / 2 - L.gutter, L.length + WALL_PAST_THE_FAR_END_METRES), [wx1, wz1] = P(L.width / 2 + L.gutter, -0.9);
+  ctx.beginPath(); ctx.moveTo(wx0, wz0); ctx.lineTo(wx0, wz1); ctx.moveTo(wx1, wz0); ctx.lineTo(wx1, wz1); ctx.stroke(); ctx.setLineDash([]);
 
   // Your zone: where you may go, and the line you stop at.
   const Z = zoneOf(c);
@@ -43,12 +48,13 @@ export function drawLane(ctx: CanvasRenderingContext2D, w: number, h: number, ma
     ctx.strokeStyle = t.zone; ctx.lineWidth = 1.5; ctx.setLineDash([6, 4]);
     ctx.beginPath(); ctx.moveTo(zx0, zy); ctx.lineTo(zx1, zy); ctx.stroke(); ctx.setLineDash([]);
     ctx.fillStyle = t.zone; ctx.font = `10px ${t.mono}`; ctx.textAlign = "left";
-    ctx.fillText(`your zone · ${Z.height} m high`, zx1 + 4, zy + 3);
+    const label = `your zone · ${Z.height} m high`;
+    ctx.fillText(label, Math.min(wx1 + 4, w - ctx.measureText(label).width - 4), zy + 3);
   }
 
   // Metre ticks along the left edge.
   ctx.fillStyle = t.textDim; ctx.font = `10px ${t.mono}`; ctx.textAlign = "right";
-  for (let z = 0; z <= L.length; z += 2) { const [x, y] = P(-L.width / 2, z); ctx.fillText(`${z}m`, x - 5, y + 3); }
+  for (let z = 0; z <= L.length; z += 2) { const [x, y] = P(-L.width / 2 - L.gutter, z); ctx.fillText(`${z}m`, x - 5, y + 3); }
 
   // You, and the actors where they stand at the playhead.
   const [yx, yy] = P(0, 0);

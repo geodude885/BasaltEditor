@@ -1,6 +1,6 @@
 <script lang="ts">
   import {
-    colourChannels, cssToLinear, cueSetsParameter, isCueForPack, linearToCss, lookCueTimeLabel,
+    colourChannels, cssToLinear, cueSetsParameter, isCueForPack, linearToCss, lookCueTimeLabel, lookFadeSkipped,
     setStageCueColour, setStageCueSetting, settingsWrittenIn, STAGE_PACK, stageCueValue, stageCueWarnings, stageLookAfterCue,
     stageLookBeforeCue, stageParameterGroups, type PackParameter, type Rgb, type StageLook,
   } from "../../model/looks";
@@ -21,6 +21,7 @@
   const index = $derived(editing.selectedLookCue);
   const cue = $derived<LookCue | undefined>(shaders[index]);
   const isStageCue = $derived(!!cue && isCueForPack(cue, STAGE_PACK));
+  const fades = (c: LookCue) => !!c.fade && !lookFadeSkipped(c, doc.tempo);
   const startsFrom = $derived<StageLook | null>(cue && isStageCue ? stageLookBeforeCue(doc.lookCues, index) : null);
   const fadesTo = $derived<StageLook | null>(cue && startsFrom ? stageLookAfterCue(startsFrom, cue) : null);
 
@@ -65,7 +66,7 @@
     {#each shaders as c, i (i)}
       <button role="option" aria-selected={editing.selectedLooks.has(i)} class:stage={isCueForPack(c, STAGE_PACK)}
         onclick={() => { selectLookCue(i); const time = evTime(c, doc.tempo); if (Number.isFinite(time)) seek(time); }}>
-        <b>{lookCueTimeLabel(c)}</b><span>{c.pack}</span><span>{cueSummary(c)}{c.fade ? ` · ${c.fade} s fade` : ""}</span>
+        <b>{lookCueTimeLabel(c)}</b><span>{c.pack}</span><span>{cueSummary(c)}{fades(c) ? ` · ${c.fade} s fade` : ""}</span>
       </button>
     {/each}
   </div>
@@ -104,6 +105,9 @@
         </select>
       </label>
     </div>
+    {#if lookFadeSkipped(cue, doc.tempo)}
+      <div class="note">A look at 0 shows at full strength from the countdown on, so this fade does nothing. To fade in, start it just after 0, though it then won't show in the countdown.</div>
+    {/if}
 
     {#if !isStageCue}
       <div class="list">
@@ -118,7 +122,7 @@
       <div class="row">
         {@render swatches(startsFrom, "starts from")}
         <span class="arrow">→</span>
-        {@render swatches(fadesTo, cue.fade ? `after ${cue.fade} s` : "at once")}
+        {@render swatches(fadesTo, fades(cue) ? `after ${cue.fade} s` : "at once")}
       </div>
       {#each stageCueWarnings(cue) as warning (warning)}<div class="warning">{warning}</div>{/each}
 

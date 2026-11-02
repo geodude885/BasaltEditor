@@ -48,12 +48,12 @@ export function templateAs(c: LoadedChart, template: ProjectileTemplate | null, 
 
 /**
  * A new projectile starting at `x` across the lane: like the template, aimed as far across from its start as
- * the template is, and no further down the lane than a projectile may start - or, without one, straight down the lane.
+ * the template is - or, without one, straight down the lane.
  */
 export function projectileAt(c: LoadedChart, x: number, template: ProjectileTemplate | null): Projectile {
   if (!template) return straightProjectile(c, x);
   const p = templateOf(template), dx = x - (+p.from?.x || 0);
-  p.from = { ...p.from, x, z: round(Math.min(+p.from?.z || 0, laneOf(c).length + 6), 1) };
+  p.from = { ...p.from, x };
   if (p.to) p.to = { ...p.to, x: round((+p.to.x || 0) + dx, 2) };
   return p;
 }

@@ -49,7 +49,7 @@ describe("projectile columns", () => {
     const ball = { structure: "Ball" as const, from: { x: -1, y: 2, z: 30 }, to: { x: -0.5, y: 1 }, speed: 7, telegraph: 1, grounded: false };
     const template = templateOf(ball);
     const p = projectileAt(chart, 1, template);
-    expect(p).toEqual({ ...ball, from: { x: 1, y: 2, z: 18 }, to: { x: 1.5, y: 1 } });
+    expect(p).toEqual({ ...ball, from: { x: 1, y: 2, z: 30 }, to: { x: 1.5, y: 1 } });
     expect(projectileAt(chart, 1, { ...template, to: undefined }).to).toBeUndefined();
     expect(projectileAt(chart, 0.5, null)).toEqual(straightProjectile(chart, 0.5));
     expect(templateAs(chart, null, "RockCube")).toMatchObject({ structure: "RockCube", speed: 11 });

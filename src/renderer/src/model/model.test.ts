@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { actorSpotAt, actorsOf, endOf, evTime, setEvTime, zoneOf } from "./chart";
 import {
-  addPhaseAt, addTempoChange, mirror, newTimed, resizeLane, setArenaSpot, setLaneColour, setMusic, setRules, setTempo, setTopLevelValueOrRemoveIfEmpty, setWallsShown, setZone, tempoList,
+  addPhaseAt, addTempoChange, mirror, newTimed, resizeLane, setArenaSpot, setLane, setLaneColour, setMusic, setRules, setTempo, setTopLevelValueOrRemoveIfEmpty, setWallsShown, setZone, tempoList,
 } from "./edits";
 import { parse } from "./jsonc";
 import { density, problems } from "./problems";
@@ -78,12 +78,39 @@ describe("problems", () => {
     c.format = 4;
     expect(problems(c, new Tempo(c.bpm))).toEqual([
       "format 4 is newer than the mod reads (3)",
-      "events[0].projectile.from.z must be over 0 and up to 18 (the lane, or 6 m past it)",
       "events[0].projectile.speed must be over 0",
       "events[0] would appear before the battle starts",
       'events[1].actor "nobody" is not one of the actors',
       "end (1) is before the last event (2)",
     ]);
+  });
+
+  it("leaves actors, moves and shots free to be outside the lane, as the mod does", () => {
+    const c = load(template("x"));
+    c.actors = [{ id: "boss", name: "Boss", at: { x: 0, z: -4 } }];
+    c.events.push({ t: 2, at: { x: 0, z: 99 } });
+    c.events.push({ t: 3, projectile: { structure: "Disc", from: { x: 50, y: 1, z: 99 }, speed: 5 } });
+    expect(problems(c, new Tempo(c.bpm))).toEqual([]);
+  });
+
+  it("wants x and z on a spot, and a shot starting ahead of you", () => {
+    const c = load(template("x"));
+    c.actors = [{ id: "boss", name: "Boss", at: { x: 0 } as never }];
+    c.events.push({ t: 2, at: { z: 1 } as never });
+    c.events.push({ t: 3, projectile: { structure: "Disc", from: { x: 0, y: 1, z: 0 }, speed: 5 } });
+    expect(problems(c, new Tempo(c.bpm))).toEqual([
+      "actors[0].at needs x and z",
+      "events[0].at needs x and z",
+      "events[1].projectile.from.z must be over 0",
+    ]);
+  });
+
+  it("refuses a negative gutter, and takes none", () => {
+    const c = load(template("x"));
+    c.lane = { length: 12, width: 3, gutter: 0 };
+    expect(problems(c, new Tempo(c.bpm))).toEqual([]);
+    c.lane.gutter = -1;
+    expect(problems(c, new Tempo(c.bpm))).toEqual(["lane.gutter cannot be negative"]);
   });
 
   it("checks tempo changes as the mod does", () => {
@@ -138,6 +165,25 @@ describe("edits", () => {
     expect(c.events[0].projectile!.from.z).toBe(5);
     expect(c.actors![0].at!.z).toBe(6);
     expect(resizeLane(c, 6)).toEqual([]);
+  });
+
+  it("keeps the gutter through the lane's other changes, and writes it only away from the default", () => {
+    const c = load(SAMPLE);
+    setLane(c, { gutter: 0 });
+    expect(c.lane).toEqual({ length: 12, width: 3, gutter: 0 });
+    setLane(c, { width: 4 });
+    resizeLane(c, 6);
+    expect(c.lane).toEqual({ length: 6, width: 4, gutter: 0 });
+    setLane(c, { gutter: 0.3 });
+    expect(c.lane).toEqual({ length: 6, width: 4 });
+  });
+
+  it("keeps events outside the lane outside it when it's resized", () => {
+    const c = load(SAMPLE);
+    c.events = [{ t: 2, at: { x: 0, z: -4 } }, { t: 3, projectile: { structure: "Disc", from: { x: 0, y: 1, z: 24 }, speed: 5 } }];
+    resizeLane(c, 6);
+    expect(c.events[0].at!.z).toBe(-2);
+    expect(c.events[1].projectile!.from.z).toBe(12);
   });
 
   it("mirrors origins, aims and spots", () => {

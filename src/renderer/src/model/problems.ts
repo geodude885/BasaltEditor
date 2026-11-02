@@ -12,6 +12,7 @@ export function problems(c: LoadedChart, tp: Tempo): string[] {
   if ((c.format ?? 1) > NEWEST_FORMAT) out.push(`format ${c.format} is newer than the mod reads (${NEWEST_FORMAT})`);
   if (L.length <= 2) out.push("lane.length must be over 2 m");
   if (L.width <= 0) out.push("lane.width must be over 0");
+  if (L.gutter < 0) out.push("lane.gutter cannot be negative");
   if (c.bpm != null && !tp.ok) out.push("bpm must be a number over 0");
   if (c.bpmChanges?.length && c.bpm == null) out.push("bpmChanges needs a bpm to start from");
   (c.bpmChanges ?? []).forEach((b, i, all) => {
@@ -19,7 +20,7 @@ export function problems(c: LoadedChart, tp: Tempo): string[] {
     if (!(b.beat > (all[i - 1]?.beat ?? 0))) out.push(`bpmChanges[${i}].beat must be after the tempo before it`);
   });
   actorsOf(c).forEach((a, i) => {
-    if (a.at && !(a.at.z >= 0 && a.at.z <= L.length)) out.push(`actors[${i}].at.z (${a.at.z}) must be within the lane: 0 to ${L.length}`);
+    if (a.at && (a.at.x == null || a.at.z == null)) out.push(`actors[${i}].at needs x and z`);
   });
   const phases = c.phases ?? [];
   phases.forEach((p, i) => {
@@ -36,9 +37,7 @@ export function problems(c: LoadedChart, tp: Tempo): string[] {
     if (s) {
       if (!STRUCTURES.includes(s.structure)) out.push(`${p}.projectile.structure "${s.structure}" is not a structure`);
       const f: Partial<typeof s.from> = s.from ?? {};
-      // Shots may start outside the lane - past the far end or off the sides - up to 6 m (ChartLoader.ProjectileReach).
-      if (!(f.z! > 0 && f.z! <= L.length + 6)) out.push(`${p}.projectile.from.z must be over 0 and up to ${L.length + 6} (the lane, or 6 m past it)`);
-      if (Math.abs(f.x || 0) > L.width / 2 + 6) out.push(`${p}.projectile.from.x must be within 6 m of the lane's sides`);
+      if (!(f.z! > 0)) out.push(`${p}.projectile.from.z must be over 0`);
       if (f.y! < 0) out.push(`${p}.projectile.from.y is below the floor`);
       if (!(s.speed > 0)) out.push(`${p}.projectile.speed must be over 0`);
       const tel = s.telegraph ?? 0.5;
@@ -46,7 +45,7 @@ export function problems(c: LoadedChart, tp: Tempo): string[] {
       else if (t - tel < 0) out.push(`${p} would appear before the battle starts`);
       if (s.grounded != null && typeof s.grounded !== "boolean") out.push(`${p}.projectile.grounded must be true or false`);
     }
-    if (e.at && !(e.at.z >= 0 && e.at.z <= L.length)) out.push(`${p}.at.z must be within the lane`);
+    if (e.at && (e.at.x == null || e.at.z == null)) out.push(`${p}.at needs x and z`);
   });
   const last = Math.max(0, ...c.events.map(e => evTime(e, tp)).filter(Number.isFinite));
   if (c.end != null && c.end < last) out.push(`end (${c.end}) is before the last event (${round(last, 2)})`);

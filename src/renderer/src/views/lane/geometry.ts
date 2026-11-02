@@ -10,10 +10,10 @@ export type LaneMap = {
   scale: number;
 };
 
-const MARGIN = 26;
+const MARGIN = 26, ROOM_BESIDE_THE_LANE_METRES = 1.5, ROOM_BESIDE_THE_WALLS_METRES = 0.25;
 
 export function laneMap(w: number, h: number, lane: Lane): LaneMap {
-  const scale = Math.min((w - MARGIN * 2) / (lane.width + 3), (h - MARGIN * 2) / (lane.length + 2));
+  const scale = Math.min((w - MARGIN * 2) / (lane.width + 2 * Math.max(ROOM_BESIDE_THE_LANE_METRES, lane.gutter + ROOM_BESIDE_THE_WALLS_METRES)), (h - MARGIN * 2) / (lane.length + 2));
   const cx = w / 2, bottom = h - MARGIN - scale * 0.9;
   return {
     toPx: (x, z) => [cx + x * scale, bottom - z * scale],

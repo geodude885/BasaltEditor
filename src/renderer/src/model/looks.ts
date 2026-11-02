@@ -56,6 +56,9 @@ export function lookCueTimeLabel(cue: LookCue): string {
   return cue.t != null ? `${cue.t} s` : "no time";
 }
 
+/** The mod shows a look at time 0 at full strength from the countdown on, so a fade written on one does nothing. */
+export const lookFadeSkipped = (cue: LookCue, tempo: Tempo): boolean => (cue.fade ?? 0) > 0 && evTime(cue, tempo) <= 0;
+
 export type TimedLookCue = { index: number; time: number; pack: string; values: [string, number][]; off: boolean; fade: number };
 
 export function timedLookCues(chart: LoadedChart, tempo: Tempo): TimedLookCue[] {
@@ -63,7 +66,7 @@ export function timedLookCues(chart: LoadedChart, tempo: Tempo): TimedLookCue[] 
     .map((cue, index) => ({ cue, index }))
     .filter(({ cue, index }) => lookCueProblems(cue, index, tempo).length === 0)
     .map(({ cue, index }) => ({
-      index, time: evTime(cue, tempo), pack: cue.pack.trim(), values: settingsWrittenIn(cue), off: cue.off ?? false, fade: cue.fade ?? 0,
+      index, time: evTime(cue, tempo), pack: cue.pack.trim(), values: settingsWrittenIn(cue), off: cue.off ?? false, fade: lookFadeSkipped(cue, tempo) ? 0 : cue.fade ?? 0,
     }))
     .sort((a, b) => a.time - b.time || a.index - b.index);
 }

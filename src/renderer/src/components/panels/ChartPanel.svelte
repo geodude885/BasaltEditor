@@ -1,8 +1,8 @@
 <script lang="ts">
   import { alphaOf, coloursOf, endOf, laneOf, zoneOf } from "../../model/chart";
-  import { DIFFICULTIES, LANE_COLOURS, MAPS, WALL_COLOUR, WALL_DEFAULT } from "../../model/constants";
+  import { DIFFICULTIES, LANE_COLOURS, LANE_GUTTER, MAPS, WALL_COLOUR, WALL_DEFAULT } from "../../model/constants";
   import {
-    resizeLane, setArenaSpot, setLaneColour, setMusic, setRules, setTopLevelValueOrRemoveIfEmpty, setWallsShown, setZone,
+    resizeLane, setArenaSpot, setLane, setLaneColour, setMusic, setRules, setTopLevelValueOrRemoveIfEmpty, setWallsShown, setZone,
   } from "../../model/edits";
   import { density } from "../../model/problems";
   import { round } from "../../model/tempo";
@@ -76,7 +76,8 @@
     </select>
   </label>
   <label><span>Length m</span><input type="number" step="1" min="3" value={lane.length} onchange={e => setLength(num(e))} /></label>
-  <label><span>Width m</span><input type="number" step="0.5" min="1" value={lane.width} onchange={e => doc.change(["lane"], () => { c.lane = { length: lane.length, width: num(e) }; })} /></label>
+  <label><span>Width m</span><input type="number" step="0.5" min="1" value={lane.width} onchange={e => doc.change(["lane"], () => setLane(c, { width: num(e) }))} /></label>
+  <label title="Room beside the lane on each side before its walls. 0 puts the walls on the lane's edges"><span>Gutter m</span><input type="number" step="0.1" min="0" value={c.lane?.gutter ?? ""} placeholder={String(LANE_GUTTER)} onchange={e => doc.change(["lane"], () => setLane(c, { gutter: optionalNum(e) ?? LANE_GUTTER }))} /></label>
 </div>
 <div class="grid3">
   <label><span>Start x</span><input type="number" step="0.1" value={arena.at?.x ?? ""} placeholder="0 (the map's centre)" onchange={e => doc.change(["arena"], () => setArenaSpot(c, optionalNum(e), arena.at?.z, arena.at?.facing))} /></label>

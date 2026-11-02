@@ -9,6 +9,8 @@ export const MOVES = ["Straight", "Uppercut", "Kick", "Stomp", "Explode", "Flick
 export const MAPS = ["gym", "ring", "pit"] as const;
 export const DIFFICULTIES = ["Easy", "Normal", "Hard", "Expert"];
 /** Where a projectile with no `to` aims, roughly: your chest at your end. */
+/** Room beside the lane on each side before its walls, unless a chart says. */
+export const LANE_GUTTER = 0.3;
 export const PLAYER_HEAD = 1.35;
 
 export type Size = { across: number; along: number; up: number };

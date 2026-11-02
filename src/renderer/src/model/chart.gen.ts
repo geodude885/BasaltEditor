@@ -49,6 +49,7 @@ export interface BasaltChart {
   lane?: {
     length?: number;
     width?: number;
+    gutter?: number;
   };
   actors?: {
     id?: string;

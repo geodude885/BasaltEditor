@@ -62,7 +62,7 @@ export function projectilesStartingInBox(chart: LoadedChart, map: LaneMap, box: 
 export function moveProjectilePoint(chart: LoadedChart, map: LaneMap, index: number, point: ProjectilePoint, px: number, py: number): void {
   const s = chart.events[index]?.projectile, lane = laneOf(chart);
   if (!s) return;
-  const [x, z] = map.toLane(px, py), sideLimit = lane.width / 2 + DRAG_PAST_THE_SIDES_METRES;
+  const [x, z] = map.toLane(px, py), sideLimit = lane.width / 2 + lane.gutter + DRAG_PAST_THE_SIDES_METRES;
   const across = round(Math.max(-sideLimit, Math.min(sideLimit, x)), 1);
   if (point === "from") { s.from.x = across; s.from.z = round(Math.max(PROJECTILE_START_NEAREST_METRES, Math.min(lane.length, z)), 1); }
   else if (s.to) s.to.x = across;

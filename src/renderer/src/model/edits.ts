@@ -1,29 +1,36 @@
 // Changes to a chart that are more than setting one field. Each mutates the chart it is given and
 // returns the top-level keys it touched, for the document to write back into the text.
-import { actorsOf, coloursOf, laneOf, phaseTime, withAlpha } from "./chart";
+import { actorsOf, coloursOf, laneOf, phaseTime, withAlpha, type Lane } from "./chart";
+import { LANE_GUTTER } from "./constants";
 import { round, type Tempo } from "./tempo";
 import type { ChartEvent, LaneColours, LoadedChart, TempoChange } from "./types";
 
+/** Changes the lane, leaving the gutter unwritten at its default, as the mod's own saves do. */
+export function setLane(c: LoadedChart, changes: Partial<Lane>): void {
+  const { gutter, ...size } = { ...laneOf(c), ...changes };
+  c.lane = gutter === LANE_GUTTER ? size : { ...size, gutter };
+}
+
 /**
  * A longer or shorter lane takes the chart with it, as the game's lane setup does: every distance
- * along the lane - projectile origins, actor spots and moves, your zone - is scaled, so
- * nothing is left past the far end (a chart saved without this would not load).
+ * along the lane - projectile origins, actor spots and moves, your zone - is scaled. Events may be
+ * outside the lane and stay as far out; actors and your zone stay on it.
  */
 export function resizeLane(c: LoadedChart, length: number): string[] {
   const old = laneOf(c).length;
   if (!(length > 2) || Math.abs(length - old) < 0.001) return [];
-  const k = length / old, scale = (z: number) => round(Math.min(length, Math.max(0, (+z || 0) * k)), 2);
+  const k = length / old, scale = (z: number) => round((+z || 0) * k, 2), onLane = (z: number) => Math.min(length, Math.max(0, scale(z)));
   const keys = ["lane", "events", "actors", "playerZone"].filter(key => key === "lane" || c[key as keyof LoadedChart] != null);
-  c.lane = { length, width: laneOf(c).width };
+  setLane(c, { length });
   for (const e of c.events) {
     if (e.projectile?.from) e.projectile.from.z = scale(e.projectile.from.z);
     if (e.at) e.at.z = scale(e.at.z);
   }
   if (Array.isArray(c.actors)) for (const a of c.actors) {
     a.at ??= { x: 0, z: old };
-    a.at.z = Math.abs((+a.at.z || 0) - old) < 0.01 ? length : scale(a.at.z);
+    a.at.z = Math.abs((+a.at.z || 0) - old) < 0.01 ? length : onLane(a.at.z);
   }
-  if (c.playerZone?.length != null) c.playerZone.length = Math.max(0.5, scale(c.playerZone.length));
+  if (c.playerZone?.length != null) c.playerZone.length = Math.max(0.5, onLane(c.playerZone.length));
   return keys;
 }
 

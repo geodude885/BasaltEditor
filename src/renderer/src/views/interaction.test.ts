@@ -13,7 +13,7 @@ const sample = () => { const c = Jsonc.parse(SAMPLE) as LoadedChart; c.events ??
 const tempo = new Tempo(120);
 
 describe("pressing on the lane", () => {
-  const chart = sample(), map = laneMap(300, 400, { length: 12, width: 3 });
+  const chart = sample(), map = laneMap(300, 400, { length: 12, width: 3, gutter: 0.3 });
   const [firstShotX, firstShotY] = map.toPx(-1.5, 10);
 
   it("grabs a selected projectile's start", () => {
@@ -41,7 +41,7 @@ describe("pressing on the lane", () => {
   it("drags a start along the lane and an aim past its sides", () => {
     const c = sample();
     moveProjectilePoint(c, map, 0, "from", ...map.toPx(9, -3));
-    expect(c.events[0].projectile!.from).toMatchObject({ x: 3.5, z: 0.5 });
+    expect(c.events[0].projectile!.from).toMatchObject({ x: 3.8, z: 0.5 });
     moveProjectilePoint(c, map, 0, "to", ...map.toPx(-2.94, 0));
     expect(c.events[0].projectile!.to).toMatchObject({ x: -2.9 });
   });
