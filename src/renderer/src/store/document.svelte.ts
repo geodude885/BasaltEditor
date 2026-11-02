@@ -8,6 +8,8 @@ import { Tempo } from "../model/tempo";
 import type { LoadedChart } from "../model/types";
 
 const DRAFT_KEY = "basalt-draft";
+/** What the example chart, gone now, was called: a draft of it is no reason to skip Your charts. */
+const OLD_EXAMPLE = "Crossfire (example)";
 const MAX_UNDO = 200;
 
 export function parseChart(text: string): LoadedChart {
@@ -75,7 +77,7 @@ class ChartDocument {
   static restoreDraft(): { text: string; name: string; unsaved: boolean } | null {
     try {
       const d = JSON.parse(localStorage.getItem(DRAFT_KEY) ?? "null");
-      if (d?.text) { parseChart(d.text); return { text: d.text, name: d.name, unsaved: d.unsaved ?? true }; }
+      if (d?.text && d.name !== OLD_EXAMPLE) { parseChart(d.text); return { text: d.text, name: d.name, unsaved: d.unsaved ?? true }; }
     } catch { /* none, or broken */ }
     return null;
   }

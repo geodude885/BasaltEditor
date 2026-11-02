@@ -5,7 +5,7 @@
 import { summaryOf, type ChartSummary } from "../io/summary";
 import * as Jsonc from "../model/jsonc";
 import { toast } from "./actions";
-import { doc } from "./document.svelte";
+import { doc, restoreDraft } from "./document.svelte";
 import { session } from "./session.svelte";
 import { keepChartsWith, mayReplaceChart, openStored, type ChartKeeper } from "./files";
 
@@ -42,6 +42,7 @@ class Library implements ChartKeeper {
   #saved = new Map<string, Uint8Array>();
   #created = Date.now();
   #timer = 0;
+  #showWhenStarted = false;
 
   /** Starts keeping charts in a source - and, where it saves as you go, picks up last time's chart. main.ts calls it. */
   start(source: LibrarySource): void {
@@ -50,6 +51,7 @@ class Library implements ChartKeeper {
     this.autosaves = source.autosaves ?? true;
     // Opening and saving (store/files.ts) reach Your charts through this, not by importing it.
     keepChartsWith(this);
+    if (this.#showWhenStarted) this.show();
     if (!this.autosaves) return;
     $effect.root(() => {
       $effect(() => {
@@ -75,6 +77,12 @@ class Library implements ChartKeeper {
   show(): void {
     this.visible = true;
     void this.refresh();
+  }
+
+  /** Shows the list as soon as there is one - the desktop's starts a moment after the page. */
+  showOnceStarted(): void {
+    this.#showWhenStarted = true;
+    if (this.available) this.show();
   }
 
   /** Whether an entry is the chart open now. */
@@ -142,14 +150,17 @@ class Library implements ChartKeeper {
     if (this.autosaves) this.#remember(stored.summary.id);
   }
 
-  /** Last time's chart: its text from the draft (which may be newer), its files from the library. */
+  /** Last time's chart: its text from the draft (which may be newer) if there is one, its files from the library. */
   async #restore(): Promise<void> {
+    // Before anything awaits: start() runs before the page, whose blank chart would count as a draft.
+    const hadDraft = !!restoreDraft();
     let id: string | null = null;
     try { id = localStorage.getItem(CURRENT_KEY); } catch { /* none */ }
     if (!id || !this.#source) return;
     const stored = await this.#source.load(id).catch(() => null);
     if (!stored) return;
-    if (stored.files.size) await openStored(doc.text, doc.name, stored.files);
+    if (!hadDraft) await openStored(stored.text, stored.summary.name, stored.files);
+    else if (stored.files.size) await openStored(doc.text, doc.name, stored.files);
     this.#become(stored);
   }
 
@@ -162,7 +173,7 @@ class Library implements ChartKeeper {
     if (!source || !this.autosaves) return true;
     let id = session.libraryId;
     if (!id) {
-      // Opened or started charts join straight away; the example only once it's been changed.
+      // Opened or started charts join straight away; the blank one at start-up only once it's been changed.
       if (!session.libraryAdd && !doc.dirty) return true;
       id = crypto.randomUUID();
       session.libraryId = id;

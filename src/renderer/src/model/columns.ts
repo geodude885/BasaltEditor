@@ -22,7 +22,7 @@ export function xOfColumn(column: number, laneWidth: number, count = PROJECTILE_
 }
 
 /**
- * A projectile as the example chart throws them: a disc from the far end of the lane, about chest
+ * The default projectile: a disc from the far end of the lane, about chest
  * high, flying straight down the lane (not at the player) from `x` across it.
  */
 export function straightProjectile(c: LoadedChart, x: number): Projectile {

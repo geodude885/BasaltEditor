@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import * as Jsonc from "../model/jsonc";
-import { SAMPLE } from "../model/samples";
+import { SAMPLE } from "../model/fixture";
 import { Tempo } from "../model/tempo";
 import type { LoadedChart } from "../model/types";
 import { laneMap } from "./lane/geometry";

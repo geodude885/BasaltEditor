@@ -5,7 +5,8 @@ import {
 } from "./edits";
 import { parse } from "./jsonc";
 import { density, problems } from "./problems";
-import { SAMPLE, template } from "./samples";
+import { SAMPLE } from "./fixture";
+import { template } from "./samples";
 import { beatText, clockText, gridLines, SNAPS, Tempo } from "./tempo";
 import type { LoadedChart } from "./types";
 

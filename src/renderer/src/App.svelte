@@ -13,7 +13,7 @@
   import MobileApp from "./components/mobile/MobileApp.svelte";
   import Library from "./components/library/Library.svelte";
   import { library } from "./store/library.svelte";
-  import { SAMPLE } from "./model/samples";
+  import { template } from "./model/samples";
   import { fit, loadChart, toast } from "./store/actions";
   import { doc, restoreDraft } from "./store/document.svelte";
   import { display } from "./store/display.svelte";
@@ -26,15 +26,15 @@
   import LaneView from "./views/lane/LaneView.svelte";
   import Timeline from "./views/timeline/Timeline.svelte";
 
-  // Start: the last draft, else the sample chart.
+  // Start: the last draft, else a blank chart behind Your charts.
   const draft = restoreDraft();
-  loadChart(draft?.text ?? SAMPLE, draft?.name ?? "Crossfire (example)");
+  loadChart(draft?.text ?? template("My Chart"), draft?.name ?? "chart.json");
   if (draft) void reopenDraftFolder(draft.unsaved);
+  else library.showOnceStarted();
 
   onMount(() => {
     // Fit the timeline again once the page has its real size.
     requestAnimationFrame(() => requestAnimationFrame(fit));
-    if (!draft) toast("This is an example chart. Open your own, or press New");
   });
 
   // Keep an A-B loop going round, in either layout and whichever editor is showing.
