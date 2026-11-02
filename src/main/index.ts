@@ -5,7 +5,7 @@ import { homedir } from "node:os";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import updater from "electron-updater";
 import { chartFolderName, freeNames } from "../shared/folders";
-import { Channels, type ChartFolder, type DuplicatedFolder, type FileKind, type OpenedFile, type OpenedFolder, type UnsavedChoice } from "../shared/api";
+import { Channels, type ChartFolder, type DuplicatedFolder, type FileKind, type OpenedFile, type OpenedFolder, type SameChartChoice, type UnsavedChoice } from "../shared/api";
 
 /** Chart folders this session opened - the only places saveChart may write. */
 const openedFolders = new Set<string>();
@@ -91,7 +91,11 @@ ipcMain.handle(Channels.openFiles, async (event, kind?: FileKind): Promise<Opene
     properties: picker.several ? ["openFile", "multiSelections"] : ["openFile"],
     filters: [{ name: picker.name, extensions: picker.extensions }, { name: "All files", extensions: ["*"] }],
   });
-  return picked.canceled ? [] : readAll(picked.filePaths, basename);
+  if (picked.canceled) return [];
+  // A chart.json picked inside a chart folder belongs to that folder: the page opens the folder instead.
+  const folderOf = async (path: string) => (basename(path).toLowerCase() === "chart.json" ? chartFolderIn(dirname(path)).catch(() => undefined) : undefined);
+  const files = await readAll(picked.filePaths, basename);
+  return Promise.all(files.map(async (file, i) => ({ ...file, folder: await folderOf(picked.filePaths[i]) })));
 });
 
 ipcMain.handle(Channels.openFolder, async (event): Promise<OpenedFolder | null> => {
@@ -241,6 +245,20 @@ ipcMain.handle(Channels.askUnsaved, async (event, name: string): Promise<Unsaved
     noLink: true,
   });
   return response === 0 ? "save" : response === 1 ? "discard" : "cancel";
+});
+
+ipcMain.handle(Channels.askSameChart, async (event, name: string, folderName: string): Promise<SameChartChoice> => {
+  const window = BrowserWindow.fromWebContents(event.sender)!;
+  const { response } = await dialog.showMessageBox(window, {
+    type: "question",
+    message: `The folder ${folderName} already holds ${name}`,
+    detail: "This chart isn't linked to a folder. Saving there replaces its chart.json; a new folder keeps both, with the same name.",
+    buttons: [`Save in ${folderName}`, "New folder", "Cancel"],
+    defaultId: 0,
+    cancelId: 2,
+    noLink: true,
+  });
+  return response === 0 ? "there" : response === 1 ? "new" : "cancel";
 });
 
 ipcMain.handle(Channels.saveChart, async (_event, folder: string, text: string): Promise<void> => {

@@ -130,6 +130,12 @@ export function ownFiles(chart: Pick<Chart, "music" | "cover">, files: Map<strin
   return out;
 }
 
+/** The song and cover the chart names that aren't among these files. */
+export function missingFiles(chart: Pick<Chart, "music" | "cover">, files: Map<string, Uint8Array>): string[] {
+  const { song, cover } = namedFiles(chart, files);
+  return [song ? undefined : chart.music?.file, cover ? undefined : chart.cover].filter((name): name is string => !!name);
+}
+
 /** Problems with the files beside the chart, for the Problems tab: a song the game can't read. */
 export function fileProblems(files: Map<string, Uint8Array>, chart: Pick<Chart, "music">): string[] {
   const song = chart.music?.file ? findSong(files, chart.music.file) : undefined;

@@ -65,13 +65,17 @@ class ChartDocument {
   undo(): boolean { return this.#step(true); }
   redo(): boolean { return this.#step(false); }
 
-  markSaved(): void { this.saved = this.text; }
+  /** The text as saved is this one, or `text` when that's what the file holds. */
+  markSaved(text = this.text): void {
+    this.saved = text;
+    this.#draft();
+  }
 
-  /** The last draft this app kept, if it still parses. */
-  static restoreDraft(): { text: string; name: string } | null {
+  /** The last draft this app kept, if it still parses. A draft from before `unsaved` was kept counts as unsaved. */
+  static restoreDraft(): { text: string; name: string; unsaved: boolean } | null {
     try {
       const d = JSON.parse(localStorage.getItem(DRAFT_KEY) ?? "null");
-      if (d?.text) { parseChart(d.text); return { text: d.text, name: d.name }; }
+      if (d?.text) { parseChart(d.text); return { text: d.text, name: d.name, unsaved: d.unsaved ?? true }; }
     } catch { /* none, or broken */ }
     return null;
   }
@@ -104,7 +108,7 @@ class ChartDocument {
   }
 
   #draft(): void {
-    try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ text: this.text, name: this.name })); } catch { /* no storage: fine */ }
+    try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ text: this.text, name: this.name, unsaved: this.dirty })); } catch { /* no storage: fine */ }
   }
 }
 

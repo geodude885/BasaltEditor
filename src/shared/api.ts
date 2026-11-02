@@ -1,7 +1,12 @@
 // The one API the page gets from the desktop app, through the preload script. The page never touches
 // Node or the file system itself.
 
-export type OpenedFile = { path: string; bytes: Uint8Array };
+export type OpenedFile = {
+  path: string;
+  bytes: Uint8Array;
+  /** The chart folder of the Charts folder it is the chart.json of, when picked on its own (openFiles). */
+  folder?: string;
+};
 export type OpenedFolder = { folder: string; files: OpenedFile[] };
 /** What a file picker is for: just a song, just a cover - or, left out, any of the chart's files. */
 export type FileKind = "song" | "cover";
@@ -11,6 +16,8 @@ export type ChartFolder = { folder: string; text: string; modified: number; imag
 export type DuplicatedFolder = { folder: string; text: string };
 /** What to do with unsaved changes before opening another chart. */
 export type UnsavedChoice = "save" | "discard" | "cancel";
+/** What to do with a chart that has no folder when a chart folder already holds one like it. */
+export type SameChartChoice = "there" | "new" | "cancel";
 
 export interface EditorApi {
   /** Picks chart files (chart.json, song, cover, clips, or a package) - or one song or cover. Empty when cancelled. */
@@ -48,6 +55,8 @@ export interface EditorApi {
   recentFolders?(): Promise<string[]>;
   /** Asks whether to save the open chart's changes before another opens. */
   askUnsaved?(name: string): Promise<UnsavedChoice>;
+  /** Asks where to save a chart with no folder, when this folder already holds one of its name and difficulty. */
+  askSameChart?(name: string, folderName: string): Promise<SameChartChoice>;
 }
 
 /** The API as the desktop app's preload gives it: every call, the desktop's own included. */
@@ -73,4 +82,5 @@ export const Channels = {
   renameChartFolder: "editor:rename-chart-folder",
   recentFolders: "editor:recent-folders",
   askUnsaved: "editor:ask-unsaved",
+  askSameChart: "editor:ask-same-chart",
 } as const;

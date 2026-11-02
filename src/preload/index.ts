@@ -18,6 +18,7 @@ const api: DesktopApi = {
   trashFolder: folder => ipcRenderer.invoke(Channels.trashFolder, folder),
   recentFolders: () => ipcRenderer.invoke(Channels.recentFolders),
   askUnsaved: name => ipcRenderer.invoke(Channels.askUnsaved, name),
+  askSameChart: (name, folderName) => ipcRenderer.invoke(Channels.askSameChart, name, folderName),
 };
 
 contextBridge.exposeInMainWorld("editor", api);

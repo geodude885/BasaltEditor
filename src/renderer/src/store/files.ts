@@ -1,13 +1,14 @@
 // Opening and saving: through the desktop app's dialogs, by drag and drop, and the clipboard.
 import { isDesktop, type OpenedFolder } from "../../../shared/api";
 import { folderNamedAfter } from "../../../shared/folders";
-import { clipSpans, findCover, findSong, isCover, isSong, ownFiles, packageContents, packageName, readEntries, type FileEntry } from "../io/files";
+import { clipSpans, findCover, findSong, isCover, isSong, missingFiles, ownFiles, packageContents, packageName, readEntries, type FileEntry } from "../io/files";
 import { setMusic } from "../model/edits";
+import { chartOfText } from "../io/summary";
 import { writeZip } from "../io/zip";
 import { template } from "../model/samples";
 import { loadChart, toast } from "./actions";
 import { doc } from "./document.svelte";
-import { session } from "./session.svelte";
+import { rememberedFolder, session } from "./session.svelte";
 import { ui } from "./ui.svelte";
 import { loadSong, unloadSong } from "./playback";
 
@@ -164,7 +165,9 @@ export async function chooseCover(): Promise<void> {
 
 export async function openFiles(): Promise<void> {
   const files = await api().openFiles();
-  if (files.length) await openEntries(files);
+  const chartFolder = files.find(f => f.folder)?.folder;
+  if (chartFolder) await openRecent(chartFolder);
+  else if (files.length) await openEntries(files);
 }
 
 export async function openFolder(): Promise<void> {
@@ -247,6 +250,35 @@ export async function openStored(text: string, name: string, files: Map<string, 
   await useFiles();
 }
 
+const CHART_FILE = "chart.json";
+const textOf = (opened: OpenedFolder): string | undefined => {
+  const chart = opened.files.find(f => f.path.toLowerCase() === CHART_FILE);
+  return chart && new TextDecoder().decode(chart.bytes);
+};
+const besideChart = (opened: OpenedFolder) => new Map(opened.files.filter(f => f.path.toLowerCase() !== CHART_FILE).map(f => [f.path, f.bytes]));
+
+/**
+ * At start-up, in the desktop app: puts last time's draft back in the folder it came from, with its song,
+ * cover and clips. Unsaved changes stay, against the file as it is now; with none, the file wins, as the
+ * game may have changed it since. A folder that's gone leaves the draft without one.
+ */
+export async function reopenDraftFolder(unsaved: boolean): Promise<void> {
+  const folder = rememberedFolder(), draft = doc.text;
+  if (!folder || !api().readFolder) return;
+  try {
+    const opened = await api().readFolder!(folder), onFile = textOf(opened);
+    if (onFile == null) throw new Error("no chart.json");
+    // Something else was opened, or edited, meanwhile.
+    if (doc.text !== draft || session.folder) return;
+    await openStored(unsaved ? draft : onFile, doc.name, besideChart(opened), opened.folder);
+    const { name, difficulty } = chartOfText(onFile);
+    session.folderNamedFor = { name: name ?? "", difficulty };
+    if (unsaved) doc.markSaved(onFile);
+  } catch {
+    session.folder = null;
+  }
+}
+
 /**
  * Saving a chart the game will not load is allowed - it may be work in progress - but never
  * silently: the Problems tab opens and the message says so.
@@ -263,8 +295,8 @@ function savedNote(what: string): string {
  * there. In the browser, Your charts keeps it already; Save just makes sure, now.
  */
 export async function save(): Promise<void> {
-  const target = saveTarget(), folder = session.folder;
-  if (target === "new-folder") { await saveToCharts("Saved"); return; }
+  const target = saveTarget();
+  if (target === "new-folder" && !await joinSameChart()) return;
   if (target === "file") { await saveChartAs(); return; }
   if (target === "library") {
     session.libraryAdd = true;
@@ -273,6 +305,7 @@ export async function save(): Promise<void> {
     toast(savedNote("Saved in Your charts"));
     return;
   }
+  const folder = session.folder;
   if (!folder) return;
   try {
     await api().saveChart(folder, doc.text);
@@ -285,6 +318,41 @@ export async function save(): Promise<void> {
     toast(savedNote(await followChartName(folder)));
   } catch (e) {
     toast(`Could not save: ${(e as Error).message}`);
+  }
+}
+
+/** The folder in the game's Charts folder holding a chart of this name and difficulty, whatever the folder is called. */
+async function folderOfSameChart(): Promise<string | undefined> {
+  const { name, difficulty } = doc.chart;
+  if (!name) return undefined;
+  const same = (await api().listCharts!()).filter(f => {
+    const chart = chartOfText(f.text);
+    return chart.name === name && chart.difficulty === difficulty;
+  });
+  return (same.find(f => folderNamedAfter(folderOf(f.folder), name, difficulty)) ?? same[0])?.folder;
+}
+
+/**
+ * Before Save gives a chart with no folder a new one: if a chart folder already holds it, asks, as two of
+ * one chart in the game look like the edit went nowhere. True to carry on, with session.folder set when
+ * saving there; a new folder is made here. False when that's the end of the save.
+ */
+async function joinSameChart(): Promise<boolean> {
+  try {
+    const same = await folderOfSameChart();
+    const choice = same ? await api().askSameChart!(doc.chart.name!, folderOf(same)) : "new";
+    if (choice === "cancel") return false;
+    if (choice === "new") { await saveToCharts("Saved"); return false; }
+    const opened = await api().readFolder!(same!), files = besideChart(opened);
+    session.folder = opened.folder;
+    session.folderNamedFor = chartNaming();
+    session.files = new Map([...files, ...session.files]);
+    onDisk = files;
+    await useFiles();
+    return true;
+  } catch (e) {
+    toast(`Could not save: ${(e as Error).message}`);
+    return false;
   }
 }
 
@@ -326,7 +394,9 @@ async function saveToCharts(what: string): Promise<void> {
     doc.markSaved();
     void refreshRecent();
     keeper?.saved();
-    toast(savedNote(`${what} in Your charts, as ${folder.split(/[\\/]/).pop()} in the game's Charts folder`));
+    const missing = missingFiles(doc.chart, session.files);
+    const note = missing.length ? `, without ${missing.join(" or ")}: add them beside its chart.json` : "";
+    toast(savedNote(`${what} in Your charts, as ${folderOf(folder)} in the game's Charts folder${note}`));
   } catch (e) {
     toast(`Could not save into the game's Charts folder: ${(e as Error).message}`);
   }

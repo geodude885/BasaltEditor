@@ -4,6 +4,12 @@ import type { Peaks } from "../audio/peaks";
 import { fileProblems, type ClipSpan } from "../io/files";
 import { problems } from "../model/problems";
 import { doc } from "./document.svelte";
+import { remember, remembered } from "./remembered";
+
+const FOLDER_KEY = "basalt-open-folder";
+
+/** The folder open when this was last used: the draft (store/document.svelte.ts) belongs to it. */
+export const rememberedFolder = (): string | null => remembered(FOLDER_KEY, null, text => text || undefined);
 
 export type Song = { name: string; url: string; buffer: AudioBuffer | null; peaks: Peaks | null };
 
@@ -13,8 +19,13 @@ class Session {
   clips = $state.raw(new Map<string, ClipSpan>());
   song = $state.raw<Song | null>(null);
   cover = $state<string | null>(null);
-  /** The chart folder on disk, when one was opened - Save writes chart.json back into it. */
-  folder = $state<string | null>(null);
+  #folder = $state<string | null>(null);
+  /** The chart folder on disk, when one was opened - Save writes chart.json back into it. Remembered with the draft. */
+  get folder(): string | null { return this.#folder; }
+  set folder(folder: string | null) {
+    this.#folder = folder;
+    remember(FOLDER_KEY, folder ?? "");
+  }
   /**
    * The chart's name and difficulty when its folder was opened or last saved: a folder named after them
    * follows the chart when Save finds them changed (shared/folders.ts).

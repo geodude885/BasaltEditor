@@ -19,7 +19,7 @@
   import { display } from "./store/display.svelte";
   import { transport } from "./store/transport.svelte";
   import { ui } from "./store/ui.svelte";
-  import { openDropped } from "./store/files";
+  import { openDropped, reopenDraftFolder } from "./store/files";
   import { handleShortcut } from "./store/keyboard";
   import { layout } from "./store/layout.svelte";
   import { keepLooping } from "./store/practice.svelte";
@@ -29,6 +29,7 @@
   // Start: the last draft, else the sample chart.
   const draft = restoreDraft();
   loadChart(draft?.text ?? SAMPLE, draft?.name ?? "Crossfire (example)");
+  if (draft) void reopenDraftFolder(draft.unsaved);
 
   onMount(() => {
     // Fit the timeline again once the page has its real size.
