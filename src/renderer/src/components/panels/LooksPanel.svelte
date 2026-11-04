@@ -4,16 +4,18 @@
     setStageCueColour, setStageCueSetting, settingsWrittenIn, STAGE_PACK, stageCueValue, stageCueWarnings, stageLookAfterCue,
     stageLookBeforeCue, stageParameterGroups, type PackParameter, type Rgb, type StageLook,
   } from "../../model/looks";
-  import { evTime } from "../../model/chart";
   import { stageStrip } from "../../model/stageFrame";
   import { round } from "../../model/tempo";
   import type { LookCue } from "../../model/types";
-  import { addStageCueAtPlayhead, editLookCue, removeLookCue, selectLookCue } from "../../store/actions";
+  import { addStageCueAtPlayhead, editLookCue, removeLookCue } from "../../store/actions";
   import { doc } from "../../store/document.svelte";
   import { liveLink } from "../../store/liveLink.svelte";
   import { editing } from "../../store/editing.svelte";
-  import { seek } from "../../store/playback";
   import { commandButton } from "../../store/commands";
+  import { converting } from "../../store/converting.svelte";
+  import LookBatch from "./LookBatch.svelte";
+  import LookConverter from "./LookConverter.svelte";
+  import LookList from "./LookList.svelte";
   import { checked, num, text } from "../fields";
 
   const groups = stageParameterGroups();
@@ -32,12 +34,6 @@
   const shownColour = (colour: string): string => linearToCss(colourChannels(colour).map(shownValue) as Rgb);
   const cueSetsColour = (colour: string) => !!cue && colourChannels(colour).some(p => cueSetsParameter(cue, p));
   const colourLabel = (colour: string) => colour.replace(/ colour$/, "");
-
-  function cueSummary(c: LookCue): string {
-    if (c.off) return "turns off";
-    const count = settingsWrittenIn(c).length;
-    return count ? `sets ${count}` : "turns on";
-  }
 
   function setMode(mode: string): void {
     editSelectedCue(c => {
@@ -58,18 +54,14 @@
 <div class="row">
   <button class="primary" title="A BossBattles Stage cue at the playhead (or double-click the timeline's looks row)" onclick={addStageCueAtPlayhead}>+ Look at the playhead</button>
   <button {...commandButton("look-preview")}>Preview</button>
+  {#if !converting.open}<button {...commandButton("looks-from-video")}>From a video…</button>{/if}
   {#if liveLink.available}<button {...commandButton("live-link")}>{liveLink.state === "on" ? "Linked to the game" : "Link to the game"}</button>{/if}
 </div>
 
+{#if converting.open}<LookConverter />{/if}
+
 {#if shaders.length}
-  <div class="cues" role="listbox" aria-label="Look cues">
-    {#each shaders as c, i (i)}
-      <button role="option" aria-selected={editing.selectedLooks.has(i)} class:stage={isCueForPack(c, STAGE_PACK)}
-        onclick={() => { selectLookCue(i); const time = evTime(c, doc.tempo); if (Number.isFinite(time)) seek(time); }}>
-        <b>{lookCueTimeLabel(c)}</b><span>{c.pack}</span><span>{cueSummary(c)}{fades(c) ? ` · ${c.fade} s fade` : ""}</span>
-      </button>
-    {/each}
-  </div>
+  <LookList />
 {:else}
   <div class="note">
     No looks yet. Looks are RumbleReShaded shader settings over time, for players who have it: add one at the playhead, set what it
@@ -77,12 +69,7 @@
   </div>
 {/if}
 
-{#if editing.selectedLooks.size > 1}
-  <div class="row">
-    <span class="note">{editing.selectedLooks.size} looks selected. Drag them on the timeline to move them together.</span>
-    <button {...commandButton("delete")}>Delete</button>
-  </div>
-{/if}
+{#if editing.selectedLooks.size > 1}<LookBatch />{/if}
 
 {#if cue}
   <div class="cue">
@@ -164,11 +151,6 @@
 {/if}
 
 <style>
-  .cues { display: flex; flex-wrap: wrap; gap: 6px; }
-  .cues button { display: grid; gap: 1px; text-align: left; font-size: 12px; padding: 4px 8px; }
-  .cues button span { color: var(--text-dim); }
-  .cues button.stage { border-left: 3px solid var(--look); }
-  .cues button[aria-selected="true"] { border-color: var(--look); background: color-mix(in srgb, var(--look) 13%, transparent); }
   .cue { display: grid; gap: 10px; padding-top: 8px; border-top: 1px solid var(--line); }
   .cue h3 { margin: 0; }
   .swatches { display: grid; grid-template-columns: repeat(3, 28px); gap: 2px; align-items: center; }

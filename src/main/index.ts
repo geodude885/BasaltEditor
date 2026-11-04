@@ -81,11 +81,12 @@ const PICKERS: Record<FileKind | "all", { title: string; name: string; extension
   all: { title: "Open chart files", name: "Charts, songs, covers and clips", extensions: ["json", "bbchart", "zip", "ogg", "mp3", "png", "jpg", "jpeg"], several: true },
   song: { title: "Choose the song", name: "Songs", extensions: ["mp3", "ogg"], several: false },
   cover: { title: "Choose the cover", name: "Images", extensions: ["png", "jpg", "jpeg"], several: false },
+  video: { title: "Choose a music video", name: "Videos", extensions: ["mp4", "webm", "mkv", "mov", "m4v"], several: false },
 };
 
 ipcMain.handle(Channels.openFiles, async (event, kind?: FileKind): Promise<OpenedFile[]> => {
   const window = BrowserWindow.fromWebContents(event.sender)!;
-  const picker = PICKERS[kind === "song" || kind === "cover" ? kind : "all"];
+  const picker = PICKERS[kind === "song" || kind === "cover" || kind === "video" ? kind : "all"];
   const picked = await dialog.showOpenDialog(window, {
     title: picker.title,
     defaultPath: chartsFolder(),

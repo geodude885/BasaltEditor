@@ -185,6 +185,11 @@ export function shadeCentrePixelLikeStage(scene: Rgb, depthMetres: number | null
     const glow = stageColour(s, "Glow");
     colour = colour.map((v, i) => v + glow[i] * blurredKey * s._Glow) as Rgb;
   }
+  if (s._Kaleidoscope > 0.001 && s._KaleidoscopeRadius > 0.001) {
+    const copies = keyness(keyed, s._KeyStrictness) * keyed[0] * s._KeyKeep;
+    const glow = stageColour(s, "Glow");
+    colour = colour.map((v, i) => v + glow[i] * copies * s._Kaleidoscope) as Rgb;
+  }
   return colour;
 }
 

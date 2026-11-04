@@ -57,7 +57,9 @@ src/renderer/src/
                 painted arena (stageFrame) - pure TypeScript
   io/           zip, sorting opened files into a chart and its song, cover and clips, what a package
                 holds, chart summaries for "Your charts"
-  audio/        waveform peaks, MP3 inside a WAV
+  audio/        waveform peaks, MP3 inside a WAV, a song's rhythm (drum hits and loudness)
+  video/        looks from a music video: its frames measured, summed by beat, turned into Stage looks;
+                and the converters that offer them (converters.ts lists them; the store reads their inputs)
   store/        document (text, chart, undo, looks), editing (selection, snap), transport (playhead,
                 playing, volume), display (which editor, timeline view, preview, colours), session
                 (files beside the chart, where it saves, problems), ui (tabs, toasts, quick actions);
@@ -126,7 +128,7 @@ src/renderer/src/
 - **The renderer never touches Node or the file system directly** - only `window.editor`, through
   `store/files.ts`. It stays a plain web app: `npm run dev:renderer` serves it in a browser, with
   everything but the dialogs working.
-- **`model/`, `io/` and `audio/` import nothing from Svelte or Electron**, so Vitest covers them
+- **`model/`, `io/`, `audio/` and `video/` import nothing from Svelte or Electron**, so Vitest covers them
   without a DOM. Logic worth testing goes there; components stay thin. Vitest compiles runes too,
   so `store/` can be tested - as long as importing a module creates nothing (playback makes its
   `<audio>` element on first use, not at import).
