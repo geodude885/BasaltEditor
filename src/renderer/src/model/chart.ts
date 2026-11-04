@@ -1,5 +1,5 @@
 // Reading a chart: the defaults the mod applies, times, and where things are.
-import { GROUNDED, GROUNDED_STATE, LANE_GUTTER } from "./constants";
+import { GROUNDED, GROUNDED_STATE, LANE_GUTTER, PLAYER_HEAD } from "./constants";
 import { round, type Tempo } from "./tempo";
 import type { Actor, Chart, ChartEvent, EventKind, LaneColours, LoadedChart, Phase, Projectile } from "./types";
 
@@ -59,6 +59,10 @@ export const kindOf = (ev: ChartEvent): EventKind =>
 /** Thrown grounded: in the game's grounded state (more damage), along the floor. */
 export const isGrounded = (s: Projectile): boolean => s.grounded ?? GROUNDED_STATE.includes(s.structure);
 /** Sits on the floor: grounded, or a structure that always rises out of it. */
+/** Where a projectile flies to: its fixed point, or at you shifted by its offset - across the lane and up, whichever way you face. */
+export const aimPointOf = (s: Projectile): { x: number; y: number } =>
+  s.to ?? { x: +(s.offset?.x ?? 0) || 0, y: PLAYER_HEAD + (+(s.offset?.y ?? 0) || 0) };
+
 export const onFloor = (s: Projectile): boolean => isGrounded(s) || GROUNDED.includes(s.structure);
 
 /** Where an actor stands at a time: its spot, then the latest "at" event that moved it. */

@@ -1,7 +1,8 @@
 <script lang="ts">
   // The selected event's fields. Every change goes through editSelected, which keeps it selected
   // wherever the edit sorts it to.
-  import { actorsOf, evTime, firstActorId, isGrounded, kindOf, onFloor } from "../model/chart";
+  import { setAimMode, setOffset } from "../model/batch";
+  import { actorsOf, aimPointOf, evTime, firstActorId, isGrounded, kindOf, onFloor } from "../model/chart";
   import { GROUNDED_STATE, MOVES, STRUCTURES } from "../model/constants";
   import { round } from "../model/tempo";
   import type { ChartEvent, Projectile, Structure } from "../model/types";
@@ -24,7 +25,7 @@
   /** A projectile's timings, as a sentence. */
   function timings(ev: ChartEvent, s: Projectile): string {
     const tp = doc.tempo, t = evTime(ev, tp), tel = s.telegraph ?? 0.5;
-    const aimX = s.to?.x ?? 0;
+    const aimX = aimPointOf(s).x;
     const air = Math.hypot(s.from?.z || 0, (s.from?.x || 0) - aimX) / Math.max(0.1, s.speed || 1);
     return `Appears ${round(t - tel, 2)} s, flies ${round(t, 2)} s${tp.ok ? ` (beat ${round(tp.beat(t), 2)})` : ""}, ${round(air, 2)} s in the air.`;
   }
@@ -96,8 +97,8 @@
       </label>
       <div class="grid3">
         <label><span>Aim</span>
-          <select value={aimPoint ? "point" : "player"} onchange={x => shot(s => { if (text(x) === "player") delete s.to; else s.to = { x: 0, y: 1.3 }; })}>
-            <option value="player">at the player</option><option value="point">at a point</option>
+          <select value={aimPoint ? "point" : "player"} onchange={x => shot(s => setAimMode(s, text(x) === "point" ? "point" : "player"))}>
+            <option value="player">At you</option><option value="point">Fixed point</option>
           </select>
         </label>
         {#if aimPoint}
@@ -105,8 +106,12 @@
           {#if isGrounded(s)}<span></span>{:else}
             <label><span>Aim y</span><input type="number" step="0.1" value={aimPoint.y} onchange={x => shot(s => { if (s.to) s.to.y = num(x); })} /></label>
           {/if}
-        {:else}<span></span><span></span>{/if}
+        {:else}
+          <label title="Metres to your right, across the lane - whichever way you face"><span>Offset x</span><input type="number" step="0.05" value={s.offset?.x ?? 0} onchange={x => shot(s => setOffset(s, { x: num(x) }))} /></label>
+          <label title={isGrounded(s) ? "Ignored: a grounded projectile slides on the floor" : "Metres up from 0.25 m below your head"}><span>Offset y</span><input type="number" step="0.05" disabled={isGrounded(s)} value={s.offset?.y ?? 0} onchange={x => shot(s => setOffset(s, { y: num(x) }))} /></label>
+        {/if}
       </div>
+      {#if !aimPoint && isGrounded(s)}<div class="note">Grounded, it slides on the floor: only Offset x applies.</div>{/if}
       <div class="grid3">
         <label><span>Speed m/s</span><input type="number" step="0.5" min="0.5" value={s.speed} onchange={x => shot(s => { s.speed = Math.max(0.5, num(x) || 0); })} /></label>
         <label><span>Spawned s before</span><input type="number" step="0.1" min="0" value={s.telegraph ?? 0.5} onchange={x => shot(s => { s.telegraph = Math.max(0, num(x) || 0); })} /></label>

@@ -106,6 +106,15 @@ export interface BasaltChart {
         x: number;
         y: number;
       };
+      /**
+       * Aimed at you, shifted: x metres to your right across the lane, y metres up. Not with to; a projectile on the floor only takes x.
+       */
+      offset?: {
+        [k: string]: unknown | undefined;
+      } & {
+        x?: number;
+        y?: number;
+      };
       speed: number;
       telegraph?: number;
       /**

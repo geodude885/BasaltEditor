@@ -8,9 +8,9 @@ export const STRUCTURES: Structure[] = ["Disc", "Ball", "Pillar", "Wall", "RockC
 export const MOVES = ["Straight", "Uppercut", "Kick", "Stomp", "Explode", "Flick", "Parry", "Jump", "RockSlide", "Disc", "SpawnBall", "SpawnCube", "SpawnPillar", "SpawnWall", "HoldLeft", "HoldRight"];
 export const MAPS = ["gym", "ring", "pit"] as const;
 export const DIFFICULTIES = ["Easy", "Normal", "Hard", "Expert"];
-/** Where a projectile with no `to` aims, roughly: your chest at your end. */
 /** Room beside the lane on each side before its walls, unless a chart says. */
 export const LANE_GUTTER = 0.3;
+/** Where a projectile with no `to` aims, roughly: 0.25 m below your head, at your end. */
 export const PLAYER_HEAD = 1.35;
 
 export type Size = { across: number; along: number; up: number };

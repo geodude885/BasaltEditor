@@ -1,5 +1,5 @@
-import { actorSpotAt, actorsOf, evTime, flightTime, isGrounded, laneOf, zoneOf } from "../../model/chart";
-import { GROUNDED, PLAYER_HEAD } from "../../model/constants";
+import { actorSpotAt, actorsOf, aimPointOf, evTime, flightTime, isGrounded, laneOf, zoneOf } from "../../model/chart";
+import { GROUNDED } from "../../model/constants";
 import { round, type Tempo } from "../../model/tempo";
 import type { LoadedChart, Projectile } from "../../model/types";
 import { shotPaint, stripePath, type ShotColouring } from "../shotColours";
@@ -92,15 +92,13 @@ export type LaneShot = { i: number; spawn: number; end: number };
 /** The chart's projectiles in the order they appear, and the longest any is on the lane - worked out once per chart. */
 export type LaneShots = { shots: LaneShot[]; longest: number };
 
-const aimOf = (s: Projectile) => s.to ?? { x: 0, y: PLAYER_HEAD };
-
 export function laneShots(c: LoadedChart, tp: Tempo): LaneShots {
   const shots: LaneShot[] = [];
   let longest = 0;
   c.events.forEach((e, i) => {
     const s = e.projectile;
     if (!s?.from) return;
-    const launch = evTime(e, tp), spawn = launch - (s.telegraph ?? 0.5), end = launch + flightTime(s, aimOf(s));
+    const launch = evTime(e, tp), spawn = launch - (s.telegraph ?? 0.5), end = launch + flightTime(s, aimPointOf(s));
     if (!Number.isFinite(spawn) || !Number.isFinite(end)) return;
     shots.push({ i, spawn, end });
     longest = Math.max(longest, end - spawn);
@@ -114,7 +112,7 @@ function drawShot(ctx: CanvasRenderingContext2D, c: LoadedChart, i: number, sele
   if (!s?.from) return;
   const launch = evTime(e, scene.tempo), spawn = launch - (s.telegraph ?? 0.5);
   const [fx, fy] = originPx(s, map);
-  const aim = aimOf(s);
+  const aim = aimPointOf(s);
   const [tx, ty] = P(+aim.x || 0, 0);
   const flight = flightTime(s, aim);
 

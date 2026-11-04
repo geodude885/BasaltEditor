@@ -2,7 +2,7 @@
 // came from and where it saves, and what is wrong with it. store/files.ts fills these in.
 import type { Peaks } from "../audio/peaks";
 import { fileProblems, type ClipSpan } from "../io/files";
-import { problems } from "../model/problems";
+import { problems, warnings } from "../model/problems";
 import { doc } from "./document.svelte";
 import { remember, remembered } from "./remembered";
 
@@ -40,6 +40,8 @@ class Session {
 
   /** What's wrong with the chart and its files: the Problems tab. */
   readonly problems = $derived([...problems(doc.chart, doc.tempo), ...fileProblems(this.files, doc.chart)]);
+  /** What the game takes but ignores: shown with the problems, not counted. */
+  readonly warnings = $derived(warnings(doc.chart));
 }
 
 export const session = new Session();

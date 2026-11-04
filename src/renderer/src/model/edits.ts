@@ -40,6 +40,7 @@ export function mirror(events: ChartEvent[]): void {
     if (e.projectile) {
       e.projectile.from.x = -(+e.projectile.from.x || 0);
       if (e.projectile.to) e.projectile.to.x = -(+e.projectile.to.x || 0);
+      if (e.projectile.offset?.x) e.projectile.offset.x = -e.projectile.offset.x;
     }
     if (e.at) e.at.x = -(+e.at.x || 0);
   }

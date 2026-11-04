@@ -1,5 +1,6 @@
 // What a press on the lane means, and where a drag puts things - plain functions the component applies.
-import { evTime, laneOf, type Point } from "../../model/chart";
+import { setOffset } from "../../model/batch";
+import { aimPointOf, evTime, laneOf, type Point } from "../../model/chart";
 import { round, type Tempo } from "../../model/tempo";
 import type { LoadedChart } from "../../model/types";
 import { normalise, type Box } from "../theme";
@@ -27,8 +28,9 @@ export function whatALanePressHits(
     if (!s) continue;
     const [fx, fy] = originPx(s, map);
     if (Math.hypot(px - fx, py - fy) < GRAB_ORIGIN_PIXELS) return { kind: "drag-projectile-point", index, point: "from" };
-    if (s.to) {
-      const [tx, ty] = map.toPx(+s.to.x || 0, 0);
+    // An aim at you can be dragged once it's shifted; until then it sits on you.
+    if (s.to || s.offset?.x) {
+      const [tx, ty] = map.toPx(aimPointOf(s).x, 0);
       if (Math.hypot(px - tx, py - ty) < GRAB_AIM_PIXELS) return { kind: "drag-projectile-point", index, point: "to" };
     }
   }
@@ -66,4 +68,5 @@ export function moveProjectilePoint(chart: LoadedChart, map: LaneMap, index: num
   const across = round(Math.max(-sideLimit, Math.min(sideLimit, x)), 1);
   if (point === "from") { s.from.x = across; s.from.z = round(Math.max(PROJECTILE_START_NEAREST_METRES, Math.min(lane.length, z)), 1); }
   else if (s.to) s.to.x = across;
+  else setOffset(s, { x: across });
 }

@@ -1,5 +1,5 @@
 // The mod's own checks that a chart maker hits most - the game will not load a chart that fails one.
-import { actorsOf, endOf, evTime, laneOf, phaseTime } from "./chart";
+import { actorsOf, endOf, evTime, isGrounded, laneOf, phaseTime } from "./chart";
 import { NEWEST_FORMAT, STRUCTURES } from "./constants";
 import { lookCueProblems } from "./looks";
 import { round, type Tempo } from "./tempo";
@@ -39,6 +39,8 @@ export function problems(c: LoadedChart, tp: Tempo): string[] {
       const f: Partial<typeof s.from> = s.from ?? {};
       if (!(f.z! > 0)) out.push(`${p}.projectile.from.z must be over 0`);
       if (f.y! < 0) out.push(`${p}.projectile.from.y is below the floor`);
+      if (s.offset != null && s.to != null) out.push(`${p}.projectile.offset can't be used with to - to is a fixed point, offset is from you`);
+      else if (s.offset != null && s.offset.x == null && s.offset.y == null) out.push(`${p}.projectile.offset needs x or y`);
       if (!(s.speed > 0)) out.push(`${p}.projectile.speed must be over 0`);
       const tel = s.telegraph ?? 0.5;
       if (tel < 0) out.push(`${p}.projectile.telegraph cannot be negative`);
@@ -56,6 +58,13 @@ export function problems(c: LoadedChart, tp: Tempo): string[] {
   if (c.music?.file && !/\.(ogg|mp3)$/i.test(c.music.file)) out.push("music.file must be .ogg or .mp3");
   (c.shaders ?? []).forEach((cue, i) => out.push(...lookCueProblems(cue, i, tp)));
   return out;
+}
+
+/** What the game accepts but won't do as written: shown with the problems, but not counted as one. */
+export function warnings(c: LoadedChart): string[] {
+  return c.events.flatMap((e, i) => e.projectile?.offset?.y && isGrounded(e.projectile)
+    ? [`events[${i}].projectile.offset.y is ignored: a grounded projectile slides on the floor, so only x applies`]
+    : []);
 }
 
 export type Density = { shots: number; average: number; peak: number; moves: number };
