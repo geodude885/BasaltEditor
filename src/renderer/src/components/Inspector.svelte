@@ -1,16 +1,16 @@
 <script lang="ts">
   // The selected event's fields. Every change goes through editSelected, which keeps it selected
   // wherever the edit sorts it to.
-  import { setAimMode, setOffset } from "../model/batch";
-  import { actorsOf, aimPointOf, evTime, firstActorId, isGrounded, kindOf, onFloor } from "../model/chart";
-  import { GROUNDED_STATE, MOVES, STRUCTURES } from "../model/constants";
+  import { actorsOf, aimPointOf, evTime, firstActorId, kindOf } from "../model/chart";
+  import { MOVES } from "../model/constants";
   import { round } from "../model/tempo";
-  import type { ChartEvent, Projectile, Structure } from "../model/types";
+  import type { ChartEvent, Projectile } from "../model/types";
   import { copySelected, editSelected, mirrorSelected, removeSelected, throwFromActor } from "../store/actions";
   import { doc } from "../store/document.svelte";
   import { editing } from "../store/editing.svelte";
   import BatchInspector from "./BatchInspector.svelte";
-  import { checked, num, text } from "./fields";
+  import ProjectileFields from "./ProjectileFields.svelte";
+  import { num, text } from "./fields";
 
   const selected = $derived([...editing.selection].filter(i => doc.chart.events[i]));
   const index = $derived(selected.length === 1 ? selected[0] : -1);
@@ -20,7 +20,6 @@
   const first = $derived(firstActorId(doc.chart));
 
   const edit = (mutate: (e: ChartEvent) => void) => editSelected(mutate);
-  const shot = (mutate: (s: Projectile) => void) => editSelected(ev => mutate(ev.projectile!));
 
   /** A projectile's timings, as a sentence. */
   function timings(ev: ChartEvent, s: Projectile): string {
@@ -63,61 +62,9 @@
     {/snippet}
 
     {#if kind === "projectile" && e.projectile}
-      {@const s = e.projectile}
-      {@const aimPoint = s.to ?? null}
-      <div class="grid2">
-        {@render timeField(e)}
-        <label><span>Structure</span>
-          <select value={s.structure} onchange={x => shot(s => { s.structure = text(x) as Structure; })}>
-            {#each STRUCTURES as n (n)}<option>{n}</option>{/each}
-          </select>
-        </label>
-      </div>
-      <div class="grid3">
-        <label><span>From x</span><input type="number" step="0.1" value={s.from?.x ?? 0} onchange={x => shot(s => { s.from.x = num(x); })} /></label>
-        {#if onFloor(s)}
-          <label><span>Height</span>
-            <input disabled value={isGrounded(s) ? "grounded" : "on the floor"}
-              title={isGrounded(s) ? "Grounded: it rests on the floor and is thrown along it" : `${s.structure} comes up out of the ground and rests on it`} />
-          </label>
-        {:else}
-          <label><span>Height y</span><input type="number" step="0.1" min="0" value={s.from?.y ?? 0} onchange={x => shot(s => { s.from.y = round(Math.max(0, num(x)), 2); })} /></label>
-        {/if}
-        <label><span>From z</span><input type="number" step="0.1" value={s.from?.z ?? 10} onchange={x => shot(s => { s.from.z = num(x); })} /></label>
-      </div>
-      {#if !onFloor(s)}
-        <label><span>Height {round(+(s.from?.y ?? 0), 2)} m</span>
-          <input type="range" min="0" max="3" step="0.05" value={s.from?.y ?? 0} onchange={x => shot(s => { s.from.y = round(Math.max(0, num(x)), 2); })} />
-        </label>
-      {/if}
-      <label class="check" title="Thrown along the floor, for more damage">
-        <input type="checkbox" checked={isGrounded(s)}
-          onchange={x => shot(s => { const on = checked(x); if (on === GROUNDED_STATE.includes(s.structure)) delete s.grounded; else s.grounded = on; })} />
-        Grounded{GROUNDED_STATE.includes(s.structure) ? ` (default for a ${s.structure})` : ""}
-      </label>
-      <div class="grid3">
-        <label><span>Aim</span>
-          <select value={aimPoint ? "point" : "player"} onchange={x => shot(s => setAimMode(s, text(x) === "point" ? "point" : "player"))}>
-            <option value="player">At you</option><option value="point">Fixed point</option>
-          </select>
-        </label>
-        {#if aimPoint}
-          <label><span>Aim x</span><input type="number" step="0.1" value={aimPoint.x} onchange={x => shot(s => { if (s.to) s.to.x = num(x); })} /></label>
-          {#if isGrounded(s)}<span></span>{:else}
-            <label><span>Aim y</span><input type="number" step="0.1" value={aimPoint.y} onchange={x => shot(s => { if (s.to) s.to.y = num(x); })} /></label>
-          {/if}
-        {:else}
-          <label title="Metres to your right, across the lane - whichever way you face"><span>Offset x</span><input type="number" step="0.05" value={s.offset?.x ?? 0} onchange={x => shot(s => setOffset(s, { x: num(x) }))} /></label>
-          <label title={isGrounded(s) ? "Ignored: a grounded projectile slides on the floor" : "Metres up from 0.25 m below your head"}><span>Offset y</span><input type="number" step="0.05" disabled={isGrounded(s)} value={s.offset?.y ?? 0} onchange={x => shot(s => setOffset(s, { y: num(x) }))} /></label>
-        {/if}
-      </div>
-      {#if !aimPoint && isGrounded(s)}<div class="note">Grounded, it slides on the floor: only Offset x applies.</div>{/if}
-      <div class="grid3">
-        <label><span>Speed m/s</span><input type="number" step="0.5" min="0.5" value={s.speed} onchange={x => shot(s => { s.speed = Math.max(0.5, num(x) || 0); })} /></label>
-        <label><span>Spawned s before</span><input type="number" step="0.1" min="0" value={s.telegraph ?? 0.5} onchange={x => shot(s => { s.telegraph = Math.max(0, num(x) || 0); })} /></label>
-        {@render actorField(e, "Thrown by")}
-      </div>
-      <div class="note">{timings(e, s)}</div>
+      <div class="grid2">{@render timeField(e)}</div>
+      <ProjectileFields events={[e]} {edit} />
+      <div class="note">{timings(e, e.projectile)}</div>
     {:else if kind === "move"}
       <div class="grid2">
         {@render timeField(e)}
