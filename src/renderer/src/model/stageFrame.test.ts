@@ -66,6 +66,23 @@ describe("the look preview's frame", () => {
     expect(centre(stageFrameBytes(scene, flash, { ...between, beatFraction: 0.99 }), scene)[0]).toBeLessThan(centre(stageFrameBytes(scene, flash, { ...between, beatFraction: 0 }), scene)[0]);
   });
 
+  it("shines stage lights, snapping them on at the beat with strobe and lighting other lamps each beat with chase", () => {
+    const scene = paintStageScene(64, 36, 0);
+    const total = (bytes: Uint8ClampedArray) => bytes.reduce((sum, v, i) => i % 4 === 3 ? sum : sum + v, 0);
+    const plain = total(stageFrameBytes(scene, look({}), between));
+    const lit = { "Lights": 1.5, "Light beams": 6, "Light width": 0.2 };
+    expect(total(stageFrameBytes(scene, look(lit), between))).toBeGreaterThan(plain);
+
+    const strobing = look({ ...lit, "Light strobe": 1 });
+    const onBeat = total(stageFrameBytes(scene, strobing, { ...between, beatFraction: 0.05, beatNumber: 3 }));
+    const afterBeat = total(stageFrameBytes(scene, strobing, { ...between, beatFraction: 0.6, beatNumber: 3 }));
+    expect(onBeat).toBeGreaterThan(afterBeat);
+
+    const chasing = look({ ...lit, "Light chase": 0.8 });
+    const beats = [1, 2, 3, 4].map(beatNumber => stageFrameBytes(scene, chasing, { ...between, beatFraction: 0.5, beatNumber }).join(","));
+    expect(new Set(beats).size).toBeGreaterThan(1);
+  });
+
   it("paints things in the key colour whatever the key hue is", () => {
     for (const hue of [0, 120, 240]) {
       const scene = paintStageScene(64, 36, hue);

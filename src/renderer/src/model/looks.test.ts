@@ -140,7 +140,7 @@ describe("the Stage manifest", () => {
   it("gives each colour its R, G and B in order, in one group", () => {
     const colours = new Map<string, string[]>();
     for (const p of STAGE_PACK.parameters) if (p.colour) colours.set(p.colour, [...(colours.get(p.colour) ?? []), p.label.slice(-1) + ":" + p.group]);
-    expect(colours.size).toBe(7);
+    expect(colours.size).toBe(8);
     for (const [, channels] of colours) expect(channels.map(c => c[0])).toEqual(["R", "G", "B"]);
     for (const [, channels] of colours) expect(new Set(channels.map(c => c.slice(2))).size).toBe(1);
   });

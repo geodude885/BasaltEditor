@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { addStageCueAtPlayhead, copySelected, editLookCue, nudge, paste, redo, removeSelected, select, selectLook, undo } from "./actions";
+import { addStageCueAtPlayhead, copySelected, editLookCue, editSelectedLooks, nudge, paste, redo, removeSelected, select, selectLook, undo } from "./actions";
 import { doc } from "./document.svelte";
 import { editing } from "./editing.svelte";
 import { transport } from "./transport.svelte";
@@ -42,6 +42,16 @@ describe("looks in the selection", () => {
     expect(packs()).toEqual(["B", "A"]);
     expect(doc.chart.shaders![1].t).toBe(8);
     expect(editing.selectedLookCue).toBe(1);
+  });
+
+  it("are edited all at once as one undo step, and stay selected", () => {
+    selectLook(0, false);
+    selectLook(1, true);
+    editSelectedLooks(cue => { cue.fade = 2; });
+    expect(doc.chart.shaders!.map(cue => cue.fade)).toEqual([2, 2]);
+    expect(editing.selectedLooks.size).toBe(2);
+    undo();
+    expect(doc.chart.shaders!.map(cue => cue.fade)).toEqual([1, undefined]);
   });
 
   it("follow a new time typed into one", () => {

@@ -1,6 +1,6 @@
 // The look preview: a small painted arena run through BossBattles Stage's whole fragment shader, pixel
-// by pixel - the grade, fog by depth, the key's glow, the beat, Magic's sparkles in the air, the vignette and the
-// danger edges. The
+// by pixel - the grade, fog by depth, the key's glow and kaleidoscope, the beat, the stage lights, Magic's sparkles
+// in the air, the vignette and the danger edges. The
 // arena stands in for the game's: sky, far hills, pillars going back into the fog, the lane, the boss,
 // and projectiles in the key colour (whatever the key hue is) beside one that is not.
 import { hueToRgb, keyness, linearToSrgb, mix, stageColour, toKeySpace, type Rgb, type StageLook, type StageSettings } from "./looks";
@@ -12,10 +12,10 @@ import { hueToRgb, keyness, linearToSrgb, mix, stageColour, toKeySpace, type Rgb
 export type StageScene = { width: number; height: number; colour: Float32Array; depth: Float32Array; keyed?: Float32Array };
 
 /**
- * The fight, as the mod tells the shader: where in the beat (null without a bpm), health 0 to 1, a hit fading 1 to 0,
- * and the time in seconds, which Magic's sparkles twinkle and drift by.
+ * The fight, as the mod tells the shader: where in the beat (null without a bpm) and which beat it is, health 0 to 1,
+ * a hit fading 1 to 0, and the time in seconds, which Magic's sparkles twinkle and drift by.
  */
-export type StageFight = { beatFraction: number | null; health: number; hit: number; time?: number };
+export type StageFight = { beatFraction: number | null; beatNumber?: number; health: number; hit: number; time?: number };
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 
@@ -139,10 +139,12 @@ export function shadeStageFrame(scene: StageScene, look: StageLook, fight: Stage
   const pulse = beat * s._BeatPulse;
   const danger = clamp01(fight.hit * s._HitFlash * 1.5 + clamp01(1 - fight.health) * s._LowHealth);
   const glowing = s._Glow > 0.001 && s._GlowRadius > 0.001, blurred = glowing ? blurredGlow(scene, maps, s._GlowRadius) : null;
+  const copying = s._Kaleidoscope > 0.001 && s._KaleidoscopeRadius > 0.001, copies = copying ? kaleidoscope(scene, maps, s._KaleidoscopeRadius) : null;
   const darkening = 1 - 0.75 * s._Darkness, kept = 1 + 0.3 * s._Glow, fogging = s._FogDensity > 0.0001;
-  const glowScale = s._KeyKeep / 12 * s._Glow * (1 + 2 * pulse), flash = beat * s._BeatFlash;
+  const glowScale = s._KeyKeep * s._Glow * (1 + 2 * pulse), copiesScale = s._KeyKeep / 12 * s._Kaleidoscope * (1 + 2 * pulse), flash = beat * s._BeatFlash;
   const magicShows = s._Glitter > 0.001 || s._Motes > 0.001, magic: Rgb = [0, 0, 0];
-  const rays = magicShows ? viewRays(scene) : null, time = fight.time ?? 0;
+  const lightsShow = s._Lights > 0.001, lights: Rgb = [0, 0, 0], lightColour = stageColour(s, "Light");
+  const rays = magicShows || lightsShow ? viewRays(scene) : null, time = fight.time ?? 0;
 
   // Plain numbers rather than [r, g, b] arrays: this runs for every pixel, every frame while playing.
   const pixel = [0, 0, 0];
@@ -153,9 +155,10 @@ export function shadeStageFrame(scene: StageScene, look: StageLook, fight: Stage
       const luma = 0.2126 * r + 0.7152 * g + 0.0722 * b;
       const fog = !fogging ? 0 : (depth[i] === Infinity ? s._SkyFog : 1 - Math.exp(-s._FogDensity * Math.max(0, depth[i] - s._FogStart))) * (1 - s._FogKeyResist * k);
 
-      const glow = blurred ? blurred[i] * glowScale : 0;
+      const glow = (blurred ? blurred[i] * glowScale : 0) + (copies ? copies[i] * copiesScale : 0);
 
-      if (rays) magicAt(i, rays, s, beat, time, magic);
+      const lit = lightsShow ? stageLightsAt(i, rays!, s, fight, time) : 0;
+      if (magicShows) magicAt(i, rays!, s, beat, time, magic);
 
       const u = (x + 0.5) / width - 0.5, edge = clamp01((u * u + v * v) * s._VignetteSize);
       const vignette = edge * s._Vignette, hurt = edge * danger;
@@ -164,7 +167,7 @@ export function shadeStageFrame(scene: StageScene, look: StageLook, fight: Stage
         const drained = (luma + (scene - luma) * s._Saturation) * darkening * tint[ch];
         let c = Math.max(0, (drained + (scene * kept - drained) * k - 0.18) * s._Contrast + 0.18);
         c += (fogColour[ch] - c) * fog;
-        c += glowColour[ch] * glow + flashColour[ch] * flash;
+        c += glowColour[ch] * glow + lightColour[ch] * lit + flashColour[ch] * flash;
         if (magicShows) c += magic[ch];
         c += (vignetteColour[ch] - c) * vignette;
         pixel[ch] = c + (dangerColour[ch] - c) * hurt;
@@ -267,7 +270,10 @@ function magicAt(i: number, rays: Float64Array, s: StageSettings, beat: number, 
   out[0] *= throughFog; out[1] *= throughFog; out[2] *= throughFog;
 }
 
-type KeyMaps = { hue: number; strictness: number; keyness: Float32Array; glowSource: Float32Array; blurred?: { radius: number; glow: Float32Array } };
+type KeyMaps = {
+  hue: number; strictness: number; keyness: Float32Array; glowSource: Float32Array;
+  blurred?: { radius: number; glow: Float32Array }; copied?: { radius: number; glow: Float32Array };
+};
 // Weakly, by scene: once the preview closes and lets go of its scene, these go with it.
 const keyMapsByScene = new WeakMap<StageScene, KeyMaps>();
 
@@ -287,10 +293,36 @@ function keyMaps(scene: StageScene, hue: number, strictness: number): KeyMaps {
   return maps;
 }
 
-// The glow's ring of taps over the key, summed for every pixel: kept with the key maps while the radius stays put,
-// so a frame only scales it by the glow, the key kept and the beat.
+// The shader's GradientNoise: a turn for each pixel's glow taps, the same every frame.
+const gradientNoise = (x: number, y: number) => fract(52.9829189 * fract(x * 0.06711056 + y * 0.00583715));
+const GLOW_TAPS = 16, GOLDEN_ANGLE = 2.3999632;
+
+// The glow's disc of taps over the key, averaged by weight for every pixel - spiralling out and turned at each pixel, as
+// the shader's are. Kept with the key maps while the radius stays put, so a frame only scales it by the glow, the key
+// kept and the beat.
 function blurredGlow(scene: StageScene, maps: KeyMaps, radius: number): Float32Array {
   if (maps.blurred?.radius === radius) return maps.blurred.glow;
+  const { width, height } = scene, reach = radius * 9 * width / GAME_WIDTH_PIXELS, glow = new Float32Array(width * height);
+  const rings = Array.from({ length: GLOW_TAPS }, (_, i) => Math.sqrt((i + 0.5) / GLOW_TAPS));
+  const weights = rings.map(ring => Math.exp(-2.5 * ring * ring)), total = weights.reduce((a, b) => a + b, 0);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const turn = gradientNoise(x + 0.5, y + 0.5) * 6.2831853;
+      let sum = 0;
+      for (let tap = 0; tap < GLOW_TAPS; tap++) {
+        const a = tap * GOLDEN_ANGLE + turn;
+        sum += bilinear(maps.glowSource, width, height, x + Math.cos(a) * rings[tap] * reach, y + Math.sin(a) * rings[tap] * reach) * weights[tap];
+      }
+      glow[y * width + x] = sum / total;
+    }
+  }
+  maps.blurred = { radius, glow };
+  return glow;
+}
+
+// Kaleidoscope's ring of taps over the key, summed for every pixel - the old glow, copies of the picture - kept like the glow.
+function kaleidoscope(scene: StageScene, maps: KeyMaps, radius: number): Float32Array {
+  if (maps.copied?.radius === radius) return maps.copied.glow;
   const { width, height } = scene, reach = radius * 4 * width / GAME_WIDTH_PIXELS, glow = new Float32Array(width * height);
   const ringX = Array.from({ length: 8 }, (_, i) => Math.cos(i * 0.785398) * reach), ringY = Array.from({ length: 8 }, (_, i) => Math.sin(i * 0.785398) * reach);
   for (let y = 0; y < height; y++) {
@@ -303,8 +335,58 @@ function blurredGlow(scene: StageScene, maps: KeyMaps, radius: number): Float32A
       glow[y * width + x] = sum;
     }
   }
-  maps.blurred = { radius, glow };
+  maps.copied = { radius, glow };
   return glow;
+}
+
+// ---- Lights: the shader's StageLights, from the painted arena's camera -------------------------------------
+
+// The rig hangs around the lane's start; the painted arena's lane starts under you, on the floor.
+const RIG_RING_METRES = 7, RIG_HEIGHT_METRES = 6, LIGHTS_REACH_METRES = 60;
+
+/** How much stage light pixel i sees, in the air and where the beams land, before the light's colour. */
+function stageLightsAt(i: number, rays: Float64Array, s: StageSettings, fight: StageFight, time: number): number {
+  const dx = rays[i * 4], dy = rays[i * 4 + 1], dz = rays[i * 4 + 2], sceneDistance = Math.min(rays[i * 4 + 3], LIGHTS_REACH_METRES);
+  const surface = rays[i * 4 + 3] < 1000, beams = Math.min(8, Math.max(1, Math.round(s._LightBeams)));
+  const wx = dx * sceneDistance, wy = EYE_HEIGHT_METRES + dy * sceneDistance, wz = dz * sceneDistance;
+  let seen = 0, landed = 0, lamps = 0;
+  // The chase: each beat lights a different few of the lamps (Light chase of them dark), always one at least.
+  const beatNumber = fight.beatFraction == null ? 0 : fight.beatNumber ?? 0, alwaysLit = beatNumber % beams;
+  for (let j = 0; j < beams; j++) {
+    if (j !== alwaysLit) { hash3(j, beatNumber, 7.7, random); if (random[0] < s._LightChase) continue; }
+    const side = (j + 0.5) / beams * 6.2831853;
+    const lx = Math.cos(side) * RIG_RING_METRES, ly = RIG_HEIGHT_METRES, lz = Math.sin(side) * RIG_RING_METRES;
+    const swing = side + 0.9 * Math.sin(time * s._LightSweep * 1.7 + j * 2.1), reach = 2.5 + 2 * Math.sin(time * s._LightSweep * 1.1 + j * 1.3);
+    let ax = Math.cos(swing) * reach - lx, ay = -ly, az = Math.sin(swing) * reach - lz;
+    const axisLength = Math.hypot(ax, ay, az); ax /= axisLength; ay /= axisLength; az /= axisLength;
+
+    // The closest the view ray comes to the beam's axis, up to the scene.
+    const fx = -lx, fy = EYE_HEIGHT_METRES - ly, fz = -lz;
+    const b = dx * ax + dy * ay + dz * az, d = dx * fx + dy * fy + dz * fz, e = ax * fx + ay * fy + az * fz;
+    const across = Math.max(1e-4, 1 - b * b), along = Math.min(sceneDistance, Math.max(0, (b * e - d) / across));
+    const nx = fx + dx * along, ny = fy + dy * along, nz = fz + dz * along;
+    const down = Math.max(0, nx * ax + ny * ay + nz * az), radius = 0.06 + down * s._LightWidth;
+    const miss = Math.hypot(nx - ax * down, ny - ay * down, nz - az * down) / radius;
+    seen += Math.exp(-2 * miss * miss) * radius / Math.max(Math.sqrt(across), 0.2) / (1 + 0.06 * down);
+
+    // The lamp itself, a bright point with a soft flare, where the ray passes it in front of the scene.
+    const toLamp = dx * lx + dy * (ly - EYE_HEIGHT_METRES) + dz * lz;
+    if (toLamp > 0 && toLamp < sceneDistance + 1) {
+      const flare = Math.hypot(dx * toLamp - lx, EYE_HEIGHT_METRES + dy * toLamp - ly, dz * toLamp - lz) / (0.15 + 0.01 * toLamp);
+      lamps += Math.exp(-flare * flare) * 2 + 0.15 / (1 + flare * flare * 4);
+    }
+
+    if (surface) {
+      const tx = wx - lx, ty = wy - ly, tz = wz - lz, onAxis = Math.max(0, tx * ax + ty * ay + tz * az);
+      const pool = Math.hypot(tx - ax * onAxis, ty - ay * onAxis, tz - az * onAxis) / (0.06 + onAxis * s._LightWidth);
+      landed += Math.exp(-2 * pool * pool);
+    }
+  }
+  // Strobe snaps the lights on hard for the first fifth of each flash - one, two or four a beat - and nearly off for the rest.
+  const perBeat = Math.min(4, Math.max(1, Math.round(s._LightStrobeRate)));
+  const flashOn = fight.beatFraction == null ? 0 : clamp01((0.2 - fract(fight.beatFraction * perBeat)) / 0.04);
+  const strobe = 1 + (0.06 + 2.4 * flashOn - 1) * s._LightStrobe, haze = 0.5 + Math.min(1, s._FogDensity * 15);
+  return s._Lights * strobe * (seen * 0.6 * haze + landed * 0.35 + lamps);
 }
 
 // The texture sampler's linear filtering, clamped at the edges.
@@ -334,11 +416,14 @@ function writePixel(out: Uint8ClampedArray, i: number, r: number, g: number, b: 
 export function stageFrameKey(look: StageLook, fight: StageFight): string {
   if (!look.on) return "off";
   const s = look.settings;
-  const beatShows = s._BeatFlash > 0 || (s._BeatPulse > 0 && s._Glow > 0.001 && s._GlowRadius > 0.001);
+  const lightsBeat = s._Lights > 0.001 && (s._LightStrobe > 0 || s._LightChase > 0);
+  const beatShows = s._BeatFlash > 0 || lightsBeat
+    || (s._BeatPulse > 0 && ((s._Glow > 0.001 && s._GlowRadius > 0.001) || (s._Kaleidoscope > 0.001 && s._KaleidoscopeRadius > 0.001)));
   const beat = beatShows && fight.beatFraction != null ? Math.exp(-fight.beatFraction * s._PulseSharpness) : 0;
   const danger = clamp01(fight.hit * s._HitFlash * 1.5 + clamp01(1 - fight.health) * s._LowHealth);
-  const magicMoves = s._Glitter > 0.001 || s._Motes > 0.001;
-  return `${Object.values(s).join(",")}|${beat}|${danger}|${magicMoves ? fight.time ?? 0 : ""}`;
+  const magicMoves = s._Glitter > 0.001 || s._Motes > 0.001 || s._Lights > 0.001;
+  const lightsAt = lightsBeat && fight.beatFraction != null ? `${fight.beatNumber ?? 0}:${fight.beatFraction}` : "";
+  return `${Object.values(s).join(",")}|${beat}|${lightsAt}|${danger}|${magicMoves ? fight.time ?? 0 : ""}`;
 }
 
 // ---- The timeline's strip: the look preview's arena, small, averaged into bands -------------------------

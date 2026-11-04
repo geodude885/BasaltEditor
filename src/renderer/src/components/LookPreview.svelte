@@ -66,7 +66,8 @@
   let asked = "";
   $effect(() => {
     const shown = comparing ? { ...look, on: false } : look;
-    const fight = { beatFraction: doc.tempo.ok ? doc.tempo.beat(Math.max(0, transport.time)) % 1 : null, health, hit, time: transport.time };
+    const beat = doc.tempo.ok ? doc.tempo.beat(Math.max(0, transport.time)) : null;
+    const fight = { beatFraction: beat == null ? null : beat % 1, beatNumber: beat == null ? undefined : Math.floor(beat), health, hit, time: transport.time };
     const key = `${width}x${height}@${keyHue}|${stageFrameKey(shown, fight)}`;
     if (!shader || key === asked) return;
     shader.shade({ width, height, keyHue, look: shown, fight });

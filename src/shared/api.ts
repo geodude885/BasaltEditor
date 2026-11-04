@@ -8,8 +8,8 @@ export type OpenedFile = {
   folder?: string;
 };
 export type OpenedFolder = { folder: string; files: OpenedFile[] };
-/** What a file picker is for: just a song, just a cover - or, left out, any of the chart's files. */
-export type FileKind = "song" | "cover";
+/** What a file picker is for: just a song, just a cover, a video to make looks from - or, left out, any of the chart's files. */
+export type FileKind = "song" | "cover" | "video";
 /** A chart folder in the game's Charts folder, for "Your charts": chart.json's text and the names of the images beside it. */
 export type ChartFolder = { folder: string; text: string; modified: number; images: string[] };
 /** A chart folder's copy: where it is, and its chart.json's text. */

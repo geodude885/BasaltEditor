@@ -285,6 +285,14 @@ export function selectLook(index: number, add: boolean): void {
   editing.selectedPhase = -1;
 }
 
+/** Edits every selected look the same way, as one undo step, keeping them selected wherever they sort to. */
+export function editSelectedLooks(mutate: (cue: LookCue) => void): void {
+  const cues = chosenLooks();
+  if (!cues.length) return;
+  doc.change(["shaders"], () => { for (const cue of cues) mutate(cue); });
+  reselectLooks(cues);
+}
+
 /** Edits one look, keeping it selected wherever a new time sorts it to. */
 export function editLookCue(index: number, mutate: (cue: LookCue) => void): void {
   const cue = doc.chart.shaders?.[index];
