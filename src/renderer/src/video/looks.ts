@@ -1,8 +1,11 @@
 // BossBattles Stage looks from a music video: each beat's colours, highlights, haze, specks and motion
-// become the Stage settings that do the same thing, and the looks follow them - a cue only when a
-// setting moves enough, fading so the look passes through each beat's own at its middle, and cutting
-// at once where the video cuts. Deterministic: the same frames always give the same cues.
-import { findPackParameter, hueToRgb, setStageCueSetting, STAGE_PACK, type PackParameter, type Rgb } from "../model/looks";
+// become the Stage settings that do the same thing, and the looks follow them - a cue only at the key
+// beats, those a straight fade from the key before to the key after would miss (model/simplify.ts), so
+// the look passes close to every beat's own, and cutting at once where the video cuts. Deterministic:
+// the same frames always give the same cues.
+import { feltVector, settingDistance } from "../model/lookImpact";
+import { findPackParameter, hueToRgb, setStageCueSetting, STAGE_PACK, stageDefaults, type PackParameter, type Rgb } from "../model/looks";
+import { keyMoments } from "../model/simplify";
 import { round, type Tempo } from "../model/tempo";
 import type { LookCue } from "../model/types";
 import { hitAt, hitNear, loudnessBetween, usualLoudness, type Rhythm } from "../audio/rhythm";
@@ -55,7 +58,7 @@ type Baseline = { specks: number; blobs: number; motion: number };
 /** The chart's song, analysed, and where chart time 0 is in it (music.offset). */
 export type SongRhythm = { rhythm: Rhythm; offset: number };
 /**
- * What the song does at a step: how hard its kick, snare and hi-hats hit at the step's start, how loud the bar is against
+ * What the song does at a step: how hard its kick, snare and hi-hats hit over the bar, how loud the bar is against
  * the song's usual, and where that loudness ranks in the song (0 the quietest bar, 1 the loudest).
  */
 export type SoundAt = { kick: number; snare: number; hat: number; loud: number; rank: number };
@@ -74,7 +77,6 @@ const SPARKLE_USUALLY_AT_MOST = 0.7;
 type SparkleScale = { least: number; most: number };
 export const sparkleAmount = (amount: number, scale: SparkleScale = MOTES_SCALE): number =>
   amount < SPARKLE_OFF_UNDER ? 0 : scale.least * (scale.most / scale.least) ** clamp(amount, 0, 1);
-const feltOn = (scale: SparkleScale) => (value: number): number => value <= 0 ? 0 : clamp(Math.log(value / scale.least) / Math.log(scale.most / scale.least), 0, 1);
 /**
  * A few bars are the big moments, where glitter or motes go right up: the bars that stand out most for them -
  * the sparkliest and busiest for glitter, the softest and quietest (but still playing) for motes. Sparing, so they land.
@@ -104,8 +106,6 @@ export function peaksOf(steps: Step[], tempo: Tempo, base: Baseline, sounds: (So
   return scores.map(s => ({ glitter: glitter.has(s.bar) ? 1 : 0, motes: motes.has(s.bar) ? 1 : 0 }));
 }
 
-/** Settings felt on a log scale: a change in them counts by how it feels, not by how far it moves. */
-const FELT: Record<string, (value: number) => number> = { _Glitter: feltOn(GLITTER_SCALE), _Motes: feltOn(MOTES_SCALE) };
 /** A step's two strongest hues - the key and the accent - and how much of the frame's colour the key is. */
 export type Palette = { hue: number; share: number; accent: number; colourful: number };
 
@@ -206,7 +206,7 @@ export function settingsForStep(step: Step, palette: Palette, base: Baseline, be
     (sound ? (0.05 + sound.kick * 0.55) * going + clamp(moving, 0, 2) * 0.03 : 0.25 + moving * 0.25) * often + strobe * 0.4);
   // How spiky only counts once there is motion to be spiky: a still frame's noise isn't a sharp pulse.
   s._PulseSharpness = sound ? 6 + sound.kick * 8 + strobe * 4 : 4 + Math.min(3, step.motionPeak / Math.max(1e-4, step.motion) - 1) * 6 * clamp(moving, 0, 1);
-  s._BeatFlash = step.flash ? 0.3 + step.flash.strength : step.cut ? 0.2 : sound && sound.snare > 0.8 && sound.loud > 1.1 ? 0.12 : 0;
+  s._BeatFlash = step.flash ? 0.3 + step.flash.strength : step.cut ? 0.2 : sound && sound.snare > 0.6 && sound.loud > 1.1 ? 0.12 : 0;
   colour("BeatFlash", step.flash && chroma(step.flash.colour) > 0.3 ? vivid(hueOfRgb(step.flash.colour)) : accent);
 
   // Lights: on in the song's loudest bars (its top half or so, fully in its top tenth) and off otherwise - without the song,
@@ -266,14 +266,14 @@ export function settingsForStep(step: Step, palette: Palette, base: Baseline, be
 const driven = (groups: readonly VideoLookGroup[]): PackParameter[] =>
   STAGE_PACK.parameters.filter(p => !LEFT_TO_THE_GAME.has(p.property) && groups.includes(p.group as VideoLookGroup));
 
-/** The settings that say how much each colour shows. */
-const COLOUR_AMOUNT: Record<string, string[]> = {
-  "Tint colour": ["_TintAmount"], "Glow colour": ["_Glow"], "Vignette colour": ["_Vignette"], "Beat flash colour": ["_BeatFlash"], "Sparkle colour": ["_Glitter", "_Motes"],
-};
+/** A setting that moves less than this share of the tolerance since the last cue, felt, isn't written again. */
+const STILL_SHARE = 1 / 3;
 /** Beats either side each setting is averaged over, within a shot; the noisiest more. Hues and flashes are left as they are. */
 const SMOOTHING: Record<string, number> = {
   _KeyHue: 0, _BeatFlash: 0, _BeatFlashR: 0, _BeatFlashG: 0, _BeatFlashB: 0, _LightStrobeRate: 0,
   _KeyKeep: 2, _KeyStrictness: 2, _PulseSharpness: 2, _BeatSparkle: 2, _Shimmer: 2, _Twinkle: 2, _MoteRise: 2, _LightBeams: 2, _LightSweep: 2,
+  // The shader pulses on every beat already: a look only follows how strong the pulse is over a bar or so.
+  _BeatPulse: 2,
 };
 const SMOOTHING_OTHERWISE = 1;
 
@@ -305,10 +305,17 @@ function soundsAt(steps: Step[], tempo: Tempo, song: SongRhythm | null): (SoundA
   if (!song) return steps.map(() => null);
   const { rhythm, offset } = song, usual = Math.max(1e-6, usualLoudness(rhythm));
   const sounds = steps.map(step => {
-    const at = step.start + offset;
     // The bar around the step: four beats with a tempo, two seconds without.
     const [from, to] = tempo.ok ? [tempo.seconds(Math.floor(tempo.beat(step.start) / 4) * 4), tempo.seconds(Math.floor(tempo.beat(step.start) / 4) * 4 + 4)] : [step.start - 1, step.start + 1];
-    return { kick: hitAt(rhythm.kick, rhythm, at), snare: hitAt(rhythm.snare, rhythm, at), hat: hitAt(rhythm.hat, rhythm, at), loud: loudnessBetween(rhythm, from + offset, to + offset) / usual, rank: 0 };
+    // How hard the drums hit over the bar, not on this one beat: the shader pulses and sparkles on every beat itself, so
+    // a look follows how much is going on - kicks and snares on the beats, hi-hats on the eighths between them too.
+    const across = (band: Float32Array, perBeat: number) => {
+      const times = tempo.ok
+        ? Array.from({ length: 4 * perBeat }, (_, i) => tempo.seconds(Math.floor(tempo.beat(step.start) / 4) * 4 + i / perBeat))
+        : Array.from({ length: 8 * perBeat }, (_, i) => from + (i / (8 * perBeat)) * (to - from));
+      return times.reduce((sum, time) => sum + hitAt(band, rhythm, time + offset), 0) / times.length;
+    };
+    return { kick: across(rhythm.kick, 1), snare: across(rhythm.snare, 1), hat: across(rhythm.hat, 2), loud: loudnessBetween(rhythm, from + offset, to + offset) / usual, rank: 0 };
   });
   const louder = sounds.map(s => s.loud).sort((a, b) => a - b);
   for (const s of sounds) s.rank = louder.length > 1 ? louder.findLastIndex(v => v <= s.loud) / (louder.length - 1) : 1;
@@ -324,7 +331,8 @@ export function looksFromVideo(frames: FrameFeatures[], tempo: Tempo, options: V
   const peaks = peaksOf(steps, tempo, base, sounds);
   const keys = palettes(steps), parameters = driven(options.groups);
   const beatsASecond = tempo.ok ? 1 / Math.max(1e-3, tempo.seconds(1) - tempo.seconds(0)) : 0;
-  const threshold = 0.02 + (1 - clamp(options.detail, 0, 1)) * 0.13, strength = clamp(options.strength, 0, 1);
+  // Detail sets how closely the looks follow the video: at 1, within 2% of every setting's range; at 0, within 15%.
+  const tolerance = 0.02 + (1 - clamp(options.detail, 0, 1)) * 0.13, strength = clamp(options.strength, 0, 1);
 
   const wantedBySteps = smoothed(steps, steps.map((step, k) => settingsForStep(step, keys[k], base, beatsASecond, sounds[k], peaks[k]))).map(raw => {
     const wanted = new Map<string, number>();
@@ -338,27 +346,31 @@ export function looksFromVideo(frames: FrameFeatures[], tempo: Tempo, options: V
     return wanted;
   });
 
+  // Where each step's look is reached: a cut's at once, the rest at the step's middle.
+  const arrivals = steps.map(step => step.cut ? step.start + CUT_FADE_SECONDS : (step.start + step.end) / 2);
+  // Only the key steps make cues: those the fade from the key before to the key after would miss by more than the
+  // tolerance. A cut is a key, and so is the step before it, to hold the look up to the cut.
+  const looks = wantedBySteps.map(wanted => {
+    const settings = stageDefaults();
+    for (const [property, value] of wanted) settings[property] = value;
+    return settings;
+  });
+  // Settings that only flavour a look count a third (model/lookImpact.ts), so their wobble doesn't keep a beat.
+  const vectors = looks.map(settings => feltVector(settings, parameters));
+  const keySteps = keyMoments(arrivals, vectors, tolerance, k => steps[k].cut || !!steps[k + 1]?.cut);
+
   const cues: LookCue[] = [], written = new Map<string, number>();
-  const now = (property: string) => written.get(property) ?? STAGE_PACK.parameters.find(p => p.property === property)!.default;
   let arrived = 0;
-  steps.forEach((step, k) => {
-    const wanted = wantedBySteps[k];
-    const moved = new Set(parameters.filter(p => {
-      if (!wanted.has(p.property)) return false;
-      if (cues.length === 0) return true;
-      // A colour's change counts as much as the colour shows: a tint colour hardly matters at no tint.
-      const amount = p.colour && COLOUR_AMOUNT[p.colour] ? Math.max(...COLOUR_AMOUNT[p.colour].map(a => now(a) / (STAGE_PACK.parameters.find(q => q.property === a)!.max * 0.5))) : 1;
-      const felt = FELT[p.property];
-      if (felt) return Math.abs(felt(wanted.get(p.property)!) - felt(now(p.property))) > threshold;
-      return Math.abs(wanted.get(p.property)! - now(p.property)) * clamp(amount, 0.2, 1) > threshold * (p.max - p.min);
-    }).map(colourOf));
-    if (!moved.size) return;
-    // A cut shows at once; otherwise the look fades over one step, from the middle of the one before (or where the last
-    // cue arrived, if that was later), to reach this step's at its middle - steps that changed nothing don't slow it.
-    const middle = (step.start + step.end) / 2;
-    const from = k > 0 ? Math.max(arrived, (steps[k - 1].start + steps[k - 1].end) / 2) : step.start;
-    const time = step.cut || cues.length === 0 ? step.start : from;
-    const fade = step.cut ? CUT_FADE_SECONDS : cues.length === 0 ? 0 : middle - from;
+  for (const k of keySteps) {
+    const step = steps[k], wanted = wantedBySteps[k];
+    // What moved since the last cue, felt; the first cue writes everything.
+    const moved = new Set(parameters.filter(p => wanted.has(p.property) && (cues.length === 0
+      || settingDistance(p, looks[k], { ...looks[k], [p.property]: written.get(p.property) ?? p.default }) > tolerance * STILL_SHARE)).map(colourOf));
+    // Nothing moved: no cue, but the look holds as it is up to here, so the next fade starts here rather than earlier.
+    if (!moved.size) { if (cues.length) arrived = arrivals[k]; continue; }
+    // A cut shows at once; otherwise the look fades in a straight line from where the last cue arrived to this step's.
+    const time = step.cut || cues.length === 0 ? step.start : arrived;
+    const fade = step.cut ? CUT_FADE_SECONDS : cues.length === 0 ? 0 : arrivals[k] - arrived;
     const cue: LookCue = { t: round(time, 3), pack: STAGE_PACK.name };
     if (fade > 0) cue.fade = round(fade, 3);
     for (const p of parameters) {
@@ -367,7 +379,7 @@ export function looksFromVideo(frames: FrameFeatures[], tempo: Tempo, options: V
       written.set(p.property, wanted.get(p.property)!);
     }
     cues.push(cue);
-    arrived = step.cut ? step.start + CUT_FADE_SECONDS : middle;
-  });
+    arrived = cues.length === 1 && !step.cut ? step.start : arrivals[k];
+  }
   return cues;
 }
