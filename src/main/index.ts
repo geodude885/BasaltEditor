@@ -6,7 +6,7 @@ import { basename, dirname, join, relative, resolve } from "node:path";
 import updater from "electron-updater";
 import { chartFolderName, freeNames } from "../shared/folders";
 import * as liveLink from "./liveLink";
-import { Channels, type ChartFolder, type DuplicatedFolder, type FileKind, type LiveLinkPack, type LiveLinkUpdate, type OpenedFile, type OpenedFolder, type SameChartChoice, type UnsavedChoice } from "../shared/api";
+import { Channels, type ChartFolder, type DuplicatedFolder, type FileKind, type LiveLinkGreeting, type LiveLinkUpdate, type OpenedFile, type OpenedFolder, type SameChartChoice, type UnsavedChoice } from "../shared/api";
 
 /** Chart folders this session opened - the only places saveChart may write. */
 const openedFolders = new Set<string>();
@@ -263,7 +263,7 @@ ipcMain.handle(Channels.askSameChart, async (event, name: string, folderName: st
   return response === 0 ? "there" : response === 1 ? "new" : "cancel";
 });
 
-ipcMain.handle(Channels.connectLiveLink, (event): Promise<LiveLinkPack[]> =>
+ipcMain.handle(Channels.connectLiveLink, (event): Promise<LiveLinkGreeting> =>
   liveLink.connect(() => { if (!event.sender.isDestroyed()) event.sender.send(Channels.liveLinkClosed); }));
 ipcMain.handle(Channels.sendLiveLink, (_event, update: LiveLinkUpdate) => liveLink.send(update));
 ipcMain.handle(Channels.disconnectLiveLink, () => liveLink.disconnect());

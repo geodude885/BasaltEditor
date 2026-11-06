@@ -2,7 +2,7 @@
 // It only exists while someone has asked for it. Messages are JSON, one per line, as RumbleReShaded's
 // docs/LIVE_LINK.md describes.
 import { connect as connectTo, type Socket } from "node:net";
-import type { LiveLinkPack, LiveLinkUpdate } from "../shared/api";
+import type { LiveLinkGreeting, LiveLinkPack, LiveLinkUpdate } from "../shared/api";
 
 const PORT = 47810;
 const HELLO = "rrs-live-link";
@@ -16,8 +16,8 @@ export function disconnect(): void {
   socket = null;
 }
 
-/** Connects, says hello, and resolves with the installed packs. `closed` is called if it drops later. */
-export function connect(closed: () => void, port = PORT): Promise<LiveLinkPack[]> {
+/** Connects, says hello, and resolves with the installed packs and what the link can do. `closed` is called if it drops later. */
+export function connect(closed: () => void, port = PORT): Promise<LiveLinkGreeting> {
   disconnect();
   return new Promise((resolve, reject) => {
     const mine = connectTo({ host: "127.0.0.1", port });
@@ -40,10 +40,11 @@ export function connect(closed: () => void, port = PORT): Promise<LiveLinkPack[]
       if (end < 0) return;
       clearTimeout(timer);
       try {
-        const reply = JSON.parse(received.slice(0, end)) as { hello?: string; version?: number; packs?: LiveLinkPack[] };
+        const reply = JSON.parse(received.slice(0, end)) as { hello?: string; version?: number; packs?: LiveLinkPack[]; features?: string[] };
         if (reply.hello !== HELLO || (reply.version ?? 0) > VERSION) { fail("not a live link this editor can use"); return; }
         greeted = true;
-        resolve(reply.packs ?? []);
+        // An older RumbleReShaded says nothing of features: it only does looks.
+        resolve({ packs: reply.packs ?? [], features: Array.isArray(reply.features) ? reply.features : [] });
       } catch {
         fail("not a live link");
       }
@@ -58,7 +59,8 @@ export function connect(closed: () => void, port = PORT): Promise<LiveLinkPack[]
   });
 }
 
-export function send({ looks, released }: LiveLinkUpdate): void {
-  const lines = [...looks.map(look => ({ look })), ...released.map(release => ({ release }))];
+export function send({ looks, released, globals }: LiveLinkUpdate): void {
+  const lines: object[] = [...looks.map(look => ({ look })), ...released.map(release => ({ release }))];
+  if (globals && Object.keys(globals).length) lines.push({ globals });
   if (lines.length) socket?.write(lines.map(line => `${JSON.stringify(line)}\n`).join(""));
 }

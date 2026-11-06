@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { LiveLinkPack } from "../../../shared/api";
-import { looksToShow, playerValueIn, shownTime } from "./liveLink";
+import { beatGlobals, looksToShow, playerValueIn, shownTime } from "./liveLink";
 import type { TimedLookCue } from "./looks";
+import { Tempo } from "./tempo";
 
 const packs: LiveLinkPack[] = [{ id: "UltraShade", name: "UltraShade", parameters: [
   { property: "_Saturation", label: "Saturation", min: 0, max: 2, default: 1, player: 0.5 },
@@ -35,5 +36,19 @@ describe("what the live link shows", () => {
     expect(shownTime(cues, 1, false, 0)).toBe(1);
     expect(shownTime(cues, 6, false, 0)).toBe(6);
     expect(shownTime(cues, 2, false, -1)).toBe(2);
+  });
+});
+
+describe("the beat the live link shows in the game", () => {
+  it("is Basalt's beat at the playhead, mid-battle and at full health", () => {
+    expect(beatGlobals(1.25, new Tempo(120))).toEqual({
+      "basalt.running": 1, "basalt.time": 1.25, "basalt.health": 1, "basalt.beat": 0.5, "basalt.beatNumber": 2, "basalt.beatsPerSecond": 2,
+    });
+  });
+
+  it("leaves the beat out without a tempo, putting it back to 0", () => {
+    expect(beatGlobals(3, new Tempo(undefined))).toEqual({
+      "basalt.running": 1, "basalt.time": 3, "basalt.health": 1, "basalt.beat": null, "basalt.beatNumber": null, "basalt.beatsPerSecond": null,
+    });
   });
 });
