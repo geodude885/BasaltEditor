@@ -32,16 +32,22 @@ afterEach(() => {
 });
 
 describe("the live link's connection", () => {
-  it("says hello, reads the packs, and sends looks and releases as lines", async () => {
-    const { port, lines } = await game(JSON.stringify({ hello: "rrs-live-link", version: 1, packs: [{ id: "a", name: "A", parameters: [] }] }));
-    expect(await connect(() => {}, port)).toEqual([{ id: "a", name: "A", parameters: [] }]);
-    send({ looks: [{ pack: "A", on: true, values: { x: 1 } }], released: ["B"] });
-    await vi.waitFor(() => expect(lines).toHaveLength(3));
+  it("says hello, reads the packs and features, and sends looks, releases and globals as lines", async () => {
+    const { port, lines } = await game(JSON.stringify({ hello: "rrs-live-link", version: 1, features: ["globals"], packs: [{ id: "a", name: "A", parameters: [] }] }));
+    expect(await connect(() => {}, port)).toEqual({ packs: [{ id: "a", name: "A", parameters: [] }], features: ["globals"] });
+    send({ looks: [{ pack: "A", on: true, values: { x: 1 } }], released: ["B"], globals: { "basalt.beat": 0.5, "basalt.time": null } });
+    await vi.waitFor(() => expect(lines).toHaveLength(4));
     expect(lines.map(line => JSON.parse(line))).toEqual([
       { hello: "rrs-live-link", version: 1 },
       { look: { pack: "A", on: true, values: { x: 1 } } },
       { release: "B" },
+      { globals: { "basalt.beat": 0.5, "basalt.time": null } },
     ]);
+  });
+
+  it("takes an older game's link, which says nothing of features, as one for looks alone", async () => {
+    const { port } = await game(JSON.stringify({ hello: "rrs-live-link", version: 1, packs: [] }));
+    expect(await connect(() => {}, port)).toEqual({ packs: [], features: [] });
   });
 
   it("says when the game goes away", async () => {

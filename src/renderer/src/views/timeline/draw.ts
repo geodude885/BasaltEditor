@@ -1,6 +1,7 @@
 import { peakBetween } from "../../audio/peaks";
 import { endOf, evTime, phaseTime } from "../../model/chart";
-import { STAGE_PACK, stageLookAt, type TimedLookCue } from "../../model/looks";
+import { groupAmounts, LOOK_GROUPS, lookImpacts, SMALL_IMPACT } from "../../model/lookImpact";
+import { linearToCss, STAGE_PACK, stageLookAt, type StageLook, type TimedLookCue } from "../../model/looks";
 import { stageStrip, type StageSparkle, type StageStrip } from "../../model/stageFrame";
 import { BEATS_PER_BAR, gridLines, type Tempo } from "../../model/tempo";
 import { playedClips, type PerformanceRow } from "../../model/performances";
@@ -183,50 +184,59 @@ function drawWave(ctx: CanvasRenderingContext2D, w: number, s: TimelineScene, t:
 
 const LOOK_STRIP_STEP_PIXELS = 3;
 
-// The strip's samples, kept for each list of cues (a new list when the looks change) at one zoom: working
+// The looks' samples, kept for each list of cues (a new list when the looks change) at one zoom: working
 // out the look at a moment walks every cue, and a redraw takes hundreds.
-const stripSamples = new WeakMap<TimedLookCue[], { step: number; strips: Map<number, StageStrip | null> }>();
+type LookSample = { look: StageLook; strip: StageStrip | null; lanes: { amount: number; colour: string | null }[] };
+const lookSamples = new WeakMap<TimedLookCue[], { step: number; samples: Map<number, LookSample> }>();
 
-function stripAt(lookCues: TimedLookCue[], stageCues: TimedLookCue[], step: number, k: number): StageStrip | null {
-  let kept = stripSamples.get(lookCues);
-  if (kept?.step !== step) { kept = { step, strips: new Map() }; stripSamples.set(lookCues, kept); }
-  let strip = kept.strips.get(k);
-  if (strip === undefined) {
-    const look = stageLookAt(stageCues, (k + 0.5) * step);
-    strip = look.on ? stageStrip(look) : null;
-    kept.strips.set(k, strip);
+function sampleAt(lookCues: TimedLookCue[], stageCues: TimedLookCue[], step: number, k: number): LookSample {
+  let kept = lookSamples.get(lookCues);
+  if (kept?.step !== step) { kept = { step, samples: new Map() }; lookSamples.set(lookCues, kept); }
+  let sample = kept.samples.get(k);
+  if (!sample) {
+    const look = stageLookAt(stageCues, (k + 0.5) * step), amounts = groupAmounts(look.settings);
+    sample = {
+      look, strip: look.on ? stageStrip(look) : null,
+      lanes: LOOK_GROUPS.map(group => ({ amount: look.on ? amounts[group]?.amount ?? 0 : 0, colour: amounts[group]?.colour ? linearToCss(amounts[group].colour!) : null })),
+    };
+    kept.samples.set(k, sample);
   }
-  return strip;
+  return sample;
 }
-// The sky and the arena take most of the strip; the things in the key colour are a thin band, as they are a
-// small part of the screen.
-const LOOK_BAND_SHARES = [0.36, 0.44, 0.2];
+// The expanded looks row, top down: the cues' flags, a strip of the arena around you, and a lane for each group.
+const FLAG_BAND_PIXELS = 12, STRIP_PIXELS = 9, LANE_GAP_PIXELS = 1;
 
-// What BossBattles Stage does over time - three bands: the sky, the arena around you, the things in the
-// key colour - with its glitter and motes sparkling over the top one, under a flag for each cue, with its
-// fade as a ramp. Other packs' cues are flags only.
+// What BossBattles Stage does over time, as a lighting desk's timeline shows a show: a lane for each group of the
+// pack - Colour, Glow, Fog, Beat, Edges, Magic, Lights - filled as high as that group is turned up and in its own
+// colour, so you can see what each part does and where, with the arena's look as a strip above them. Each cue's flag
+// is as bold as the change it makes, with a tick in each lane it changes, so a look that changes little is easy to
+// spot. Its fade is a ramp. Other packs' cues are flags only. Collapsed, the row is the strip and the flags.
 function drawLooks(ctx: CanvasRenderingContext2D, w: number, s: TimelineScene, t: Theme): void {
   const [top, height] = s.layout.rows.look, collapsed = s.layout.collapsed.has("look");
-  // Collapsed, the strip is just the arena around you.
-  const shares = collapsed ? [1] : LOOK_BAND_SHARES, stripTop = top + (collapsed ? 1 : 4), stripHeight = height - (collapsed ? 2 : 8);
   const isStage = (cue: TimedLookCue) => cue.pack.toLowerCase() === STAGE_PACK.name.toLowerCase();
-  const stageCues = s.lookCues.filter(isStage);
+  const stageCues = s.lookCues.filter(isStage), impacts = lookImpacts(s.lookCues);
+  const stripTop = top + (collapsed ? 1 : FLAG_BAND_PIXELS), stripHeight = collapsed ? height - 2 : STRIP_PIXELS;
+  const lanesTop = stripTop + stripHeight + 2, laneHeight = collapsed ? 0 : (top + height - 2 - lanesTop) / LOOK_GROUPS.length;
+  const laneY = (lane: number) => lanesTop + lane * laneHeight;
   ctx.fillStyle = alpha(t.wash, 0.02); ctx.fillRect(0, top, w, height);
+  if (!collapsed) LOOK_GROUPS.forEach((_, lane) => { ctx.fillStyle = alpha(t.wash, lane % 2 ? 0.025 : 0.05); ctx.fillRect(0, laneY(lane), w, laneHeight - LANE_GAP_PIXELS); });
 
   if (stageCues.length) {
     // Sampled at steady moments of chart time, not at pixels, so scrolling doesn't change what is sampled.
     const step = LOOK_STRIP_STEP_PIXELS / s.view.pps;
     for (let k = Math.floor(tOf(s.view, 0) / step); k * step < tOf(s.view, w); k++) {
-      const strip = stripAt(s.lookCues, stageCues, step, k);
-      if (!strip) continue;
+      const sample = sampleAt(s.lookCues, stageCues, step, k);
+      if (!sample.strip) continue;
       const x = Math.floor(xOf(s.view, k * step)), stepWidth = Math.ceil(xOf(s.view, (k + 1) * step)) - x;
-      let y = stripTop;
-      (collapsed ? [strip.surroundings] : [strip.sky, strip.surroundings, strip.keyColoured]).forEach((colour, band) => {
-        const bandHeight = stripHeight * shares[band];
-        ctx.fillStyle = colour;
-        ctx.fillRect(x, y, stepWidth, bandHeight);
-        if (band === 0 && strip.sparkle) drawSparkles(ctx, k, x, y, stepWidth, bandHeight, strip.sparkle);
-        y += bandHeight;
+      ctx.fillStyle = sample.strip.surroundings;
+      ctx.fillRect(x, stripTop, stepWidth, stripHeight);
+      if (sample.strip.sparkle && !collapsed) drawSparkles(ctx, k, x, stripTop, stepWidth, stripHeight, sample.strip.sparkle);
+      if (collapsed) continue;
+      sample.lanes.forEach(({ amount, colour }, lane) => {
+        if (amount <= 0.005) return;
+        const filled = Math.max(1, amount * (laneHeight - LANE_GAP_PIXELS));
+        ctx.fillStyle = colour ?? t.look;
+        ctx.fillRect(x, laneY(lane) + laneHeight - LANE_GAP_PIXELS - filled, stepWidth, filled);
       });
     }
   }
@@ -235,17 +245,38 @@ function drawLooks(ctx: CanvasRenderingContext2D, w: number, s: TimelineScene, t
   for (const cue of s.lookCues) {
     const cx = xOf(s.view, cue.time), selected = s.selectedLooks.has(cue.index);
     if (cx < -40 || cx > w + 40) continue;
+    const impact = impacts.get(cue.index), bold = impact ? 0.25 + 0.75 * Math.min(1, impact.total / 0.3) : 1;
     if (cue.fade > 0) {
-      ctx.strokeStyle = alpha(t.wash, 0.67); ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(cx, top + height - 3); ctx.lineTo(xOf(s.view, cue.time + cue.fade), top + 3); ctx.stroke();
+      ctx.strokeStyle = alpha(t.wash, 0.67 * bold); ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(cx, stripTop + stripHeight); ctx.lineTo(xOf(s.view, cue.time + cue.fade), stripTop); ctx.stroke();
     }
-    ctx.fillStyle = selected ? t.text : isStage(cue) ? t.look : t.textDim;
-    ctx.fillRect(cx - 1, top, 2, height);
+    ctx.fillStyle = selected ? t.text : isStage(cue) ? alpha(t.look, bold) : t.textDim;
+    ctx.fillRect(cx - 1, top, 2, collapsed ? height : stripTop + stripHeight - top);
     if (collapsed) continue;
-    ctx.beginPath(); ctx.moveTo(cx - 1, top); ctx.lineTo(cx + 8, top + 4); ctx.lineTo(cx - 1, top + 8); ctx.fill();
+    // The flag grows with the change the look makes; a tick in each lane whose group it changes.
+    const flag = 4 + 5 * bold;
+    ctx.beginPath(); ctx.moveTo(cx - 1, top); ctx.lineTo(cx + flag, top + flag / 2); ctx.lineTo(cx - 1, top + flag); ctx.fill();
+    if (impact) LOOK_GROUPS.forEach((group, lane) => {
+      const changed = impact.groups[group] ?? 0;
+      if (changed < SMALL_IMPACT / 2) return;
+      // Thin and faint, so the lanes' fills read through them: a big change in a group shows plainer.
+      ctx.fillStyle = selected ? t.text : alpha(t.text, 0.12 + 0.4 * Math.min(1, changed / 0.3));
+      ctx.fillRect(Math.round(cx), laneY(lane), 1, laneHeight - LANE_GAP_PIXELS);
+    });
     if (selected) { ctx.strokeStyle = t.look; ctx.lineWidth = 2; ctx.strokeRect(cx - 3, top + 1, 6, height - 2); }
     const label = cue.off ? "off" : isStage(cue) ? "" : cue.pack;
     if (label) { ctx.fillStyle = t.text; ctx.fillText(label, cx + 10, top + 9); }
+  }
+
+  // The lanes' names, at the left, over a little of the row's own colour so they read over the fills.
+  if (!collapsed && laneHeight >= 7) {
+    ctx.font = `${Math.min(9, Math.floor(laneHeight))}px ${t.mono}`; ctx.textBaseline = "middle";
+    LOOK_GROUPS.forEach((group, lane) => {
+      const y = laneY(lane) + (laneHeight - LANE_GAP_PIXELS) / 2, width = ctx.measureText(group).width + 6;
+      ctx.fillStyle = alpha(t.timeline, 0.7); ctx.fillRect(2, laneY(lane), width, laneHeight - LANE_GAP_PIXELS);
+      ctx.fillStyle = t.textDim; ctx.fillText(group, 5, y);
+    });
+    ctx.textBaseline = "alphabetic";
   }
 }
 

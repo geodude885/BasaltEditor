@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { rhythmOf } from "../audio/rhythm";
-import { findPackParameter, settingsWrittenIn, STAGE_PACK } from "../model/looks";
+import { findPackParameter, settingsWrittenIn, STAGE_PACK, stageLookAt, timedLookCues } from "../model/looks";
 import { Tempo } from "../model/tempo";
-import type { LookCue } from "../model/types";
+import type { LoadedChart, LookCue } from "../model/types";
 import { FrameMeasurer, MEASURE_HEIGHT as H, MEASURE_WIDTH as W, type FrameFeatures } from "./frames";
 import { CUT_FADE_SECONDS, DEFAULT_VIDEO_LOOK_OPTIONS, keyHues, looksFromVideo, palettes, sparkleAmount, type SongRhythm, type VideoLookOptions } from "./looks";
 import { cutsIn, flashesIn, stepsOf } from "./steps";
@@ -28,6 +28,9 @@ function video(...parts: [Paint | Changing, number][]): FrameFeatures[] {
 }
 const value = (cue: LookCue, property: string) => settingsWrittenIn(cue).find(([name]) => findPackParameter(STAGE_PACK, name)?.property === property)?.[1];
 const tempo = new Tempo(120);
+/** A Stage setting as the looks have it at a moment, fades and all, as the game and the preview work it out. */
+const lookAt = (cues: LookCue[], property: string, time: number) =>
+  stageLookAt(timedLookCues({ events: [], shaders: cues } as unknown as LoadedChart, tempo), time).settings[property];
 const options = (o: Partial<VideoLookOptions> = {}): VideoLookOptions => ({ ...DEFAULT_VIDEO_LOOK_OPTIONS, ...o });
 
 describe("measuring a frame", () => {
@@ -133,7 +136,7 @@ describe("looks from a video", () => {
     const stars = (every: number): Paint => (x, y) => x % every === every >> 1 && y % every === every >> 1 ? [255, 255, 255] : [20, 20, 60];
     // Ten bars of two seconds at 120 bpm; the sixth has four times the specks.
     const cues = looksFromVideo(video([stars(10), 10], [stars(5), 2], [stars(10), 8]), tempo, options({ groups: ["Magic"] }));
-    const glitterAt = (time: number) => cues.filter(c => c.t! <= time).map(c => value(c, "_Glitter")).filter(v => v !== undefined).at(-1) ?? 0;
+    const glitterAt = (time: number) => lookAt(cues, "_Glitter", time);
     expect(glitterAt(11)).toBeGreaterThan(0.1);
     expect(glitterAt(11)).toBeLessThanOrEqual(0.3);
     expect(glitterAt(5)).toBe(0);
@@ -210,7 +213,7 @@ describe("looks from a video and its song", () => {
   it("pulses with the song's kicks, not the video's stillness", () => {
     const kicksLater = song(4, [2, 2.5, 3, 3.5].map(at => ({ at, hz: 60 })));
     const cues = looksFromVideo(still, tempo, options({ groups: ["Beat"] }), kicksLater);
-    expect(lastWritten(cues, "_BeatPulse", 3)!).toBeGreaterThan(lastWritten(cues, "_BeatPulse", 1.5)! + 0.3);
+    expect(lookAt(cues, "_BeatPulse", 3)).toBeGreaterThan(lookAt(cues, "_BeatPulse", 1.5) + 0.3);
   });
 
   it("brings motes in where the song goes quiet, and keeps glitter and motes to their scales", () => {

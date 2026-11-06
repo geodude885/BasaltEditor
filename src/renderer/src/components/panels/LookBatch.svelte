@@ -8,9 +8,10 @@
     colourChannels, cssToLinear, isCueForPack, linearToCss, setStageCueColour, setStageCueSetting, STAGE_PACK, stageCueValue,
     stageParameterGroups, type PackParameter, type Rgb,
   } from "../../model/looks";
+  import { SIMPLIFY_CLOSENESS, SIMPLIFY_TOLERANCE, simplifyLooks } from "../../model/simplify";
   import { round } from "../../model/tempo";
   import type { LookCue } from "../../model/types";
-  import { editSelectedLooks } from "../../store/actions";
+  import { editSelectedLooks, simplifySelectedLooks } from "../../store/actions";
   import { commandButton } from "../../store/commands";
   import { doc } from "../../store/document.svelte";
   import { editing } from "../../store/editing.svelte";
@@ -20,6 +21,9 @@
   const cues = $derived([...editing.selectedLooks].map(i => doc.chart.shaders?.[i]).filter((c): c is LookCue => !!c));
   const allStage = $derived(cues.length > 0 && cues.every(c => isCueForPack(c, STAGE_PACK)));
   const fade = $derived(fadeAcross(cues));
+  let closeness = $state(SIMPLIFY_TOLERANCE);
+  /** How many looks simplifying would leave, so the button can say. */
+  const simplifiedTo = $derived(simplifyLooks(doc.chart, doc.tempo, editing.selectedLooks, { tolerance: closeness }).add.length || cues.length);
   const mode = $derived(modeAcross(cues));
 
   const sliderStep = (p: PackParameter) => (p.max - p.min) / 200;
@@ -58,6 +62,13 @@
   <div class="row">
     <h3>{cues.length} looks selected</h3>
     <span class="spacer"></span>
+    <select aria-label="How closely to keep to them" title="How closely the simplified looks keep to these: Close within 6% of any setting, Loose 15%, Rough 30%"
+      value={closeness} onchange={e => { closeness = +text(e); }}>
+      {#each SIMPLIFY_CLOSENESS as option (option.tolerance)}<option value={option.tolerance}>{option.label}</option>{/each}
+    </select>
+    <button title="Fewer looks in their place that look much the same: only the moments a fade wouldn't reach" disabled={simplifiedTo >= cues.length}
+      onclick={() => simplifySelectedLooks(false, closeness)}>Simplify to {simplifiedTo}</button>
+    <button title="One look in place of them all, fading from the first's time to where the last ends up" onclick={() => simplifySelectedLooks(true)}>Merge into one</button>
     <button {...commandButton("delete")}>Delete them</button>
   </div>
   <div class="note">

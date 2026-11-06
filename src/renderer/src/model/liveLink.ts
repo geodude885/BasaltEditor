@@ -1,6 +1,25 @@
 // What the live link (store/liveLink.svelte.ts) shows in the game: the looks at a moment of the chart.
 import type { LiveLinkLook, LiveLinkPack } from "../../../shared/api";
 import { comparableParameterName, evaluateLooksAt, type TimedLookCue } from "./looks";
+import type { Tempo } from "./tempo";
+
+/**
+ * What Basalt tells the shaders during a battle, for the moment at `time`, so the game shows the beat as it would:
+ * Beat pulse and flash, the lights' strobe, chase and sweep. Health stays full - no damage or hit shows - and there
+ * are no flash limits, so flashing is as the chart has it. Without a tempo the beat is left out (null puts it back
+ * to 0), as the mod leaves it.
+ */
+export function beatGlobals(time: number, tempo: Tempo): Record<string, number | null> {
+  const at = Math.max(0, time), globals: Record<string, number | null> = { "basalt.running": 1, "basalt.time": at, "basalt.health": 1 };
+  if (!tempo.ok) return { ...globals, "basalt.beat": null, "basalt.beatNumber": null, "basalt.beatsPerSecond": null };
+  const beat = tempo.beat(at), whole = Math.floor(beat);
+  return {
+    ...globals,
+    "basalt.beat": beat - whole,
+    "basalt.beatNumber": whole,
+    "basalt.beatsPerSecond": 1 / Math.max(1e-3, tempo.seconds(whole + 1) - tempo.seconds(whole)),
+  };
+}
 
 /** A slider's value as the player has it, which a look fades from. The game says; 0 for one it doesn't know. */
 export function playerValueIn(packs: LiveLinkPack[]): (pack: string, setting: string) => number {

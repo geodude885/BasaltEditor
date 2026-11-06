@@ -25,10 +25,15 @@ export type LiveLinkPack = {
   name: string;
   parameters: { property: string; label: string; min: number; max: number; default: number; player: number }[];
 };
+/** What the game said when linked: its packs, and what its live link can do beyond looks ("globals"). */
+export type LiveLinkGreeting = { packs: LiveLinkPack[]; features: string[] };
 /** A pack's look to show in the game: sliders left out are the player's. */
 export type LiveLinkLook = { pack: string; on: boolean; values: Record<string, number> };
-/** What changed for the live link: looks to show, and packs to hand back. */
-export type LiveLinkUpdate = { looks: LiveLinkLook[]; released: string[] };
+/**
+ * What changed for the live link: looks to show, packs to hand back, and shader globals to set as a mod would during
+ * play ("basalt.beat"), null putting one back to 0.
+ */
+export type LiveLinkUpdate = { looks: LiveLinkLook[]; released: string[]; globals?: Record<string, number | null> };
 
 export interface EditorApi {
   /** Picks chart files (chart.json, song, cover, clips, or a package) - or one song or cover. Empty when cancelled. */
@@ -69,7 +74,7 @@ export interface EditorApi {
   /** Asks where to save a chart with no folder, when this folder already holds one of its name and difficulty. */
   askSameChart?(name: string, folderName: string): Promise<SameChartChoice>;
   /** Connects to RumbleReShaded in the running game (its Live link setting), and says which packs it has. Rejects if it can't. */
-  connectLiveLink?(): Promise<LiveLinkPack[]>;
+  connectLiveLink?(): Promise<LiveLinkGreeting>;
   /** Shows looks in the game, over the live link. */
   sendLiveLink?(update: LiveLinkUpdate): Promise<void>;
   /** Ends the live link: the game hands every pack back to the player. */

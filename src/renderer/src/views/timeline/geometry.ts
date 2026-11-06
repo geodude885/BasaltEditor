@@ -13,7 +13,8 @@ export const COLLAPSIBLE_ROWS: { row: TimelineRow; label: string }[] = [
   { row: "shot", label: "Projectiles" }, { row: "move", label: "Moves · spots" }, { row: "clip", label: "Recorded" },
 ];
 
-const EXPANDED_ROW_HEIGHT_PIXELS: Record<TimelineRow, number> = { ruler: 22, wave: 58, phase: 22, look: 34, shot: 54, move: 34, clip: 30 };
+// The looks row holds its flags, a summary strip, and a lane for each of BossBattles Stage's groups.
+const EXPANDED_ROW_HEIGHT_PIXELS: Record<TimelineRow, number> = { ruler: 22, wave: 58, phase: 22, look: 92, shot: 54, move: 34, clip: 30 };
 export const COLLAPSED_ROW_HEIGHT_PIXELS = 10;
 // The resize handle's extra height goes to the rows that use it.
 const SHARE_OF_EXTRA_HEIGHT: Partial<Record<TimelineRow, number>> = { wave: 0.35, look: 0.2, shot: 0.45 };

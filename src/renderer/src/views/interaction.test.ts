@@ -103,23 +103,23 @@ describe("laying out the timeline", () => {
   it("stacks the rows with no gaps, at their own heights", () => {
     const layout = layoutTimeline(new Set(), 0);
     expect(layout.rows.ruler).toEqual([0, 22]);
-    expect(layout.rows.look).toEqual([102, 34]);
-    expect(layout.height).toBe(254);
+    expect(layout.rows.look).toEqual([102, 92]);
+    expect(layout.height).toBe(312);
   });
 
   it("shrinks a collapsed row to a strip and moves the rest up", () => {
     const layout = layoutTimeline(new Set<TimelineRow>(["wave", "look"]), 0);
     expect(layout.rows.wave).toEqual([22, COLLAPSED_ROW_HEIGHT_PIXELS]);
     expect(layout.rows.phase[0]).toBe(22 + COLLAPSED_ROW_HEIGHT_PIXELS);
-    expect(layout.height).toBe(254 - 58 - 34 + 2 * COLLAPSED_ROW_HEIGHT_PIXELS);
+    expect(layout.height).toBe(312 - 58 - 92 + 2 * COLLAPSED_ROW_HEIGHT_PIXELS);
   });
 
   it("gives extra height to the expanded rows that use it", () => {
     const taller = layoutTimeline(new Set(), 100), withLooksCollapsed = layoutTimeline(new Set<TimelineRow>(["look"]), 100);
-    expect(taller.height).toBe(354);
-    expect([taller.rows.wave[1], taller.rows.look[1], taller.rows.shot[1], taller.rows.move[1]]).toEqual([58 + 35, 34 + 20, 54 + 45, 34]);
+    expect(taller.height).toBe(412);
+    expect([taller.rows.wave[1], taller.rows.look[1], taller.rows.shot[1], taller.rows.move[1]]).toEqual([58 + 35, 92 + 20, 54 + 45, 34]);
     expect(withLooksCollapsed.rows.look[1]).toBe(COLLAPSED_ROW_HEIGHT_PIXELS);
-    expect(withLooksCollapsed.height).toBe(254 - 34 + COLLAPSED_ROW_HEIGHT_PIXELS + 100);
+    expect(withLooksCollapsed.height).toBe(312 - 92 + COLLAPSED_ROW_HEIGHT_PIXELS + 100);
   });
 
   it("puts a projectile from the middle of the lane on the middle of its row, however tall", () => {

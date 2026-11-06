@@ -2,6 +2,7 @@
 // without them), each with what it sets, filtered by pack or by what it sets; the look in effect at a time, to follow
 // the playhead; and the looks between two in the list, for selecting a run of them.
 import { evTime, phaseTime } from "./chart";
+import { SMALL_IMPACT, type LookImpact } from "./lookImpact";
 import { findPackParameter, isCueForPack, lookCueTimeLabel, settingsWrittenIn, STAGE_PACK } from "./looks";
 import { clockText, type Tempo } from "./tempo";
 import type { LoadedChart, LookCue } from "./types";
@@ -18,10 +19,12 @@ export type LookRow = {
   /** The Stage groups it sets something in. */
   groups: string[];
   fade: number;
+  /** How much it changes, 0 to 1 felt (model/lookImpact.ts); null for another pack's look, which the editor can't measure. */
+  impact: number | null;
 };
 export type LookSection = { key: string; title: string; rows: LookRow[] };
-/** Only looks of this pack, or that set something in this Stage group; null lets all through. */
-export type LookFilter = { pack: string | null; group: string | null };
+/** Only looks of this pack, that set something in this Stage group, or (smallOnly) that change little; null lets all through. */
+export type LookFilter = { pack: string | null; group: string | null; smallOnly?: boolean };
 
 const BARS_A_SECTION = 8, SECONDS_A_SECTION_WITHOUT_TEMPO = 30, GROUPS_NAMED = 3;
 
@@ -44,11 +47,15 @@ export function lookSummary(cue: LookCue): string {
 /** The packs the chart's looks are for, in the order they first come. */
 export const packsIn = (chart: LoadedChart): string[] => [...new Set((chart.shaders ?? []).map(cue => cue.pack.trim()))];
 
-const passes = (cue: LookCue, filter: LookFilter) =>
-  (filter.pack == null || cue.pack.trim().toLowerCase() === filter.pack.toLowerCase()) && (filter.group == null || groupsSetBy(cue).includes(filter.group));
+const passes = (cue: LookCue, filter: LookFilter, impact: number | null) =>
+  (filter.pack == null || cue.pack.trim().toLowerCase() === filter.pack.toLowerCase()) && (filter.group == null || groupsSetBy(cue).includes(filter.group))
+  && (!filter.smallOnly || (impact !== null && impact < SMALL_IMPACT));
 
-/** The looks that pass the filter, grouped by phase - or by eight bars (thirty seconds without a tempo) for a chart without phases. */
-export function lookSections(chart: LoadedChart, tempo: Tempo, filter: LookFilter = { pack: null, group: null }): LookSection[] {
+/**
+ * The looks that pass the filter, grouped by phase - or by eight bars (thirty seconds without a tempo) for a chart without
+ * phases. `impacts` are how much each Stage look changes, by its index.
+ */
+export function lookSections(chart: LoadedChart, tempo: Tempo, filter: LookFilter = { pack: null, group: null }, impacts: ReadonlyMap<number, LookImpact> = new Map()): LookSection[] {
   const phases = (chart.phases ?? []).map((phase, i) => ({ name: phase.name?.trim() || `Phase ${i + 1}`, from: phaseTime(phase, tempo) }))
     .filter(p => Number.isFinite(p.from)).sort((a, b) => a.from - b.from);
   const sectionOf = (time: number): { key: string; title: string } => {
@@ -68,13 +75,14 @@ export function lookSections(chart: LoadedChart, tempo: Tempo, filter: LookFilte
 
   const sections: LookSection[] = [];
   (chart.shaders ?? []).forEach((cue, index) => {
-    if (!passes(cue, filter)) return;
+    const impact = impacts.get(index)?.total ?? null;
+    if (!passes(cue, filter, impact)) return;
     const time = evTime(cue, tempo), { key, title } = sectionOf(time);
     let section = sections.find(s => s.key === key);
     if (!section) sections.push(section = { key, title, rows: [] });
     section.rows.push({
       index, time, label: lookCueTimeLabel(cue), pack: cue.pack, stage: isCueForPack(cue, STAGE_PACK),
-      summary: lookSummary(cue), groups: groupsSetBy(cue), fade: cue.fade ?? 0,
+      summary: lookSummary(cue), groups: groupsSetBy(cue), fade: cue.fade ?? 0, impact,
     });
   });
   return sections;

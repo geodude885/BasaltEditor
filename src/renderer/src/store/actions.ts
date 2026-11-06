@@ -6,6 +6,7 @@ import { projectileAt, templateOf, xOfColumn } from "../model/columns";
 import { barAround, projectilesBetween } from "../model/ranges";
 import { addPhaseAt, mirror, newTimed } from "../model/edits";
 import { newStageCue } from "../model/looks";
+import { simplifyLooks } from "../model/simplify";
 import { round } from "../model/tempo";
 import type { Point } from "../model/chart";
 import type { ChartEvent, LookCue, Projectile } from "../model/types";
@@ -291,6 +292,24 @@ export function editSelectedLooks(mutate: (cue: LookCue) => void): void {
   if (!cues.length) return;
   doc.change(["shaders"], () => { for (const cue of cues) mutate(cue); });
   reselectLooks(cues);
+}
+
+/**
+ * Fewer looks in place of the selected ones that look much the same (model/simplify.ts) - or, with `merge`, one look in
+ * place of them all - as one undo step, the new ones selected.
+ */
+export function simplifySelectedLooks(merge = false, tolerance?: number): void {
+  const { remove, add } = simplifyLooks(doc.chart, doc.tempo, editing.selectedLooks, { merge, tolerance });
+  if (!remove.length) { toast("Select two or more BossBattles Stage looks first"); return; }
+  let made: LookCue[] = [];
+  doc.change(["shaders"], () => {
+    const gone = new Set(remove);
+    doc.chart.shaders = (doc.chart.shaders ?? []).filter((_, i) => !gone.has(i));
+    for (const cue of add) doc.chart.shaders.push(cue);
+    made = doc.chart.shaders.slice(doc.chart.shaders.length - add.length);
+  });
+  reselectLooks(made);
+  toast(merge ? `Merged ${remove.length} looks into one` : `Simplified ${remove.length} looks to ${add.length}`);
 }
 
 /** Edits one look, keeping it selected wherever a new time sorts it to. */
