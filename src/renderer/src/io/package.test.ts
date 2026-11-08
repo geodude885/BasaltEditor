@@ -41,6 +41,14 @@ describe("what a package holds", () => {
     expect(packaged.music).toEqual({ file: "song.mp3", offset: 0.5 });
   });
 
+  it("leaves out recordings no performance plays any more", () => {
+    const recording = (name: string) => new TextEncoder().encode(JSON.stringify({ Name: name, Frames: [{ T: 0 }, { T: 4 }] }));
+    const files = new Map([["clips/a.json", recording("a")], ["clips/b.json", recording("b")], ["clips/notes.json", bytes(9)]]);
+    const played = { performances: [{ actor: "boss", clips: [{ t: 0, clip: "a" }] }] };
+    expect(packageContents("{}", played, files).entries.map(e => e.path)).toEqual(["chart.json", "clips/a.json", "clips/notes.json"]);
+    expect(packageContents("{}", {}, files).entries.map(e => e.path)).toEqual(["chart.json", "clips/notes.json"]);
+  });
+
   it("leaves out a song and cover the chart doesn't name", () => {
     const files = new Map([["song.mp3", bytes(1)], ["cover.png", bytes(3)]]);
     expect(packageContents("{}", {}, files).entries.map(e => e.path)).toEqual(["chart.json"]);

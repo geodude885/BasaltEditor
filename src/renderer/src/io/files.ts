@@ -2,6 +2,7 @@
 // or from a package (.bbchart, or .zip as the hosted editor saved them).
 import { mp3InsideWav } from "../audio/riff";
 import * as Jsonc from "../model/jsonc";
+import { clipsPlayed } from "../model/performances";
 import type { Chart } from "../model/types";
 import { readZip } from "./zip";
 
@@ -91,26 +92,38 @@ export type ClipSpan = { start: number; end: number };
 export function clipSpans(files: Map<string, Uint8Array>): Map<string, ClipSpan> {
   const out = new Map<string, ClipSpan>();
   for (const [k, v] of files) {
-    if (!/\.json$/i.test(k)) continue;
-    try {
-      const clip = JSON.parse(new TextDecoder().decode(v)), frames = clip.Frames ?? clip.frames;
-      if (!Array.isArray(frames) || !frames.length) continue;
-      const first = frames[0], last = frames[frames.length - 1];
-      out.set(clip.Name ?? clip.name ?? k.split("/").pop()!.replace(/\.json$/i, ""), { start: first.T ?? first.t ?? 0, end: last.T ?? last.t ?? 0 });
-    } catch { /* not a clip */ }
+    const clip = readClip(k, v);
+    if (clip) out.set(clip.name, clip.span);
   }
   return out;
 }
+
+/** A recorded clip's name (its own, else its file's) and span, or undefined for a file that isn't one. */
+function readClip(path: string, bytes: Uint8Array): { name: string; span: ClipSpan } | undefined {
+  if (!/\.json$/i.test(path)) return undefined;
+  try {
+    const clip = JSON.parse(new TextDecoder().decode(bytes)), frames = clip.Frames ?? clip.frames;
+    if (!Array.isArray(frames) || !frames.length) return undefined;
+    const first = frames[0], last = frames[frames.length - 1];
+    return { name: clip.Name ?? clip.name ?? path.split("/").pop()!.replace(/\.json$/i, ""), span: { start: first.T ?? first.t ?? 0, end: last.T ?? last.t ?? 0 } };
+  } catch { return undefined; }
+}
+
+/** Whether a file in clips/ goes in a package: a recording a performance plays, or anything that isn't a recording. */
+const clipNeeded = (path: string, bytes: Uint8Array, played: ReadonlySet<string>): boolean => {
+  const clip = readClip(path, bytes);
+  return !clip || played.has(clip.name);
+};
 
 /** A package's file name for a chart. */
 export const packageName = (chartName: string | undefined): string => `${(chartName || "chart").replace(/[^\w-]+/g, "-")}.bbchart`;
 
 /**
- * What a package holds: chart.json, the chart's own song and cover, and its recorded clips - not
- * backups, other songs or anything else opened beside them. A song that is MP3 audio in a WAV wrapper
+ * What a package holds: chart.json, the chart's own song and cover, and the recorded clips its performances
+ * play - not backups, other songs, clips no longer played or anything else opened beside them. A song that is MP3 audio in a WAV wrapper
  * goes in as the plain MP3 inside, which the game can read, and the packaged chart.json names that.
  */
-export function packageContents(text: string, chart: Pick<Chart, "music" | "cover">, files: Map<string, Uint8Array>): { entries: FileEntry[]; unwrapped?: string } {
+export function packageContents(text: string, chart: Pick<Chart, "music" | "cover" | "performances">, files: Map<string, Uint8Array>): { entries: FileEntry[]; unwrapped?: string } {
   const entries: FileEntry[] = [];
   let chartText = text, unwrapped: string | undefined;
   const { song, cover } = namedFiles(chart, files);
@@ -123,12 +136,13 @@ export function packageContents(text: string, chart: Pick<Chart, "music" | "cove
     } else entries.push({ path: song, bytes });
   }
   if (cover) entries.push({ path: cover, bytes: files.get(cover)! });
-  for (const [path, bytes] of files) if (/^clips\//i.test(path)) entries.push({ path, bytes });
+  const played = clipsPlayed(chart);
+  for (const [path, bytes] of files) if (/^clips\//i.test(path) && clipNeeded(path, bytes, played)) entries.push({ path, bytes });
   return { entries: [{ path: "chart.json", bytes: new TextEncoder().encode(chartText) }, ...entries], unwrapped };
 }
 
 /** A chart to package with others: its text, as parsed, and the files beside it. */
-export type PackagedChart = { text: string; chart: Pick<Chart, "music" | "cover" | "difficulty">; files: Map<string, Uint8Array> };
+export type PackagedChart = { text: string; chart: Pick<Chart, "music" | "cover" | "difficulty" | "performances">; files: Map<string, Uint8Array> };
 
 /** The game's own order for difficulties (its ChartLibrary): these first, then any others by name, then a chart with none. */
 const DIFFICULTY_ORDER = ["expert", "hard", "normal", "easy"];
