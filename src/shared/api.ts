@@ -55,8 +55,11 @@ export interface EditorApi {
   listCharts?(): Promise<ChartFolder[]>;
   /** One image beside chart.json in a chart folder of the Charts folder, for its card; null when it is too big to show. */
   readCover?(folder: string, name: string): Promise<Uint8Array | null>;
-  /** Reads a chart folder as Open folder does, without asking: one in the Charts folder, or opened before. */
-  readFolder?(folder: string): Promise<OpenedFolder>;
+  /**
+   * Reads a chart folder as Open folder does, without asking: one in the Charts folder, or opened before.
+   * With `remember` false it isn't counted as opened or recent.
+   */
+  readFolder?(folder: string, remember?: boolean): Promise<OpenedFolder>;
   /** Copies a chart folder in the Charts folder beside itself. */
   duplicateFolder?(folder: string): Promise<DuplicatedFolder>;
   /** Makes a chart folder in the Charts folder, named after the chart, with these files (chart.json among them); its path. */

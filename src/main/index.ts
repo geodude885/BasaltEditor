@@ -107,8 +107,11 @@ ipcMain.handle(Channels.openFolder, async (event): Promise<OpenedFolder | null> 
   return readFolder(resolve(picked.filePaths[0]));
 });
 
-/** Reads chart.json, the files beside it and clips/; the folder then counts as opened, and recent. */
-async function readFolder(folder: string): Promise<OpenedFolder> {
+/**
+ * Reads chart.json, the files beside it and clips/; the folder then counts as opened, and recent - unless
+ * `remember` is false, as for a chart read only to package it with another of its difficulties.
+ */
+async function readFolder(folder: string, remember = true): Promise<OpenedFolder> {
   const paths: string[] = [];
   for (const entry of await readdir(folder, { withFileTypes: true })) {
     if (entry.isFile()) paths.push(join(folder, entry.name));
@@ -118,8 +121,10 @@ async function readFolder(folder: string): Promise<OpenedFolder> {
       }
     }
   }
-  openedFolders.add(folder);
-  rememberRecent(folder);
+  if (remember) {
+    openedFolders.add(folder);
+    rememberRecent(folder);
+  }
   const files = await readAll(paths, path => path.slice(folder.length + 1).replace(/\\/g, "/"));
   return { folder, files };
 }
@@ -176,10 +181,10 @@ ipcMain.handle(Channels.readCover, async (_event, folder: string, name: string):
   return new Uint8Array(await readFile(path));
 });
 
-ipcMain.handle(Channels.readFolder, async (_event, folder: string): Promise<OpenedFolder> => {
+ipcMain.handle(Channels.readFolder, async (_event, folder: string, remember?: boolean): Promise<OpenedFolder> => {
   const target = resolve(folder);
   if (!recentFolders.includes(target) && !openedFolders.has(target)) await chartFolderIn(target);
-  return readFolder(target);
+  return readFolder(target, remember !== false);
 });
 
 ipcMain.handle(Channels.duplicateFolder, async (_event, folder: string): Promise<DuplicatedFolder> => {

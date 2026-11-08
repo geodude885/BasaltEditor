@@ -2,7 +2,7 @@
 // picking files again. Where they are kept is a LibrarySource: the browser's storage on the web
 // (platform/library-web.ts), where changes save themselves a moment after they are made - or, in the
 // desktop app, the game's Charts folder (platform/library-desktop.ts), where saving stays Ctrl S.
-import { summaryOf, type ChartSummary } from "../io/summary";
+import { chartOfText, summaryOf, type ChartSummary } from "../io/summary";
 import * as Jsonc from "../model/jsonc";
 import { toast } from "./actions";
 import { doc, restoreDraft } from "./document.svelte";
@@ -19,9 +19,12 @@ export interface LibrarySource {
   /** Keeps every change as it is made (the default). False where saving stays explicit. */
   autosaves?: boolean;
   list(): Promise<ChartSummary[]>;
-  load(id: string): Promise<StoredChart | null>;
+  /** A chart and its files; `quietly` for one only being read (to package it), not opened. */
+  load(id: string, quietly?: boolean): Promise<StoredChart | null>;
   save(summary: ChartSummary, text: string, changed: [string, Uint8Array][], removed: string[]): Promise<void>;
   remove(id: string): Promise<void>;
+  /** Keeps a new chart its own way; without it, the library saves it as a new entry. */
+  add?(text: string, files: Map<string, Uint8Array>): Promise<void>;
   /** Copies a chart its own way; without it, the library loads and saves a copy. */
   duplicate?(id: string): Promise<void>;
 }
@@ -83,6 +86,45 @@ class Library implements ChartKeeper {
   showOnceStarted(): void {
     this.#showWhenStarted = true;
     if (this.available) this.show();
+  }
+
+  /**
+   * The open chart's other difficulties: the charts kept here with its name, as the game puts them together
+   * under one song - all but the open one itself, and one of each difficulty.
+   */
+  async otherDifficulties(name: string, difficulty: string | undefined): Promise<StoredChart[]> {
+    const source = this.#source;
+    if (!source || !name) return [];
+    const same = (a: string | undefined, b: string | undefined) => (a ?? "").trim().toLowerCase() === (b ?? "").trim().toLowerCase();
+    const found: StoredChart[] = [];
+    for (const entry of (await source.list()).sort((a, b) => b.updated - a.updated)) {
+      if (this.isCurrent(entry.id) || !same(entry.name, name) || same(entry.difficulty, difficulty)) continue;
+      if (found.some(f => same(f.summary.difficulty, entry.difficulty))) continue;
+      const stored = await source.load(entry.id, true).catch(() => null);
+      if (stored) found.push(stored);
+    }
+    return found;
+  }
+
+  /**
+   * Keeps charts from a package of several difficulties beside the one opened from it: each that isn't kept
+   * here already (by name and difficulty) becomes one of Your charts. Says which difficulties it added.
+   */
+  async addCharts(charts: { text: string; files: Map<string, Uint8Array> }[]): Promise<string[]> {
+    const source = this.#source;
+    if (!source) return [];
+    const key = (name?: string, difficulty?: string) => `${(name ?? "").trim().toLowerCase()}|${(difficulty ?? "").trim().toLowerCase()}`;
+    const kept = new Set((await source.list()).map(e => key(e.name, e.difficulty))), added: string[] = [];
+    for (const { text, files } of charts) {
+      const now = Date.now(), summary = summaryOf(crypto.randomUUID(), chartOfText(text), files, now, now);
+      if (kept.has(key(summary.name, summary.difficulty))) continue;
+      if (source.add) await source.add(text, files);
+      else await source.save(summary, text, [...files], []);
+      kept.add(key(summary.name, summary.difficulty));
+      added.push(summary.difficulty ?? summary.name);
+    }
+    if (added.length && this.visible) await this.refresh();
+    return added;
   }
 
   /** Whether an entry is the chart open now. */

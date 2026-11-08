@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import * as Jsonc from "../model/jsonc";
-import { fileProblems, ownFiles, packageContents } from "./files";
+import { fileProblems, ownFiles, packageContents, packageDifficulties, unpack, unpackAll } from "./files";
 
 /** MP3 audio in a WAV wrapper: RIFF, a "fmt " chunk saying MPEG layer 3, then the MP3 as "data". */
 function wrapped(mp3: Uint8Array): Uint8Array {
@@ -52,6 +52,38 @@ describe("what a package holds", () => {
   it("leaves out a song and cover the chart doesn't name", () => {
     const files = new Map([["song.mp3", bytes(1)], ["cover.png", bytes(3)]]);
     expect(packageContents("{}", {}, files).entries.map(e => e.path)).toEqual(["chart.json"]);
+  });
+});
+
+describe("a package of a song's difficulties", () => {
+  const chartOf = (difficulty?: string) => {
+    const c = { name: "Song", ...(difficulty ? { difficulty } : {}), music: { file: "song.mp3", offset: 0 } };
+    return { text: JSON.stringify(c), chart: c, files: new Map([["song.mp3", bytes(1)], ["other.ogg", bytes(2)]]) };
+  };
+
+  it("puts each in a folder named after its difficulty, in the game's order, with its own song", () => {
+    const { entries } = packageDifficulties([chartOf("Easy"), chartOf("Expert"), chartOf("Very Hard!"), chartOf(), chartOf("Hard")]);
+    expect(entries.map(e => e.path)).toEqual([
+      "expert/chart.json", "expert/song.mp3", "hard/chart.json", "hard/song.mp3", "easy/chart.json", "easy/song.mp3",
+      "very-hard/chart.json", "very-hard/song.mp3", "chart/chart.json", "chart/song.mp3",
+    ]);
+  });
+
+  it("is a plain package with only one", () => {
+    expect(packageDifficulties([chartOf("Hard")]).entries.map(e => e.path)).toEqual(["chart.json", "song.mp3"]);
+  });
+
+  it("opens as every chart, hardest first, each with its own files", () => {
+    const { entries } = packageDifficulties([chartOf("Easy"), chartOf("Hard")]);
+    const charts = unpackAll(new Map(entries.map(e => [e.path, e.bytes])), "song.bbchart");
+    expect(charts.map(o => (JSON.parse(o.chart!.text) as { difficulty: string }).difficulty)).toEqual(["Hard", "Easy"]);
+    expect(charts.map(o => [...o.files.keys()])).toEqual([["song.mp3"], ["song.mp3"]]);
+    expect(unpack(new Map(entries.map(e => [e.path, e.bytes])), "song.bbchart").chart!.text).toBe(charts[0].chart!.text);
+  });
+
+  it("still opens a package with one chart in a folder", () => {
+    const files = new Map([["Song/chart.json", new TextEncoder().encode("{}")], ["Song/song.mp3", bytes(1)]]);
+    expect(unpackAll(files, "x.bbchart").map(o => [...o.files.keys()])).toEqual([["song.mp3"]]);
   });
 });
 

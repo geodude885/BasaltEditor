@@ -9,7 +9,7 @@
   const keys: [string, string][] = $derived([
     ...shortcutCommands().map((c): [string, string] => [c.keys!, c.help ?? c.label]),
     ["Double-click", "On the lane: a projectile from there. On a timeline row: a projectile, move or look at that beat."],
-    [display.highwayColumns > 1 ? `1 – ${RECORD_KEYS[display.highwayColumns - 1].toUpperCase()}` : "1",
+    [display.highwayColumns > 1 ? `1 â€“ ${RECORD_KEYS[display.highwayColumns - 1].toUpperCase()}` : "1",
       "With Record on, on the highway: tap that column as the song plays. Pausing ends the take. Set how many columns beside the highway."],
     ["Alt / F10", "Go to the menus; the arrows move round them"],
   ]);
@@ -42,10 +42,11 @@
   <code>UserData/Basalt/Charts</code>, then <b>Save</b>. The game reloads it automatically. In the desktop app, <b>New</b> starts
   a chart in a folder of its own there, named after it, and <b>Save</b> gives a chart opened from anywhere else one; in a browser,
   Your charts keeps every chart as you go. A <b>.bbchart</b> package opens too,
-  and <b>Package</b> makes one with the song, cover and the recorded clips it plays, to share. Only the parts you change are
-  rewritten: comments and recorded clips elsewhere stay as they were (comments among the events go when you edit an event).
+  and <b>Package</b> makes one with the song, cover and the recorded clips it plays, to share. A song's difficulties are charts
+  of the same name, each with its own difficulty: <b>Package all difficulties</b> puts every one in Your charts in a single
+  package, and opening one of those adds the others to Your charts. Only the parts you change are rewritten: comments and
+  recorded clips elsewhere stay as they were (comments among the events go when you edit an event).
   Recorded clips are made in game; select one on the timeline and press <b>Delete</b> to remove it.
-
 </div>
 
 <style>

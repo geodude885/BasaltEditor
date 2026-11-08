@@ -1,7 +1,10 @@
 // Opening and saving: through the desktop app's dialogs, by drag and drop, and the clipboard.
 import { isDesktop, type OpenedFolder } from "../../../shared/api";
 import { folderNamedAfter } from "../../../shared/folders";
-import { clipSpans, findCover, findSong, isCover, isSong, missingFiles, ownFiles, packageContents, packageName, readEntries, type FileEntry } from "../io/files";
+import {
+  clipSpans, findCover, findSong, isCover, isSong, missingFiles, ownFiles, packageContents, packageDifficulties, packageName, readEntries,
+  type FileEntry, type Opened, type PackagedChart,
+} from "../io/files";
 import { setMusic } from "../model/edits";
 import { chartOfText } from "../io/summary";
 import { writeZip } from "../io/zip";
@@ -27,9 +30,15 @@ export interface ChartKeeper {
   flush(): Promise<boolean>;
   /** A chart was just saved into it, from here. */
   saved(): void;
+  /** The charts kept with this name and another difficulty, one of each: to package with the open chart. */
+  otherDifficulties(name: string, difficulty: string | undefined): Promise<{ text: string; files: Map<string, Uint8Array> }[]>;
+  /** Keeps these as charts of their own, unless they're kept already; the difficulties it added. */
+  addCharts(charts: { text: string; files: Map<string, Uint8Array> }[]): Promise<string[]>;
 }
 let keeper: ChartKeeper | null = null;
 export function keepChartsWith(k: ChartKeeper): void { keeper = k; }
+/** Whether there's a Your charts here to find a chart's other difficulties in. */
+export const libraryHere = (): boolean => !!keeper?.available;
 
 /** The chart folder's files as they are on disk, by path - so Save writes only a song or cover that is new or changed. */
 let onDisk = new Map<string, Uint8Array>();
@@ -77,11 +86,27 @@ export async function openEntries(entries: FileEntry[], folder: string | null = 
     const song = opened.chart ? undefined : await adopt([...opened.files.keys()]);
     await useFiles();
     const extra = opened.files.size ? ` with ${opened.files.size} file(s)` : "";
+    // A package of several difficulties: this one is open; the rest join Your charts.
+    if (opened.others?.length) { toast(await keepOthers(opened.others)); return; }
     // A song opened on its own has said so already (useSong).
     if (opened.chart) toast(`Opened ${doc.chart.name || opened.chart.name}${extra}`);
     else if (!song) toast(`Added ${opened.files.size} file(s)`);
   } catch (e) {
     toast(`Could not open that: ${(e as Error).message}`);
+  }
+}
+
+/** Keeps a package's other difficulties in Your charts, saying what became of them. */
+async function keepOthers(others: Opened[]): Promise<string> {
+  const opened = `Opened ${doc.chart.name || "the chart"}${doc.chart.difficulty ? ` (${doc.chart.difficulty})` : ""}`;
+  const charts = others.filter(o => o.chart).map(o => ({ text: o.chart!.text, files: o.files }));
+  if (!keeper?.available) return `${opened}. The package's other ${charts.length} difficult${charts.length === 1 ? "y" : "ies"} need Your charts, which isn't here`;
+  try {
+    const added = await keeper.addCharts(charts);
+    if (!added.length) return `${opened}. Its other difficulties are in Your charts already`;
+    return `${opened}, and added ${added.join(", ")} to Your charts`;
+  } catch (e) {
+    return `${opened}, but couldn't add its other difficulties to Your charts: ${(e as Error).message}`;
   }
 }
 
@@ -412,6 +437,28 @@ export async function savePackage(): Promise<void> {
   const zip = writeZip(entries.map(e => [e.path, e.bytes]));
   await saveFile(packageName(doc.chart.name), zip, false);
   if (unwrapped) toast(`The song went in as ${unwrapped}: it was MP3 audio inside a WAV file, which the game can't read`);
+}
+
+/**
+ * One package (.bbchart) of the song's difficulties: the open chart, as it is now, and every other chart in
+ * Your charts with its name - a folder each, which the game lists together under one song.
+ */
+export async function saveSongPackage(): Promise<void> {
+  let others: { text: string; files: Map<string, Uint8Array> }[] = [];
+  try { others = await keeper?.otherDifficulties(doc.chart.name ?? "", doc.chart.difficulty) ?? []; }
+  catch (e) { toast(`Could not read Your charts: ${(e as Error).message}`); return; }
+  if (!others.length) {
+    toast(`No other difficulties of ${doc.chart.name || "this chart"} in Your charts: give them the same name, and a difficulty each`);
+    return;
+  }
+  const charts: PackagedChart[] = [
+    { text: doc.text, chart: doc.chart, files: session.files },
+    ...others.map(o => ({ text: o.text, chart: chartOfText(o.text), files: o.files })),
+  ];
+  const { entries, unwrapped } = packageDifficulties(charts);
+  await saveFile(packageName(doc.chart.name), writeZip(entries.map(e => [e.path, e.bytes])), false);
+  const names = charts.map(c => c.chart.difficulty || "no difficulty").join(", ");
+  toast(`Packaged ${charts.length} difficulties: ${names}${unwrapped.length ? `. ${unwrapped.join(", ")} went in as the MP3 inside its WAV` : ""}`);
 }
 
 async function saveFile(name: string, bytes: Uint8Array, isChart: boolean): Promise<void> {

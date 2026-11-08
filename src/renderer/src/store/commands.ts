@@ -13,7 +13,7 @@ import { editing } from "./editing.svelte";
 import { session } from "./session.svelte";
 import { transport } from "./transport.svelte";
 import { ui } from "./ui.svelte";
-import { copyChart, newChart, openFiles, openFolder, openRecent, save, saveChartAs, savePackage, saveTarget } from "./files";
+import { copyChart, libraryHere, newChart, openFiles, openFolder, openRecent, save, saveChartAs, savePackage, saveSongPackage, saveTarget } from "./files";
 import { library } from "./library.svelte";
 import { liveLink } from "./liveLink.svelte";
 import { converting } from "./converting.svelte";
@@ -98,6 +98,8 @@ export function menus(): Menu[] {
           { id: "save-as", label: "Save chart.json as…", keys: "Ctrl Shift S", run: saveChartAs, shown: () => saveTarget() !== "file", whileTyping: true,
             help: "Save a copy of chart.json somewhere you pick" },
           { id: "package", label: "Package (.bbchart)…", run: savePackage },
+          { id: "package-song", label: "Package all difficulties…", run: saveSongPackage, shown: () => libraryHere(),
+            help: "One package of this chart and every other in Your charts with its name, a folder per difficulty" },
           { id: "copy-chart", label: "Copy chart.json", run: copyChart },
         ],
       ],
