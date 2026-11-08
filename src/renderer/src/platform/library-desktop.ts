@@ -10,8 +10,8 @@ import type { LibrarySource, StoredChart } from "../store/library.svelte";
 const NO_BYTES = new Uint8Array();
 
 export function desktopLibrary(api: DesktopApi): LibrarySource {
-  async function load(id: string): Promise<StoredChart | null> {
-    const opened = await api.readFolder(id);
+  async function load(id: string, quietly = false): Promise<StoredChart | null> {
+    const opened = await api.readFolder(id, !quietly);
     const chart = opened.files.find(f => f.path.toLowerCase() === "chart.json");
     if (!chart) return null;
     const text = new TextDecoder().decode(chart.bytes);
@@ -36,6 +36,12 @@ export function desktopLibrary(api: DesktopApi): LibrarySource {
     load,
 
     async save() { /* Ctrl S saves into the folder */ },
+
+    /** A new chart folder in the Charts folder, named after the chart. */
+    async add(text, files) {
+      const chart = chartOfText(text), entries = [{ path: "chart.json", bytes: new TextEncoder().encode(text) }, ...[...files].map(([path, bytes]) => ({ path, bytes }))];
+      await api.createChartFolder(chart.name || "My Chart", entries, chart.difficulty);
+    },
 
     async remove(id) {
       await api.trashFolder(id);

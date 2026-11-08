@@ -7,15 +7,21 @@ import { readZip } from "./zip";
 
 export type FileEntry = { path: string; bytes: Uint8Array };
 
-/** What was opened: a chart (unless only extra files came), and the other files by path relative to it. */
-export type Opened = { chart?: { text: string; name: string }; files: Map<string, Uint8Array> };
+/**
+ * What was opened: a chart (unless only extra files came), and the other files by path relative to it -
+ * and, from a package of several difficulties, the others, each the same way.
+ */
+export type Opened = { chart?: { text: string; name: string }; files: Map<string, Uint8Array>; others?: Opened[] };
 
 export const isPackage = (path: string): boolean => /\.(bbchart|zip)$/i.test(path);
 
 /** Sorts opened files into the chart and the files beside it. */
 export async function readEntries(entries: FileEntry[]): Promise<Opened> {
   const pack = entries.find(e => isPackage(e.path));
-  if (pack) return unpack(await readZip(pack.bytes), pack.path.split(/[\\/]/).pop()!);
+  if (pack) {
+    const [first, ...others] = unpackAll(await readZip(pack.bytes), pack.path.split(/[\\/]/).pop()!);
+    return others.length ? { ...first, others } : first;
+  }
   const chart = entries.find(e => /(^|\/)chart\.json$/i.test(e.path))
     ?? entries.find(e => /\.json$/i.test(e.path) && !/clips\//i.test(e.path) && !/-(take|clip)-\d+\.json$/i.test(e.path));
   const files = new Map<string, Uint8Array>();
@@ -23,17 +29,27 @@ export async function readEntries(entries: FileEntry[]): Promise<Opened> {
   return { chart: chart && { text: new TextDecoder().decode(chart.bytes), name: chart.path.split("/").pop()! }, files };
 }
 
-/** A package's chart and files; chart.json may sit at the top or in one folder. */
+/** A package's chart and files: the first of its difficulties, when it holds several. */
 export function unpack(files: Map<string, Uint8Array>, name: string): Opened {
-  let prefix = "";
-  if (!files.has("chart.json")) {
-    const nested = [...files.keys()].find(k => /^[^/]+\/chart\.json$/.test(k));
-    if (!nested) throw new Error("it has no chart.json");
-    prefix = nested.slice(0, nested.indexOf("/") + 1);
-  }
-  const rest = new Map<string, Uint8Array>();
-  for (const [k, v] of files) if (k !== prefix + "chart.json" && k.startsWith(prefix)) rest.set(k.slice(prefix.length), v);
-  return { chart: { text: new TextDecoder().decode(files.get(prefix + "chart.json")), name }, files: rest };
+  return unpackAll(files, name)[0];
+}
+
+/**
+ * Every chart in a package, with its own files. chart.json may sit at the top (one chart), or in folders
+ * at the top level, one chart each - the several difficulties of one song, which the game lists together
+ * as it does any charts of the same name.
+ */
+export function unpackAll(files: Map<string, Uint8Array>, name: string): Opened[] {
+  const prefixes = files.has("chart.json") ? [""] : [...files.keys()].filter(k => /^[^/]+\/chart\.json$/.test(k)).sort().map(k => k.slice(0, k.indexOf("/") + 1));
+  if (!prefixes.length) throw new Error("it has no chart.json");
+  const charts = prefixes.map(prefix => {
+    const rest = new Map<string, Uint8Array>();
+    for (const [k, v] of files) if (k !== prefix + "chart.json" && k.startsWith(prefix)) rest.set(k.slice(prefix.length), v);
+    return { chart: { text: new TextDecoder().decode(files.get(prefix + "chart.json")), name }, files: rest };
+  });
+  // In the game's order, so the hardest opens first as the game lists it first.
+  const rank = (o: Opened) => { try { return difficultyRank((Jsonc.parse(o.chart!.text) as Partial<Chart>).difficulty); } catch { return Infinity; } };
+  return charts.sort((a, b) => rank(a) - rank(b));
 }
 
 /** A file's path relative to the chart's folder, so "clips/x.json" stays "clips/x.json" and a loose clip goes into clips/. */
@@ -109,6 +125,47 @@ export function packageContents(text: string, chart: Pick<Chart, "music" | "cove
   if (cover) entries.push({ path: cover, bytes: files.get(cover)! });
   for (const [path, bytes] of files) if (/^clips\//i.test(path)) entries.push({ path, bytes });
   return { entries: [{ path: "chart.json", bytes: new TextEncoder().encode(chartText) }, ...entries], unwrapped };
+}
+
+/** A chart to package with others: its text, as parsed, and the files beside it. */
+export type PackagedChart = { text: string; chart: Pick<Chart, "music" | "cover" | "difficulty">; files: Map<string, Uint8Array> };
+
+/** The game's own order for difficulties (its ChartLibrary): these first, then any others by name, then a chart with none. */
+const DIFFICULTY_ORDER = ["expert", "hard", "normal", "easy"];
+const difficultyRank = (difficulty?: string): number => {
+  if (!difficulty?.trim()) return Infinity;
+  const known = DIFFICULTY_ORDER.indexOf(difficulty.trim().toLowerCase());
+  return known >= 0 ? known : DIFFICULTY_ORDER.length;
+};
+
+/** A difficulty's folder in a package: its name, lower case, letters and digits - "chart" with none - and never two alike. */
+function difficultyFolder(difficulty: string | undefined, taken: Set<string>): string {
+  const base = (difficulty ?? "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "chart";
+  let folder = base;
+  for (let n = 2; taken.has(folder); n++) folder = `${base}-${n}`;
+  taken.add(folder);
+  return folder;
+}
+
+/**
+ * A package of one song's difficulties: with one chart, as packageContents makes it; with several, each in a
+ * folder of its own named after its difficulty (easy/, hard/...), with its own song, cover and clips, in the
+ * game's order. Says which songs went in as the MP3 inside a WAV.
+ */
+export function packageDifficulties(charts: PackagedChart[]): { entries: FileEntry[]; unwrapped: string[] } {
+  if (charts.length === 1) {
+    const { entries, unwrapped } = packageContents(charts[0].text, charts[0].chart, charts[0].files);
+    return { entries, unwrapped: unwrapped ? [unwrapped] : [] };
+  }
+  const taken = new Set<string>(), entries: FileEntry[] = [], unwrapped: string[] = [];
+  const ordered = [...charts].sort((a, b) => difficultyRank(a.chart.difficulty) - difficultyRank(b.chart.difficulty)
+    || (a.chart.difficulty ?? "").localeCompare(b.chart.difficulty ?? ""));
+  for (const c of ordered) {
+    const folder = difficultyFolder(c.chart.difficulty, taken), own = packageContents(c.text, c.chart, c.files);
+    for (const e of own.entries) entries.push({ path: `${folder}/${e.path}`, bytes: e.bytes });
+    if (own.unwrapped) unwrapped.push(`${folder}/${own.unwrapped}`);
+  }
+  return { entries, unwrapped };
 }
 
 /**

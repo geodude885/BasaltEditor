@@ -42,7 +42,9 @@
   <code>UserData/Basalt/Charts</code>, then <b>Save</b>. The game reloads it automatically. In the desktop app, <b>New</b> starts
   a chart in a folder of its own there, named after it, and <b>Save</b> gives a chart opened from anywhere else one; in a browser,
   Your charts keeps every chart as you go. A <b>.bbchart</b> package opens too,
-  and <b>Package</b> makes one with the song, cover and clips to share. Only the parts you change are rewritten: comments and
+  and <b>Package</b> makes one with the song, cover and clips to share. A song's difficulties are charts of the same name,
+  each with its own difficulty: <b>Package all difficulties</b> puts every one in Your charts in a single package, and
+  opening one of those adds the others to Your charts. Only the parts you change are rewritten: comments and
   recorded clips elsewhere stay as they were (comments among the events go when you edit an event).
 </div>
 
