@@ -4,7 +4,7 @@ import { groupAmounts, LOOK_GROUPS, lookImpacts, SMALL_IMPACT } from "../../mode
 import { linearToCss, STAGE_PACK, stageLookAt, type StageLook, type TimedLookCue } from "../../model/looks";
 import { stageStrip, type StageSparkle, type StageStrip } from "../../model/stageFrame";
 import { BEATS_PER_BAR, gridLines, type Tempo } from "../../model/tempo";
-import { playedClips, type PerformanceRow } from "../../model/performances";
+import { clipKey, playedClips, type PerformanceRow } from "../../model/performances";
 import type { LoadedChart } from "../../model/types";
 import type { ClipSpan } from "../../io/files";
 import type { Song } from "../../store/session.svelte";
@@ -22,6 +22,8 @@ export type TimelineScene = {
   selectedPhase: number;
   lookCues: TimedLookCue[];
   selectedLooks: ReadonlySet<number>;
+  /** Recorded clips selected to remove, by clipKey. */
+  selectedClips: ReadonlySet<string>;
   markers: Marker[];
   song: Song | null;
   /** Where the chart starts in the song. */
@@ -119,24 +121,27 @@ export function drawTimeline(ctx: CanvasRenderingContext2D, w: number, h: number
 
   if (s.box) drawBox(ctx, s.box, t);
 
-  // Recorded clips (made in game - shown, kept, not edited here): a lane per performance, in the order
-  // of the actors. Each clip runs until the next in its own performance; mimed ones are faint and hatched.
+  // Recorded clips (made in game - shown, kept, and only removed here): a lane per performance, in the order
+  // of the actors. Each clip runs until the next in its own performance; mimed ones are faint and hatched,
+  // selected ones ringed.
   const clipCollapsed = collapsed.has("clip");
   s.performanceRows.forEach((row, lane) => {
     const [laneTop, laneHeight] = clipLaneSpan(s.layout, lane), inset = clipCollapsed ? 1 : 3;
     if (lane > 0 && !clipCollapsed) { ctx.fillStyle = t.grid; ctx.fillRect(0, Math.round(laneTop), w, 1); }
     const played = playedClips(c.performances?.[row.performance]?.clips ?? [], tp, end, clip => s.clips.get(clip)?.end);
-    for (const k of played) {
+    played.forEach((k, at) => {
       const a = Math.max(-2, x(k.start)), b = Math.min(w + 2, x(k.stop) - 1);
-      if (b <= a) continue;
+      if (b <= a) return;
       const box = { x: a, y: laneTop + inset, w: b - a, h: laneHeight - inset * 2 };
-      ctx.fillStyle = alpha(t.clip, k.mime ? 0.07 : 0.22);
+      const selected = s.selectedClips.has(clipKey(row.performance, at));
+      ctx.fillStyle = alpha(t.clip, k.mime ? 0.07 : selected ? 0.4 : 0.22);
       ctx.fillRect(box.x, box.y, box.w, box.h);
       if (k.mime) hatchMime(ctx, box, t);
-      if (clipCollapsed || laneHeight < 16) continue;
+      if (selected) { ctx.strokeStyle = t.text; ctx.lineWidth = 2; ctx.strokeRect(box.x + 1, box.y + 1, box.w - 2, box.h - 2); }
+      if (clipCollapsed || laneHeight < 16) return;
       ctx.fillStyle = k.mime ? t.textDim : t.clip; ctx.textAlign = "left";
       ctx.fillText(k.mime ? `${k.clip} (mime)` : k.clip, x(k.start) + 4, laneTop + laneHeight / 2 + 4);
-    }
+    });
   });
 
   // The end.

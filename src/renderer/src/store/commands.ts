@@ -58,6 +58,8 @@ export type Menu = { id: MenuId; label: string; groups: Command[][] };
 
 const selection = () => editing.hasSelection;
 const selectedEvents = () => editing.selection.size > 0;
+/** Events or looks - what can be copied; recorded clips can only be removed. */
+const copyable = () => editing.selection.size + editing.selectedLooks.size > 0;
 
 /**
  * Starts a new chart. The desktop app asks about unsaved changes in its own dialog; elsewhere the
@@ -107,7 +109,7 @@ export function menus(): Menu[] {
           { id: "redo", label: "Redo", keys: "Ctrl Y / Ctrl Shift Z", run: redo, enabled: () => doc.canRedo },
         ],
         [
-          { id: "copy", label: "Copy", keys: "Ctrl C", run: copySelected, enabled: selection, browserDefault: true, help: "Copy the selection" },
+          { id: "copy", label: "Copy", keys: "Ctrl C", run: copySelected, enabled: copyable, browserDefault: true, help: "Copy the selection" },
           { id: "paste", label: "Paste at the playhead", keys: "Ctrl V", run: paste, browserDefault: true },
           { id: "mirror", label: "Mirror", keys: "X", run: mirrorSelected, enabled: selectedEvents, help: "Mirror the selection left/right" },
           { id: "delete", label: "Delete", keys: "Delete / Backspace", run: removeSelected, enabled: selection, help: "Delete the selection" },

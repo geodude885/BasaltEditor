@@ -46,6 +46,34 @@ export function playedClips(clips: PerformanceClip[], tp: Tempo, chartEnd: numbe
   });
 }
 
+/** A recorded clip as selected: its performance's index and its place among that performance's clips. */
+export const clipKey = (performance: number, clip: number): string => `${performance}:${clip}`;
+
+/**
+ * Takes these clips (by clipKey) out of their performances. A performance left with no clips goes too, and
+ * `performances` itself when none are left. Their recordings stay among the files; packages leave out unused ones.
+ */
+export function removeClips(c: LoadedChart, keys: Iterable<string>): void {
+  const gone = new Set(keys);
+  if (!gone.size || !c.performances) return;
+  c.performances.forEach((performance, i) => {
+    if (performance.clips?.some((_, j) => gone.has(clipKey(i, j)))) performance.clips = performance.clips.filter((_, j) => !gone.has(clipKey(i, j)));
+  });
+  c.performances = c.performances.filter((performance, i) => performance.clips?.length || ![...gone].some(k => k.startsWith(`${i}:`)));
+  if (!c.performances.length) delete c.performances;
+}
+
+/** Takes a whole performance out, so its actor plays nothing recorded (and can be removed). */
+export function removePerformance(c: LoadedChart, index: number): void {
+  if (!c.performances?.[index]) return;
+  c.performances = c.performances.filter((_, i) => i !== index);
+  if (!c.performances.length) delete c.performances;
+}
+
+/** The clip names chart.json's performances play: the recordings a package needs. */
+export const clipsPlayed = (c: Pick<LoadedChart, "performances">): Set<string> =>
+  new Set((c.performances ?? []).flatMap(performance => (performance.clips ?? []).map(k => k.clip)));
+
 /** What the mod refuses in `performances`: a second performance for an actor, an actor that doesn't exist, clips out of order or misshapen. */
 export function performanceProblems(c: LoadedChart, tp: Tempo): string[] {
   const out: string[] = [], ids = new Set(actorsOf(c).map(a => a.id)), first = firstActorId(c), seen = new Set<string>();

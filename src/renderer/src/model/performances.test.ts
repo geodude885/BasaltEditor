@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import * as Jsonc from "./jsonc";
 import { renameActor } from "./edits";
 import { Tempo } from "./tempo";
-import { playedClips, performanceOfActor, performanceProblems, performanceRows } from "./performances";
+import { clipKey, clipsPlayed, playedClips, performanceOfActor, performanceProblems, performanceRows, removeClips, removePerformance } from "./performances";
 import type { LoadedChart } from "./types";
 
 // A duet: the performances are listed in the other order from the actors, and the lead's names no actor.
@@ -65,6 +65,26 @@ describe("recorded performances", () => {
     renameActor(c, 0, "singer");
     expect(performanceRows(c).map(row => row.actor)).toEqual(["singer", "harmony"]);
     expect(c.performances![1].actor).toBeUndefined();
+  });
+
+  it("lose the clips removed, and a performance left with none goes too", () => {
+    const c = parseChart(DUET);
+    removeClips(c, [clipKey(0, 1)]);
+    expect(c.performances!.map(p => p.clips!.map(k => k.clip))).toEqual([["b1"], ["l1"]]);
+    removeClips(c, [clipKey(1, 0)]);
+    expect(c.performances!.map(p => p.actor)).toEqual(["backup"]);
+    removeClips(c, [clipKey(0, 0)]);
+    expect(c.performances).toBeUndefined();
+    expect(clipsPlayed(c)).toEqual(new Set());
+  });
+
+  it("can go whole, and say which clips they play", () => {
+    const c = parseChart(DUET);
+    expect(clipsPlayed(c)).toEqual(new Set(["b1", "b2", "l1"]));
+    removePerformance(c, 0);
+    expect(performanceRows(c).map(row => row.actor)).toEqual(["lead"]);
+    removePerformance(c, 0);
+    expect(c.performances).toBeUndefined();
   });
 
   it("are found by the actor they name", () => {
