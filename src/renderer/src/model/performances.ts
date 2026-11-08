@@ -1,7 +1,7 @@
 // Recorded performances: at most one per actor, each a list of clips played one after another. The timeline
 // shows a row of clips per performance, in the order of the actors list; they never cut each other off.
 import { actorsOf, firstActorId } from "./chart";
-import type { Tempo } from "./tempo";
+import { round, type Tempo } from "./tempo";
 import type { LoadedChart, PerformanceClip } from "./types";
 
 /** A row of the timeline's recorded clips: a performance (its index in `performances`), whose actor it is, and the row's label. */
@@ -86,9 +86,13 @@ export function performanceProblems(c: LoadedChart, tp: Tempo): string[] {
     (performance.clips ?? []).forEach((k, j) => {
       const p = `performances[${i}].clips[${j}]`;
       if (k.t == null && k.beat == null) out.push(`${p} needs t or beat`);
+      else if (k.t != null && k.beat != null) out.push(`${p} cannot have both t and beat`);
       else {
         const start = clipStart(k, tp);
-        if (!(start > before)) out.push(`${p} must start after the clip before it`);
+        // The mod refuses a clip before the chart starts. A take begun in the countdown starts at 0 instead,
+        // that much further into its recording (`start`).
+        if (start < 0) out.push(`${p}.t cannot be negative: make it 0, and add ${round(-start, 3)} to its start`);
+        else if (!(start > before)) out.push(`${p} must start after the clip before it`);
         before = start;
       }
       if (!k.clip) out.push(`${p} needs a clip`);
