@@ -57,6 +57,16 @@ describe("recorded performances", () => {
     ]);
   });
 
+  it("flag a clip before the chart starts, as a take begun in the countdown was written, and one with two times", () => {
+    const c = parseChart(DUET);
+    c.performances![0].clips![0].t = -0.15;
+    c.performances![1].clips![0].beat = 4;
+    expect(performanceProblems(c, tempo)).toEqual([
+      "performances[0].clips[0].t cannot be negative: make it 0, and add 0.15 to its start",
+      "performances[1].clips[0] cannot have both t and beat",
+    ]);
+  });
+
   it("follow an actor's new id, leaving a performance that names no actor alone", () => {
     const c = parseChart(DUET);
     expect(renameActor(c, 1, "harmony").sort()).toEqual(["events", "performances"]);
