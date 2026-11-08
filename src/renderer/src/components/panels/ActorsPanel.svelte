@@ -4,6 +4,7 @@
   import { addActor, renameActor } from "../../model/edits";
   import { performanceOfActor, performanceRows } from "../../model/performances";
   import type { Actor } from "../../model/types";
+  import { removePerformanceOf } from "../../store/actions";
   import { doc } from "../../store/document.svelte";
   import { num, text } from "../fields";
 
@@ -44,7 +45,8 @@
   {#each actors as a, i (i)}
     {@const look = a.look ?? "you"}
     {@const stones = stonesOf(a)}
-    {@const recorded = performanceOfActor(doc.chart, a.id ?? "") >= 0}
+    {@const performance = performanceOfActor(doc.chart, a.id ?? "")}
+    {@const recorded = performance >= 0}
     <div class="item">
       <label><span>Id</span><input value={a.id ?? ""} onchange={e => { const id = text(e); doc.change(["actors"], () => renameActor(doc.chart, i, id)); }} /></label>
       <label><span>Name</span><input value={a.name ?? ""} onchange={e => edit(i, a => { a.name = text(e); })} /></label>
@@ -71,8 +73,12 @@
           {#each STONES as s (s)}<option>{s}</option>{/each}
         </select>
       </label>
-      <button disabled={actors.length < 2 || recorded} title={recorded ? "This actor has recorded clips. Remove its performance in game first." : null}
+      <button disabled={actors.length < 2 || recorded} title={recorded ? "This actor has recorded clips: remove its recording first." : null}
         onclick={() => doc.change(["actors"], () => { doc.chart.actors = actorsOf(doc.chart).filter((_, j) => j !== i); })}>Remove</button>
+      {#if recorded}
+        <button title="Remove every clip this actor recorded, so it plays only the events. Undo brings them back."
+          onclick={() => removePerformanceOf(performance)}>Remove recording</button>
+      {/if}
     </div>
   {/each}
 </div>
@@ -83,6 +89,6 @@
 <div class="row"><button onclick={() => doc.change(["actors"], () => addActor(doc.chart))}>Add an actor</button></div>
 {#if doc.chart.performances?.length}
   <div class="note">
-    Recorded clips for {performanceRows(doc.chart).map(row => row.label).join(", ")}, each in a row of its own on the timeline. Record or re-record them in game.
+    Recorded clips for {performanceRows(doc.chart).map(row => row.label).join(", ")}, each in a row of its own on the timeline. Record or re-record them in game; to remove one, select it there and press Delete.
   </div>
 {/if}

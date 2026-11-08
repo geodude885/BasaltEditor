@@ -42,6 +42,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pull-requests: read
     env:
       WHERE: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || 'prerelease' }}
     # Shows as a deployment, with a link to the copy, on the pull request and the repository's page.
@@ -55,9 +56,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { sparse-checkout: .github, sparse-checkout-cone-mode: false }
+      # A pull request closed while this waited its turn has had its copy taken down (preview-cleanup.yml),
+      # which runs in the same group: publishing now would put it back for good. Asked here, not taken from
+      # the event, which says how the pull request was when this run started.
+      - id: open
+        if: github.event_name == 'pull_request'
+        run: echo "state=$(gh pr view "$NUMBER" --repo "$REPO" --json state --jq .state)" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          NUMBER: ${{ github.event.pull_request.number }}
+      - if: steps.open.outputs.state != '' && steps.open.outputs.state != 'OPEN'
+        run: echo "Pull request ${{ github.event.pull_request.number }} has closed, so its copy isn't published."
       - uses: actions/download-artifact@v4
+        if: steps.open.outputs.state == '' || steps.open.outputs.state == 'OPEN'
         with: { name: web, path: web }
       - run: .github/publish-pages.sh "$WHERE" web
+        if: steps.open.outputs.state == '' || steps.open.outputs.state == 'OPEN'
         env:
           TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}

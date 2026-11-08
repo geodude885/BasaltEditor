@@ -7,7 +7,7 @@
   import { evTime, setEvTime } from "../../model/chart";
   import type { ChartEvent, LookCue } from "../../model/types";
   import {
-    addMove, addProjectile, addProjectileInColumn, addStageCueAtPlayhead, keysOf, pickCycled, reselectBoth, select, selectLook, selectPhase, setExtraTimelineHeight, toggleTimelineRow, zoom,
+    addMove, addProjectile, addProjectileInColumn, addStageCueAtPlayhead, keysOf, pickCycled, reselectBoth, select, selectClip, selectLook, selectPhase, setExtraTimelineHeight, toggleTimelineRow, zoom,
     undoByTouch,
   } from "../../store/actions";
   import { doc } from "../../store/document.svelte";
@@ -24,7 +24,7 @@
   import { drawPlayhead, drawTimeline } from "./draw";
   import { performanceRows } from "../../model/performances";
   import { clipLaneSpan, COLLAPSIBLE_ROWS, eventSpots, layoutTimeline, placeMarkers, tOf } from "./geometry";
-  import { lookCuesInBox, markersInBox, pressWaitsOnTouch, touchTapWith, whatATimelinePressHits, whatATouchTapAdds, type TouchTap } from "./interaction";
+  import { clipAt, lookCuesInBox, markersInBox, pressWaitsOnTouch, touchTapWith, whatATimelinePressHits, whatATouchTapAdds, type TouchTap } from "./interaction";
   import { dragStartsAfterPixels, Fingers, restingFinger, Taps, WaitingPress, type PinchStep } from "../touch";
 
   let canvas: HTMLCanvasElement;
@@ -56,7 +56,7 @@
     if (!w || !still) return null;
     drawTimeline(prepare(still, w, layout.height), w, layout.height, {
       chart: doc.chart, tempo: doc.tempo, view: display.timeline, snap: editing.snap,
-      selection: editing.selection, selectedPhase: editing.selectedPhase, lookCues: doc.lookCues, selectedLooks: editing.selectedLooks, shotColouring: display.shotColouring,
+      selection: editing.selection, selectedPhase: editing.selectedPhase, lookCues: doc.lookCues, selectedLooks: editing.selectedLooks, selectedClips: editing.selectedClips, shotColouring: display.shotColouring,
       markers: placed, song: session.song, songOffset: songOffset(), clips: session.clips, performanceRows: performanceLanes, box, layout, loop: practice.loop, loopStart: practice.loopStart,
     }, theme(appearance.scheme));
     return { canvas: still };
@@ -103,6 +103,7 @@
       case "add-projectile": addProjectileInColumn(t, tap.column, layout.shotColumns); return;
       case "add-look-cue": seek(snapped(t)); addStageCueAtPlayhead(); return;
       case "add-move": seek(snapped(t)); addMove(); return;
+      case "select-clip": selectClip(tap.key, d.adding); return;
       case "seek-and-clear-selection":
         if (!d.adding) editing.clearSelection();
         seek(Math.max(0, t));
@@ -124,7 +125,8 @@
       return;
     }
     if (fingers.busy) return;
-    const press = whatATimelinePressHits(doc.chart, doc.tempo, display.timeline, layout, placed, doc.lookCues, x, y, taps.isDouble(ev));
+    const clip = clipAt(doc.chart, doc.tempo, display.timeline, layout, performanceLanes, name => session.clips.get(name)?.end, x, y);
+    const press = whatATimelinePressHits(doc.chart, doc.tempo, display.timeline, layout, placed, doc.lookCues, x, y, taps.isDouble(ev), clip);
     // Select mode: empty space boxes straight away, with any pointer.
     if (editing.selectMode && pressWaitsOnTouch(press)) {
       startBox(x, y, adds(ev));
@@ -134,7 +136,7 @@
       const adding = adds(ev);
       // Held still: box-select from here.
       const d: Extract<Drag, { kind: "touch" }> = {
-        kind: "touch", t0: display.timeline.t0, tap: whatATouchTapAdds(layout, y), adding,
+        kind: "touch", t0: display.timeline.t0, tap: press.kind === "select-clip" ? press : whatATouchTapAdds(layout, y), adding,
         press: new WaitingPress(x, y, () => {
           if (drag === d) startBox(x, y, adding);
         }),
@@ -159,6 +161,7 @@
         startMove(ev, x, y);
         return;
       }
+      case "select-clip": selectClip(press.key, adds(ev)); return;
       case "box-select":
         startBox(x, y, adds(ev));
         return;

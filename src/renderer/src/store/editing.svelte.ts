@@ -24,6 +24,8 @@ class Editing {
   readonly selection = new SvelteSet<number>();
   /** Indices into chart.shaders: looks are selected alongside events. */
   readonly selectedLooks = new SvelteSet<number>();
+  /** Recorded clips, by clipKey (performance and place in it): selected only to remove them. */
+  readonly selectedClips = new SvelteSet<string>();
   selectedPhase = $state(-1);
   /** Presses add to the selection, as Shift does - for touch screens, which have no Shift. */
   multiSelect = $state(false);
@@ -39,12 +41,13 @@ class Editing {
 
   /** The one look selected, for what edits a single look; -1 with none, or several. */
   get selectedLookCue(): number { return this.selectedLooks.size === 1 ? [...this.selectedLooks][0] : -1; }
-  get selectedCount(): number { return this.selection.size + this.selectedLooks.size; }
+  get selectedCount(): number { return this.selection.size + this.selectedLooks.size + this.selectedClips.size; }
   get hasSelection(): boolean { return this.selectedCount > 0; }
 
   clearSelection(): void {
     this.selection.clear();
     this.selectedLooks.clear();
+    this.selectedClips.clear();
   }
 
   setLookSelection(indices: Iterable<number>): void {

@@ -6,6 +6,7 @@ import { projectileAt, templateOf, xOfColumn } from "../model/columns";
 import { barAround, projectilesBetween } from "../model/ranges";
 import { addPhaseAt, mirror, newTimed } from "../model/edits";
 import { newStageCue } from "../model/looks";
+import { removeClips, removePerformance } from "../model/performances";
 import { simplifyLooks } from "../model/simplify";
 import { round } from "../model/tempo";
 import type { Point } from "../model/chart";
@@ -155,9 +156,10 @@ export const editSelectedProjectiles = (mutate: (p: Projectile) => void): void =
 
 export function removeSelected(): void {
   if (!editing.hasSelection) return;
-  const gone = new Set(editing.selection), goneLooks = new Set(editing.selectedLooks);
-  doc.change(keysOf([...gone], [...goneLooks]), () => {
+  const gone = new Set(editing.selection), goneLooks = new Set(editing.selectedLooks), goneClips = [...editing.selectedClips];
+  doc.change([...keysOf([...gone], [...goneLooks]), ...(goneClips.length ? ["performances"] : [])], () => {
     if (gone.size) doc.chart.events = doc.chart.events.filter((_, i) => !gone.has(i));
+    removeClips(doc.chart, goneClips);
     if (!goneLooks.size) return;
     doc.chart.shaders = doc.chart.shaders?.filter((_, i) => !goneLooks.has(i));
     if (!doc.chart.shaders?.length) delete doc.chart.shaders;
@@ -277,6 +279,21 @@ export function selectLookCue(index: number): void {
   editing.selectedLooks.add(index);
   editing.selectedPhase = -1;
   ui.revealTab("looks");
+}
+
+/** A press on a recorded clip: selects it (to remove it), or with `add` adds it to the selection or takes it out. */
+export function selectClip(key: string, add: boolean): void {
+  if (!add) editing.clearSelection();
+  else if (editing.selectedClips.delete(key)) return;
+  editing.selectedClips.add(key);
+  editing.selectedPhase = -1;
+}
+
+/** Removes an actor's whole performance - every clip it recorded - as one undo step. */
+export function removePerformanceOf(index: number): void {
+  editing.selectedClips.clear();
+  doc.change(["performances"], () => removePerformance(doc.chart, index));
+  toast("Removed the recorded performance - Undo brings it back");
 }
 
 /** A press on a look: selects it, or with `add` adds it to the selection or takes it out. */
