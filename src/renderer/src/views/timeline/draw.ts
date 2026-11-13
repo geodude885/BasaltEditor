@@ -5,6 +5,7 @@ import { linearToCss, STAGE_PACK, stageLookAt, type StageLook, type TimedLookCue
 import { stageStrip, type StageSparkle, type StageStrip } from "../../model/stageFrame";
 import { BEATS_PER_BAR, gridLines, type Tempo } from "../../model/tempo";
 import { clipKey, playedClips, type PerformanceRow } from "../../model/performances";
+import type { CloseCall } from "../../model/closeCalls";
 import type { LoadedChart } from "../../model/types";
 import type { ClipSpan } from "../../io/files";
 import type { Song } from "../../store/session.svelte";
@@ -25,6 +26,8 @@ export type TimelineScene = {
   /** Recorded clips selected to remove, by clipKey. */
   selectedClips: ReadonlySet<string>;
   markers: Marker[];
+  /** Structures that may touch, shown: joined on the projectiles row. */
+  closeCalls: CloseCall[];
   song: Song | null;
   /** Where the chart starts in the song. */
   songOffset: number;
@@ -92,6 +95,19 @@ export function drawTimeline(ctx: CanvasRenderingContext2D, w: number, h: number
   });
 
   drawLooks(ctx, w, s, t);
+
+  // Close calls: a faint line joining the two projectiles' markers, with a dot where they'd touch.
+  if (s.closeCalls.length) {
+    const at = new Map(s.markers.map(m => [m.i, m]));
+    ctx.strokeStyle = alpha(t.telegraph, 0.75); ctx.fillStyle = t.telegraph; ctx.lineWidth = 1.5;
+    for (const call of s.closeCalls) {
+      const a = at.get(call.a), b = at.get(call.b);
+      if (!a || !b || Math.max(a.x, b.x) < 0 || Math.min(a.x, b.x) > w) continue;
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+      const k = b.x === a.x ? 0.5 : Math.min(1, Math.max(0, (x(call.at) - a.x) / (b.x - a.x)));
+      ctx.beginPath(); ctx.arc(a.x + (b.x - a.x) * k, a.y + (b.y - a.y) * k, 2.5, 0, Math.PI * 2); ctx.fill();
+    }
+  }
 
   // Events, where the markers put them - smaller, and without names, in a collapsed row.
   for (const { i, x: mx, y, left, right } of s.markers) {

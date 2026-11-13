@@ -2,6 +2,7 @@
 // keys it touched back into the text, so comments and anything the editor does not show survive.
 // Undo keeps texts, not objects.
 import { evTime, sortByTime } from "../model/chart";
+import { closeCalls } from "../model/closeCalls";
 import * as Jsonc from "../model/jsonc";
 import { timedLookCues } from "../model/looks";
 import { Tempo } from "../model/tempo";
@@ -34,6 +35,8 @@ class ChartDocument {
   readonly dirty = $derived(this.text !== this.saved);
   /** The looks (shader cues) in time order, with when each starts and fades. */
   readonly lookCues = $derived(timedLookCues(this.chart, this.tempo));
+  /** Structures that may touch before they're on their way (model/closeCalls.ts), meant or not. */
+  readonly closeCalls = $derived(closeCalls(this.chart, this.tempo));
   get canUndo(): boolean { return this.#undo.length > 0; }
   get canRedo(): boolean { return this.#redo.length > 0; }
 
