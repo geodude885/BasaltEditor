@@ -78,15 +78,15 @@ export function closeCalls(c: LoadedChart, tp: Tempo): CloseCall[] {
   return found.sort((x, y) => x.at - y.at);
 }
 
-/** What a close call is, in words: "Disc and RockCube may touch while both wait", or "… before the Disc is out of the way". */
+/** What a close call is, in a few words: "Disc and RockCube touch while waiting", or "Two RockCubes: one launched, still in the way". */
 export function closeCallText(c: LoadedChart, call: CloseCall): string {
   const a = c.events[call.a]?.projectile?.structure ?? "?", b = c.events[call.b]?.projectile?.structure ?? "?";
   const pair = a === b ? `Two ${a}s` : `${a} and ${b}`;
-  return call.kind === "waiting" ? `${pair} may touch while both wait to launch` : `${pair} may touch: one launched, not yet out of the other's way`;
+  return call.kind === "waiting" ? `${pair} touch while waiting` : `${pair}: one launched, still in the way`;
 }
 
 /**
- * What a close call is about, to remember it as meant: both projectiles as they are, so moving or changing
+ * What a close call is about, to remember it as hidden: both projectiles as they are, so moving or changing
  * either brings the warning back.
  */
 export function closeCallKey(c: LoadedChart, call: CloseCall): string {

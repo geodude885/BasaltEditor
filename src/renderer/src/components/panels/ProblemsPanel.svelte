@@ -45,10 +45,9 @@
   </div>
   {#if closeCallState.shown}
     <div class="note">
-      Structures that may touch before they're on their way - waiting side by side, or one launched and not yet clear of the next -
-      which can hitstun, slow or break them. A guess from their sizes and straight flights; the game plays them either way.
-      <b>Meant</b> hides one until either projectile changes.
-      {#if closeCallState.meantHere}<button class="link" onclick={() => closeCallState.unmarkHere()}>Show the {closeCallState.meantHere} meant here again</button>{/if}
+      Structures that may touch before launching, or before the last is out of the way: a guess, and the game plays them anyway.
+      <b>Hide</b> one until either projectile changes.
+      {#if closeCallState.hiddenHere}<button class="link" onclick={() => closeCallState.showHiddenHere()}>Show {closeCallState.hiddenHere} hidden</button>{/if}
     </div>
     <div class="list">
       {#each calls as call (`${call.a}:${call.b}`)}
@@ -56,7 +55,7 @@
           <button class="go" title="Select both, and go to just before they'd touch" onclick={() => show(call)}>
             <span class="time">{clockText(call.at, 2)}</span> {closeCallText(doc.chart, call)}
           </button>
-          <button title="This one is meant: stop showing it while both projectiles stay as they are" onclick={() => closeCallState.markMeant([call])}>Meant</button>
+          <button title="Stop showing this one while both projectiles stay as they are" onclick={() => closeCallState.hide([call])}>Hide</button>
         </div>
       {:else}
         <div class="none">None found.</div>
