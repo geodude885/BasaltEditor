@@ -1,6 +1,7 @@
 import { actorSpotAt, actorsOf, aimPointOf, evTime, flightTime, isGrounded, laneOf, zoneOf } from "../../model/chart";
 import { GROUNDED } from "../../model/constants";
 import { round, type Tempo } from "../../model/tempo";
+import type { CloseCall } from "../../model/closeCalls";
 import type { LoadedChart, Projectile } from "../../model/types";
 import { shotPaint, stripePath, type ShotColouring } from "../shotColours";
 import { alpha, drawBox, type Box, type Theme } from "../theme";
@@ -16,7 +17,12 @@ export type LaneScene = {
   shotColouring: ShotColouring;
   /** The projectiles' moments, from laneShots. */
   shots: LaneShots;
+  /** Structures that may touch, shown: ringed on the lane around when they would. */
+  closeCalls: CloseCall[];
 };
+
+/** How long either side of a close call its two structures are ringed. */
+const CLOSE_CALL_RINGED_SECONDS = 0.5;
 
 const WALL_PAST_THE_FAR_END_METRES = 0.75;
 
@@ -71,10 +77,11 @@ export function drawLane(ctx: CanvasRenderingContext2D, w: number, h: number, ma
   const { shots, longest } = scene.shots, from = time - SHOWN_AFTER_LANDING_SECONDS - longest;
   let lo = 0, hi = shots.length;
   while (lo < hi) { const mid = (lo + hi) >> 1; if (shots[mid].spawn < from) lo = mid + 1; else hi = mid; }
+  const close = new Set(scene.closeCalls.filter(call => Math.abs(call.at - time) <= CLOSE_CALL_RINGED_SECONDS).flatMap(call => [call.a, call.b]));
   for (let j = lo; j < shots.length && shots[j].spawn <= time + SHOWN_BEFORE_SPAWNING_SECONDS; j++) {
-    if (!scene.selection.has(shots[j].i)) drawShot(ctx, c, shots[j].i, false, map, scene, t);
+    if (!scene.selection.has(shots[j].i)) drawShot(ctx, c, shots[j].i, false, map, scene, t, close.has(shots[j].i));
   }
-  for (const i of scene.selection) drawShot(ctx, c, i, true, map, scene, t);
+  for (const i of scene.selection) drawShot(ctx, c, i, true, map, scene, t, close.has(i));
 
   if (scene.box) drawBox(ctx, scene.box, t);
 }
@@ -107,7 +114,7 @@ export function laneShots(c: LoadedChart, tp: Tempo): LaneShots {
   return { shots, longest };
 }
 
-function drawShot(ctx: CanvasRenderingContext2D, c: LoadedChart, i: number, selected: boolean, map: LaneMap, scene: LaneScene, t: Theme): void {
+function drawShot(ctx: CanvasRenderingContext2D, c: LoadedChart, i: number, selected: boolean, map: LaneMap, scene: LaneScene, t: Theme, close = false): void {
   const e = c.events[i], s = e?.projectile, time = scene.time, P = map.toPx;
   if (!s?.from) return;
   const launch = evTime(e, scene.tempo), spawn = launch - (s.telegraph ?? 0.5);
@@ -143,6 +150,11 @@ function drawShot(ctx: CanvasRenderingContext2D, c: LoadedChart, i: number, sele
   if (paint.colour && waiting) { ctx.strokeStyle = t.telegraph; ctx.lineWidth = 2; shape(ctx, s.structure, map.scale, x, y, 3, true); }
   ctx.globalAlpha = 1;
   if (selected) { ctx.strokeStyle = t.text; ctx.lineWidth = 1.5; shape(ctx, s.structure, map.scale, x, y, 5, true); }
+  // In a close call: a dashed ring, wider than the selection's.
+  if (close && live) {
+    ctx.strokeStyle = t.telegraph; ctx.lineWidth = 1.5; ctx.setLineDash([3, 3]);
+    shape(ctx, s.structure, map.scale, x, y, 8, true); ctx.setLineDash([]);
+  }
 }
 
 /** A structure's footprint, filled - or stroked, with `outline`. */

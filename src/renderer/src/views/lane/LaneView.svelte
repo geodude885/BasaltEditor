@@ -1,6 +1,7 @@
 <script lang="ts">
   // The lane from above. Click a projectile to select it, drag its start or aim point, drag a box to
   // select several, double-click (or alt-click) the floor to add one there.
+  import { closeCallState } from "../../store/closeCalls.svelte";
   import { laneOf } from "../../model/chart";
   import { addProjectile, pickCycled, select } from "../../store/actions";
   import { doc } from "../../store/document.svelte";
@@ -26,7 +27,7 @@
 
   $effect(() => {
     if (!w || !h) return;
-    drawLane(prepare(canvas, w, h), w, h, map, { chart: doc.chart, tempo: doc.tempo, time: transport.time, selection: editing.selection, box, shotColouring: display.shotColouring, shots }, theme(appearance.scheme));
+    drawLane(prepare(canvas, w, h), w, h, map, { chart: doc.chart, tempo: doc.tempo, time: transport.time, selection: editing.selection, box, shotColouring: display.shotColouring, shots, closeCalls: closeCallState.visible }, theme(appearance.scheme));
   });
 
   const pointerAt = (ev: PointerEvent): [number, number] => { const r = canvas.getBoundingClientRect(); return [ev.clientX - r.left, ev.clientY - r.top]; };

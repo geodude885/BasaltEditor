@@ -19,6 +19,7 @@
   import { ui } from "../../store/ui.svelte";
   import { keepPlayheadInView, seek, songOffset } from "../../store/playback";
   import { practice } from "../../store/practice.svelte";
+  import { closeCallState } from "../../store/closeCalls.svelte";
   import { untrack } from "svelte";
   import { boxIsAClick, prepare, theme, type Box } from "../theme";
   import { drawPlayhead, drawTimeline } from "./draw";
@@ -57,7 +58,7 @@
     drawTimeline(prepare(still, w, layout.height), w, layout.height, {
       chart: doc.chart, tempo: doc.tempo, view: display.timeline, snap: editing.snap,
       selection: editing.selection, selectedPhase: editing.selectedPhase, lookCues: doc.lookCues, selectedLooks: editing.selectedLooks, selectedClips: editing.selectedClips, shotColouring: display.shotColouring,
-      markers: placed, song: session.song, songOffset: songOffset(), clips: session.clips, performanceRows: performanceLanes, box, layout, loop: practice.loop, loopStart: practice.loopStart,
+      markers: placed, closeCalls: closeCallState.visible, song: session.song, songOffset: songOffset(), clips: session.clips, performanceRows: performanceLanes, box, layout, loop: practice.loop, loopStart: practice.loopStart,
     }, theme(appearance.scheme));
     return { canvas: still };
   });
