@@ -119,9 +119,9 @@ src/renderer/src/
 - **The web build** (`npm run build:web`, `vite.config.web.ts`) is the same renderer with
   `platform/web.ts` standing in for the preload, published to GitHub Pages (the `gh-pages` branch)
   as several copies: the live site at the root, changed only by publishing a release
-  (`web-release.yml`); `/prerelease/` from every push to `main`; `/pr-<number>/` from each pull
-  request, taken down when it closes. `.github/publish-pages.sh` replaces one copy and leaves the
-  rest. Test copies say so in the top bar and their home-screen name (`BASALT_WEB_CHANNEL`,
+  (`web-release.yml`); `/prerelease/` from every push to `main`. (Pull requests' `/pr-<number>/`
+  previews are off for now - see `ci.yml` to bring them back.) `.github/publish-pages.sh` replaces
+  one copy and leaves the rest. Test copies say so in the top bar and their home-screen name (`BASALT_WEB_CHANNEL`,
   `components/BuildBadge.svelte`). They share the live site's browser storage - same origin - so
   nothing a copy stores there may be something an older or newer copy can't read.
 
@@ -172,11 +172,12 @@ the tests that check Stage against a transcription of the retired BossBattles Ni
 ## Releases
 
 - **Branches:** short-lived branches and pull requests into `main`; `main` is always releasable but
-  not yet released. Each pull request gets a preview to try on a phone, `main` is the prerelease,
-  and a tag marks a release. Make a `release/x.y` branch from a tag only to fix a release while
-  `main` holds unreleased work.
-- `ci.yml` runs check, tests and both builds on every push and pull request, then publishes the
-  test copy of the website (above); only its publish job can write to the repository. Pushing a
+  not yet released. `main` is the prerelease, and a tag marks a release. Make a `release/x.y` branch
+  from a tag only to fix a release while `main` holds unreleased work.
+- `ci.yml` runs check, tests and both builds on every push to `main`, then publishes the test copy of
+  the website (above); only its publish job can write to the repository. Pull requests don't run it
+  for now, to save Actions minutes: run `npm run check` and `npm test` before merging, or run CI on a
+  branch by hand (Actions > CI > Run workflow). Pushing a
   `v*` tag runs `release.yml`: a matrix (`windows-latest`, `macos-latest`, `ubuntu-latest`) builds
   and publishes to a draft release; publish the draft by hand, which also publishes the live
   website from that tag (`web-release.yml`; run it by hand with a tag for a website-only fix). Keep
