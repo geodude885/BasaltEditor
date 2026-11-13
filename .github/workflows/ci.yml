@@ -1,14 +1,17 @@
 name: CI
-# Checks, tests and builds every push to main and every pull request, then publishes the website - the
-# editor as a web app for phones and browsers - as a test copy on the gh-pages branch (Settings > Pages
-# > Source: Deploy from a branch, gh-pages, / (root)):
+# Checks, tests and builds every push to main, then publishes the website - the editor as a web app for
+# phones and browsers - as a test copy on the gh-pages branch (Settings > Pages > Source: Deploy from a
+# branch, gh-pages, / (root)):
 #   main            -> /prerelease/
-#   a pull request  -> /pr-<number>/, taken down when it closes (preview-cleanup.yml)
 # The live site, at the root, only changes when a release is published (web-release.yml).
+#
+# Pull requests don't run it for now: most are opened and reviewed by agents, and it spent the free
+# Actions minutes. Run it on a branch by hand (Actions > CI > Run workflow) when one is worth checking.
+# To bring back a check and a preview (/pr-<number>/) on every pull request, add `pull_request:` below
+# and `pull_request: types: [closed]` back to preview-cleanup.yml; the jobs still handle both.
 on:
   push:
     branches: [main]
-  pull_request:
   workflow_dispatch:
 
 # Read-only by default: installing and testing run third-party code. Only the publish job, which runs
